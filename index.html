@@ -19,7 +19,7 @@
       <section id="player">
         <div class="container">
           <div class="row web-player d-flex justify-content-center">
-            <div class="col-12 col-lg-10">
+            <div class="col-12 col-lg-8">
               <div class="row">
                 <!-- <div class="col-12 col-md-5">
                   <div class="cover-album">
@@ -27,10 +27,17 @@
                     <div class="watermark"></div>
                   </div>
                 </div> -->
-                <div class="col-12 ml-md-auto">
+                <div class="col-12">
+                  <div class="row toplay">
+                    <div class="col-12">
+                      <div class="row" id="toplaySong">
+                        <!-- filled by script function -->
+                      </div>
+                    </div>
+                  </div>
                   <div class="row">
                     <div class="col-12">
-                      <div class="info-current-song">
+                      <div class="info-current-song text-center">
                         <p id="currentSong" class="current-song text-uppercase">
                           Loading...
                         </p>
@@ -44,19 +51,21 @@
                     </div>
                     <div class="col-12">
                       <div class="row">
-                        <div class="play-pause col-12 col-md-2 text-center">
+                        <div class="play-pause col-12 text-center">
                           <i
                             id="playerButton"
                             class="fa fa-play-circle"
                             onclick="togglePlay()"
                           ></i>
                         </div>
-                        <div class="col-12 col-md-10 text-center">
-                          <div class="row volume-control">
+                        <div class="col-12 col-md-8 text-center">
+                          <div
+                            class="row volume-control justify-content-center"
+                          >
                             <div class="volume-icon col-1">
                               <i class="fa fa-volume-up"></i>
                             </div>
-                            <div class="volume-slide col-10 text-center">
+                            <div class="volume-slide offset-3 col-8">
                               <input
                                 type="range"
                                 id="volume"
@@ -66,16 +75,15 @@
                                 value="20"
                               />
                             </div>
-                            <!-- <div class="percentual-volume col-12">
-                              Volume <span id="volIndicator">...</span>%
-                            </div> -->
                           </div>
                         </div>
                       </div>
-                      <div class="row">
-                        <div
-                          class="col-12 col-md-6 text-center call-lyrics"
-                        ></div>
+                      <div class="row historic">
+                        <div class="col-12">
+                          <div class="row" id="historicSong">
+                            <!-- filled by script function -->
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -83,53 +91,18 @@
               </div>
             </div>
           </div>
-          <div class="row historic">
-            <div class="col-12">
-              <p>recently played</p>
-              <div class="row" id="historicSong">
-                <article class="col-12 col-md-6">
-                  <!-- <div class="cover-historic"></div> -->
-                  <div class="music-info">
-                    <div class="song">No Song</div>
-                    <div class="artist">No Artist</div>
-                  </div>
-                </article>
-                <article class="col-12 col-md-6">
-                  <!-- <div class="cover-historic"></div> -->
-                  <div class="music-info">
-                    <div class="song">No Title</div>
-                    <div class="artist">No Artist</div>
-                  </div>
-                </article>
-                <article class="col-12 col-md-6">
-                  <!-- <div class="cover-historic"></div> -->
-                  <div class="music-info">
-                    <div class="song">No Song</div>
-                    <div class="artist">No Artist</div>
-                  </div>
-                </article>
-                <article class="col-12 col-md-6">
-                  <!-- <div class="cover-historic"></div> -->
-                  <div class="music-info">
-                    <div class="song">No Title</div>
-                    <div class="artist">No Artist</div>
-                  </div>
-                </article>
-              </div>
-            </div>
-            <
-          </div>
         </div>
       </section>
     </main>
-    <!-- <div
-      class="modal fade"
-      id="modalLyrics"
-      tabindex="-1"
-      role="dialog"
-      aria-labelledby="lyricsSong"
-      aria-hidden="true"
-    ></div> -->
+    <!-- <footer>
+      <div class="container">
+        <div class="row">
+          <div class="col-12 text-center">
+            <p>RL Player | &copy;2025 <a href="https://www.pnch.nl">PNCH</a></p>
+          </div>
+        </div>
+      </div>
+    </footer> -->
     <script
       type="text/javascript"
       src="https://code.jquery.com/jquery-3.2.1.min.js"
