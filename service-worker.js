@@ -7,7 +7,8 @@ const urlsToCache = [
   // "./index.html",
   // "./css/style.css",
   // "./js/script.js",
-  // "./img/cover.png"
+  "./img/cover.png",
+  "./img/b-kvpn-square.png",
 ];
 
 self.addEventListener("install", function (event) {

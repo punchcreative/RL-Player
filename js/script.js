@@ -76,7 +76,7 @@ class Page {
 
     this.setVolume = function () {
       if (typeof Storage !== "undefined") {
-        const volumeLocalStorage = localStorage.getItem("volume") || 80;
+        const volumeLocalStorage = localStorage.getItem("volume") || 20;
 
         document.getElementById("volume").value = volumeLocalStorage;
       }
@@ -131,8 +131,8 @@ async function getStreamingData() {
           article.innerHTML = `
                         <div class="music-info text-center">
                           <p class="song ${textSize}">${
-            songInfo.Artist || "Unknown"
-          } - ${songInfo.Title || "Unknown"}</p>
+            songInfo.Artist || ""
+          } - ${songInfo.Title || ""}</p>
                         </div>
                       `;
           toplayContainer.appendChild(article);
@@ -150,7 +150,7 @@ async function getStreamingData() {
 
         console.log("History Array:", historyArray);
 
-        const maxHistoryToDisplay = 2; // Adjust as needed
+        const maxHistoryToDisplay = 3; // Adjust as needed
         const limitedHistory = historyArray.slice(
           Math.max(0, historyArray.length - maxHistoryToDisplay)
         );
@@ -163,8 +163,8 @@ async function getStreamingData() {
           article.innerHTML = `
                         <div class="music-info text-center">
                           <p class="song ${textSize}">${
-            songInfo.Artist || "Unknown"
-          } - ${songInfo.Title || "Unknown"}</p>
+            songInfo.Artist || ""
+          } - ${songInfo.Title || ""}</p>
                         </div>
                       `;
           historicContainer.appendChild(article);

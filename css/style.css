@@ -90,8 +90,9 @@ body {
 
   transition: background-image 1s;
 }
-*/ .logo {
-  /* display: none; */
+
+.logo {
+  display: none;
 }
 
 .info-current-song {
@@ -145,17 +146,10 @@ body {
 }
 
 .volume-control {
-  display: none;
+  /* display: none; */
   padding: 10px;
   border-radius: 5px;
 }
-
-/* .volume-slide input[type="range"] {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
-  outline: none;
-  border-radius: 5px;
-  border: none;
-} */
 
 .volume-slide input[type="range"]::-webkit-slider-runnable-track {
   background: rgba(0, 0, 0, 0.3);
@@ -282,6 +276,22 @@ input[type="range"]::-ms-thumb {
   cursor: pointer;
 }
 
+.info-current-song {
+  margin-top: 1em;
+}
+.volume-slide {
+  margin-bottom: 1em;
+}
+
+.playlist-part.current-title,
+.playlist-part.historic-title {
+  border-top: 1px solid #fff;
+  border-bottom: 1px solid #fff;
+}
+.playlist-part.toplay-title {
+  border-bottom: 1px solid #fff;
+}
+
 .historic,
 .toplay {
   color: #e4e4e4;
@@ -292,7 +302,12 @@ input[type="range"]::-ms-thumb {
 }
 
 .toplay {
+  margin-top: 2em;
   margin-bottom: 2em;
+  opacity: 0.4;
+}
+.historic {
+  opacity: 0.3;
 }
 
 .historic article,
@@ -319,20 +334,38 @@ input[type="range"]::-ms-thumb {
   /* text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5); */
 }
 
-.text-size-0 {
+#toplaySong .text-size-0 {
   font-size: 0.8em;
+  opacity: 0.4;
 }
-.text-size-1 {
+#toplaySong .text-size-1 {
   font-size: 0.9em;
+  opacity: 0.5;
 }
-.text-size-2 {
+#toplaySong .text-size-2 {
   font-size: 1em;
+  opacity: 0.6;
 }
-.text-size-3 {
+#toplaySong .text-size-3 {
   font-size: 1.1em;
+  opacity: 0.8;
 }
-.text-size-4 {
+#toplaySong .text-size-4 {
   font-size: 1.2em;
+  opacity: 1;
+}
+
+#historicSong .text-size-0 {
+  font-size: 1em;
+  opacity: 0.7;
+}
+#historicSong .text-size-1 {
+  font-size: 0.9em;
+  opacity: 0.5;
+}
+#historicSong .text-size-2 {
+  font-size: 0.8em;
+  opacity: 0.3;
 }
 
 @media (max-width: 370px) {
@@ -388,7 +421,7 @@ input[type="range"]::-ms-thumb {
   }
 
   .volume-control {
-    margin-top: 10%;
+    margin-top: 1em;
   }
 
   .volume-control {
