@@ -1,10 +1,10 @@
 const RADIO_NAME = "KVPN";
 
 // Change Stream URL Here, Supports, ICECAST, ZENO, SHOUTCAST, RADIOJAR and any other stream service.
-const URL_STREAMING = "http://kvpn:8000/stream";
+const URL_STREAMING = "https://stream.pvpjamz.com"; //https://stream.pvpjamz.com
 
 //API URL /
-const PlayerData = "playlist.json";
+const PlayerData = "./playlist.json";
 
 let userInteracted = true;
 
@@ -18,10 +18,10 @@ window.addEventListener("load", () => {
   page.changeTitlePage();
   page.setVolume();
 
-  const player = new Player();
-  // player.play();
-
   getStreamingData();
+
+  const player = new Player();
+  player.play();
 
   // Define interval te renew playlist data in millisecsonds
   const streamingInterval = setInterval(getStreamingData, 10000);
@@ -42,16 +42,13 @@ class Page {
         song !== currentSong.textContent ||
         artist !== currentArtist.textContent
       ) {
-        // Esmaecer o conteúdo existente (fade-out)
         currentSong.classList.add("fade-out");
         currentArtist.classList.add("fade-out");
 
         setTimeout(function () {
-          // Atualizar o conteúdo após o fade-out
           currentSong.textContent = song;
           currentArtist.textContent = artist;
 
-          // Esmaecer o novo conteúdo (fade-in)
           currentSong.classList.remove("fade-out");
           currentSong.classList.add("fade-in");
           currentArtist.classList.remove("fade-out");
@@ -59,7 +56,6 @@ class Page {
         }, 500);
 
         setTimeout(function () {
-          // Remover as classes fade-in após a animação
           currentSong.classList.remove("fade-in");
           currentArtist.classList.remove("fade-in");
         }, 1000);
@@ -77,7 +73,6 @@ class Page {
     this.setVolume = function () {
       if (typeof Storage !== "undefined") {
         const volumeLocalStorage = localStorage.getItem("volume") || 20;
-
         document.getElementById("volume").value = volumeLocalStorage;
       }
     };
@@ -116,7 +111,7 @@ async function getStreamingData() {
             }))
           : data.Next;
 
-        console.log("Toplay Array:", toplayArray);
+        // console.log("Toplay Array:", toplayArray);
 
         const maxToplayToDisplay = 5; // Adjust as needed
         const limitedToplay = toplayArray.slice(
@@ -148,7 +143,7 @@ async function getStreamingData() {
             }))
           : data.Last;
 
-        console.log("History Array:", historyArray);
+        // console.log("History Array:", historyArray);
 
         const maxHistoryToDisplay = 3; // Adjust as needed
         const limitedHistory = historyArray.slice(
@@ -188,15 +183,15 @@ async function fetchStreamingData(apiUrl) {
     const response = await fetch(apiUrl);
     if (!response.ok) {
       throw new Error(
-        `Erro na requisição da API: ${response.status} ${response.statusText}`
+        "Error stream url: ${response.status} ${response.statusText}"
       );
     }
 
     const data = await response.json();
-    console.log(data);
+    // console.log(data);
     return data;
   } catch (error) {
-    console.log("Erro ao buscar dados de streaming da API:", error);
+    console.log("Error stream url:", error);
     return null; // Retorna null em caso de erro
   }
 }
@@ -211,9 +206,8 @@ function changeImageSize(url, size) {
 
 // AUDIO
 
-// Variável global para armazenar as músicas
-// var audio = new Audio(URL_STREAMING);
-var audio = new Audio();
+// Variable for playing the audio stream url
+var audio = new Audio(URL_STREAMING);
 
 // Player control
 class Player {
@@ -232,9 +226,10 @@ class Player {
       } else {
         audio.volume = intToDecimal(defaultVolume);
       }
-      // document.getElementById("volIndicator").innerHTML = defaultVolume;
 
-      togglePlay(); // Adiciona esta linha para atualizar o botão
+      togglePlay();
+
+      getStreamingData();
     };
 
     this.pause = function () {
@@ -271,9 +266,7 @@ audio.onvolumechange = function () {
 };
 
 audio.onerror = function () {
-  var confirmacao = confirm(
-    "Stream Down / Network Error. \nClick OK to try again."
-  );
+  var confirmacao = alert("Stream Down / Network Error.");
 
   if (confirmacao) {
     window.location.reload();
