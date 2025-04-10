@@ -1,17 +1,10 @@
 const RADIO_NAME = "KVPN";
-
 // Change Stream URL Here, Supports, ICECAST, ZENO, SHOUTCAST, RADIOJAR and any other stream service.
-const URL_STREAMING = "https://stream.pvpjamz.com"; //https://stream.pvpjamz.com
-
-//API URL /
-const PlayerData = "./playlist.json";
-
-let userInteracted = true;
+const URL_STREAMING = "https://k-one.pvpjamz.com"; //https://stream.pvpjamz.com
+//P laylist data json url
+const PlayerData = "https://eajt.nl/kvpn/playlist.json";
 
 let musicaAtual = null;
-
-// Cache para a API do iTunes
-const cache = {};
 
 window.addEventListener("load", () => {
   const page = new Page();
@@ -21,9 +14,10 @@ window.addEventListener("load", () => {
   getStreamingData();
 
   const player = new Player();
-  player.play();
+  // Start the player onload, but most browsers will block autoplay
+  // player.play();
 
-  // Define interval te renew playlist data in millisecsonds
+  // Define interval to renew playlist data in millisecsonds
   const streamingInterval = setInterval(getStreamingData, 10000);
 });
 
@@ -34,7 +28,7 @@ class Page {
       document.title = title;
     };
 
-    this.refreshCurrentSong = function (song, artist) {
+    this.refreshCurrentSong = function (song, artist, duration) {
       const currentSong = document.getElementById("currentSong");
       const currentArtist = document.getElementById("currentArtist");
 
@@ -48,21 +42,23 @@ class Page {
         setTimeout(function () {
           currentSong.textContent = song;
           currentArtist.textContent = artist;
+          currentDuration.textContent = duration;
 
           currentSong.classList.remove("fade-out");
           currentSong.classList.add("fade-in");
           currentArtist.classList.remove("fade-out");
           currentArtist.classList.add("fade-in");
+          currentDuration.classList.remove("fade-out");
+          currentDuration.classList.add("fade-in");
         }, 500);
 
         setTimeout(function () {
           currentSong.classList.remove("fade-in");
           currentArtist.classList.remove("fade-in");
+          currentDuration.classList.remove("fade-in");
         }, 1000);
       }
     };
-
-    const defaultCoverArt = "img/cover.png";
 
     this.changeVolumeIndicator = function (volume) {
       if (typeof Storage !== "undefined") {
@@ -95,11 +91,18 @@ async function getStreamingData() {
       const safeCurrentArtist = (currentArtist || "")
         .replace(/'/g, "'")
         .replace(/&/g, "&");
+      const safeCurrentDuration = (currentDuration || "")
+        .replace(/'/g, "'")
+        .replace(/&/g, "&");
 
       if (safeCurrentSong !== musicaAtual) {
-        document.title = `${safeCurrentSong} - ${safeCurrentArtist} | ${RADIO_NAME}`;
+        document.title = `${RADIO_NAME} | ${safeCurrentSong} - ${safeCurrentArtist}`;
 
-        page.refreshCurrentSong(safeCurrentSong, safeCurrentArtist);
+        page.refreshCurrentSong(
+          safeCurrentSong,
+          safeCurrentArtist,
+          safeCurrentDuration
+        );
 
         const toplayContainer = document.getElementById("toplaySong");
         toplayContainer.innerHTML = "";
@@ -163,11 +166,6 @@ async function getStreamingData() {
                         </div>
                       `;
           historicContainer.appendChild(article);
-          // try {
-          //   page.refreshHistoric(songInfo, i);
-          // } catch (error) {
-          //   console.error("Error refreshing historic song:", error);
-          // }
         }
         musicaAtual = safeCurrentSong;
       }
@@ -177,13 +175,12 @@ async function getStreamingData() {
   }
 }
 
-// Função para buscar dados de streaming de uma API específica
 async function fetchStreamingData(apiUrl) {
   try {
     const response = await fetch(apiUrl);
     if (!response.ok) {
       throw new Error(
-        "Error stream url: ${response.status} ${response.statusText}"
+        `Error stream url: ${response.status} ${response.statusText}`
       );
     }
 
@@ -191,12 +188,11 @@ async function fetchStreamingData(apiUrl) {
     // console.log(data);
     return data;
   } catch (error) {
-    console.log("Error stream url:", error);
-    return null; // Retorna null em caso de erro
+    console.log("Error playlistdata laden:", error);
+    return null;
   }
 }
 
-// Função para alterar o tamanho da imagem do iTunes
 function changeImageSize(url, size) {
   const parts = url.split("/");
   const filename = parts.pop();
@@ -266,7 +262,9 @@ audio.onvolumechange = function () {
 };
 
 audio.onerror = function () {
-  var confirmacao = alert("Stream Down / Network Error.");
+  var confirmacao = confirm(
+    "Stream Down or network error. Try loading it again?"
+  );
 
   if (confirmacao) {
     window.location.reload();
@@ -331,57 +329,57 @@ function mute() {
   }
 }
 
-document.addEventListener("keydown", function (event) {
-  var key = event.key;
-  var slideVolume = document.getElementById("volume");
-  var page = new Page();
+// document.addEventListener("keydown", function (event) {
+//   var key = event.key;
+//   var slideVolume = document.getElementById("volume");
+//   var page = new Page();
 
-  switch (key) {
-    // Arrow up
-    case "ArrowUp":
-      volumeUp();
-      slideVolume.value = decimalToInt(audio.volume);
-      page.changeVolumeIndicator(decimalToInt(audio.volume));
-      break;
-    // Arrow down
-    case "ArrowDown":
-      volumeDown();
-      slideVolume.value = decimalToInt(audio.volume);
-      page.changeVolumeIndicator(decimalToInt(audio.volume));
-      break;
-    // Spacebar
-    case " ":
-    case "Spacebar":
-      togglePlay();
-      break;
-    // P
-    case "p":
-    case "P":
-      togglePlay();
-      break;
-    // M
-    case "m":
-    case "M":
-      mute();
-      break;
-    // Numeric keys 0-9
-    case "0":
-    case "1":
-    case "2":
-    case "3":
-    case "4":
-    case "5":
-    case "6":
-    case "7":
-    case "8":
-    case "9":
-      var volumeValue = parseInt(key);
-      audio.volume = volumeValue / 10;
-      slideVolume.value = volumeValue * 10;
-      page.changeVolumeIndicator(volumeValue * 10);
-      break;
-  }
-});
+//   switch (key) {
+//     // Arrow up
+//     case "ArrowUp":
+//       volumeUp();
+//       slideVolume.value = decimalToInt(audio.volume);
+//       page.changeVolumeIndicator(decimalToInt(audio.volume));
+//       break;
+//     // Arrow down
+//     case "ArrowDown":
+//       volumeDown();
+//       slideVolume.value = decimalToInt(audio.volume);
+//       page.changeVolumeIndicator(decimalToInt(audio.volume));
+//       break;
+//     // Spacebar
+//     case " ":
+//     case "Spacebar":
+//       togglePlay();
+//       break;
+//     // P
+//     case "p":
+//     case "P":
+//       togglePlay();
+//       break;
+//     // M
+//     case "m":
+//     case "M":
+//       mute();
+//       break;
+//     // Numeric keys 0-9
+//     case "0":
+//     case "1":
+//     case "2":
+//     case "3":
+//     case "4":
+//     case "5":
+//     case "6":
+//     case "7":
+//     case "8":
+//     case "9":
+//       var volumeValue = parseInt(key);
+//       audio.volume = volumeValue / 10;
+//       slideVolume.value = volumeValue * 10;
+//       page.changeVolumeIndicator(volumeValue * 10);
+//       break;
+//   }
+// });
 
 function intToDecimal(vol) {
   return vol / 100;

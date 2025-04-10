@@ -33,8 +33,17 @@
                     <div class="col-12"></div>
                     <div class="col-12">
                       <div class="info-current-song text-center">
-                        <p id="currentSong" class="current-song text-uppercase">
+                        <p
+                          id="currentSong"
+                          class="current-song text-uppercase d-inline-flex"
+                        >
                           Loading...
+                        </p>
+                        <p
+                          id="currentDuration"
+                          class="current-duration d-inline mx-3"
+                        >
+                          00:00
                         </p>
                         <p
                           id="currentArtist"
@@ -53,7 +62,7 @@
                             onclick="togglePlay()"
                           ></i>
                         </div>
-                        <div class="col-12">
+                        <div class="col-12 d-none">
                           <div
                             class="row volume-control justify-content-center"
                           >

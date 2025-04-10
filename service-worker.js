@@ -3,10 +3,10 @@ const CACHE_NAME = "web-radio-v1";
 
 // files and folders to cache
 const urlsToCache = [
-  // "./",
-  // "./index.html",
-  // "./css/style.css",
-  // "./js/script.js",
+  "./",
+  "./index.html",
+  "./css/style.css",
+  "./js/script.js",
   "./img/cover.png",
   "./img/b-kvpn-square.png",
 ];
