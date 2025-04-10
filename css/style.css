@@ -185,6 +185,12 @@ body {
   border-radius: 20px;
 }
 
+.copyright {
+  font-size: 0.8em;
+  color: #fff;
+  text-align: center;
+  margin-top: 1em;
+}
 .modal-content .btn {
   border-radius: 20px;
   background-color: #00e1e7;

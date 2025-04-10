@@ -1,4 +1,6 @@
-# HTML5 Icecast/Shoutcast Full Page Radio Player with PWA Support based on Jailsons radiopl;ayer
+# HTML5 Icecast/Shoutcast Full Page Radiologik Player with PWA Support
+
+# Based on Jailsons radioplayer, but simplified in layout
 
 # (https://github.com/jailsonsb2/RadioPlayer-All-Streams/blob/main/js/script.js)
 
@@ -12,15 +14,15 @@
 
 Open The [Script.js] file and edit the lines Below.
 
-// RADIO NAME
-const RADIO_NAME = '...';
+    // RADIO NAME
+    const RADIO_NAME = '...';
 
-// Change Stream URL Here, Supports, ICECAST, ZENO, SHOUTCAST, RADIOJAR and any other stream service.
-const URL_STREAMING = '...';
-// Playlist data json url
-const PlayerData = "...";
+    // Change Stream URL Here, Supports, ICECAST, ZENO, SHOUTCAST, RADIOJAR and any other stream service.
+    const URL_STREAMING = '...';
+    // Playlist data json url
+    const PlayerData = "...";
 
-## Change Logo.
+## Change Logo
 
 Open The img folder and add your logo named "cover.png"
 

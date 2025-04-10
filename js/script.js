@@ -17,8 +17,11 @@ window.addEventListener("load", () => {
   // Start the player onload, but most browsers will block autoplay
   // player.play();
 
+  const copy = document.getElementById("copy");
   // Define interval to renew playlist data in millisecsonds
   const streamingInterval = setInterval(getStreamingData, 10000);
+  let jaar = new Date().getFullYear();
+  copy.textContent = "RL Player | ©" + jaar + " " + RADIO_NAME;
 });
 
 // DOM control
