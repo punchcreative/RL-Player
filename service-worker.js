@@ -3,12 +3,11 @@ const CACHE_NAME = "rl-player-v1";
 
 // files and folders to cache
 const urlsToCache = [
-  // "./",
-  // "./index.html",
-  // "./css/style.css",
-  // "./js/script.js",
-  "./img/cover.png",
-  "./img/background.png",
+  // "index.html",
+  // "css/style.css",
+  // "js/script.js",
+  "img/cover.png",
+  "img/background.png",
 ];
 
 self.addEventListener("install", function (event) {

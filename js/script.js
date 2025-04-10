@@ -2,26 +2,27 @@ const RADIO_NAME = "KVPN";
 // Change Stream URL Here, Supports, ICECAST, ZENO, SHOUTCAST, RADIOJAR and any other stream service.
 const URL_STREAMING = "https://k-one.pvpjamz.com"; //https://stream.pvpjamz.com
 // Playlist data json url
-const PlayerData = "https://eajt.nl/kvpn/playlist.json";
+const PlayerData = "./playlist.json";
 
 let musicaAtual = null;
 
 window.addEventListener("load", () => {
+  console.log("Page loaded");
   const page = new Page();
   page.changeTitlePage();
   page.setVolume();
-
-  getStreamingData();
 
   const player = new Player();
   // Start the player onload, but most browsers will block autoplay
   // player.play();
 
-  const copy = document.getElementById("copy");
-  // Define interval to renew playlist data in millisecsonds
+  // Load playlist data
+  getStreamingData();
+
+  setCopyright();
+
+  // Set timer for renewing playlist info
   const streamingInterval = setInterval(getStreamingData, 10000);
-  let jaar = new Date().getFullYear();
-  copy.textContent = "RL Player | ©" + jaar + " " + RADIO_NAME;
 });
 
 // DOM control
@@ -87,6 +88,8 @@ async function getStreamingData() {
       const currentSong = data.Current.Title;
       const currentArtist = data.Current.Artist;
       const currentDuration = data.Current.Duration;
+      // console.log("getStreamingData - Current Song:", currentSong);
+      // console.log("getStreamingData - Current Artist:", currentArtist);
 
       const safeCurrentSong = (currentSong || "")
         .replace(/'/g, "'")
@@ -107,6 +110,7 @@ async function getStreamingData() {
           safeCurrentDuration
         );
 
+        // Display what is comming up next
         const toplayContainer = document.getElementById("toplaySong");
         toplayContainer.innerHTML = "";
 
@@ -139,6 +143,7 @@ async function getStreamingData() {
           toplayContainer.appendChild(article);
         }
 
+        // Display the last played songs
         const historicContainer = document.getElementById("historicSong");
         historicContainer.innerHTML = "";
 
@@ -183,7 +188,7 @@ async function fetchStreamingData(apiUrl) {
     const response = await fetch(apiUrl);
     if (!response.ok) {
       throw new Error(
-        `Error stream url: ${response.status} ${response.statusText}`
+        `Error fetching playlist: ${response.status} ${response.statusText}`
       );
     }
 
@@ -191,30 +196,21 @@ async function fetchStreamingData(apiUrl) {
     // console.log(data);
     return data;
   } catch (error) {
-    console.log("Error playlistdata laden:", error);
+    console.log("fetchStreamingData error:", error);
     return null;
   }
 }
 
-function changeImageSize(url, size) {
-  const parts = url.split("/");
-  const filename = parts.pop();
-  const newFilename = `${size}${filename.substring(filename.lastIndexOf("."))}`;
-  return parts.join("/") + "/" + newFilename;
-}
-
-// AUDIO
-
-// Variable for playing the audio stream url
+// AUDIO PLAYER
+// Variable audio for handling the audio events
 var audio = new Audio(URL_STREAMING);
 
 // Player control
 class Player {
   constructor() {
     this.play = function () {
-      audio.play();
-
-      var defaultVolume = document.getElementById("volume").value;
+      // Set volume level to start with, get it from the input fields value in index.html
+      var defaultVolume = 20; //document.getElementById("volume").value;
 
       if (typeof Storage !== "undefined") {
         if (localStorage.getItem("volume") !== null) {
@@ -224,7 +220,11 @@ class Player {
         }
       } else {
         audio.volume = intToDecimal(defaultVolume);
+        page.changeVolumeIndicator(audio.volume);
       }
+
+      // audio.play();
+      // audio.muted = false;
 
       togglePlay();
 
@@ -257,7 +257,7 @@ audio.onpause = function () {
   }
 };
 
-// Unmute when volume changed
+//Unmute when volume changed
 audio.onvolumechange = function () {
   if (audio.volume > 0) {
     audio.muted = false;
@@ -276,7 +276,6 @@ audio.onerror = function () {
 
 document.getElementById("volume").oninput = function () {
   audio.volume = intToDecimal(this.value);
-
   var page = new Page();
   page.changeVolumeIndicator(this.value);
 };
@@ -290,15 +289,22 @@ function togglePlay() {
     playerButton.classList.add("fa-play-circle");
     playerButton.style.textShadow = "0 0 5px black";
     audio.pause();
+    console.log("Audio paused");
   } else {
     playerButton.classList.remove("fa-play-circle");
     playerButton.classList.add("fa-pause-circle");
     playerButton.style.textShadow = "0 0 5px black";
-    audio.load();
+    //audio.load(); // Do not use this when streaming.
     audio.play();
+    console.log("Audio playing");
   }
 }
 
+function setCopyright() {
+  const copy = document.getElementById("copy");
+  let jaar = new Date().getFullYear();
+  copy.textContent = "RL Player | ©" + jaar + " " + RADIO_NAME;
+}
 function volumeUp() {
   var vol = audio.volume;
   if (audio) {
