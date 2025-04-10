@@ -1,7 +1,7 @@
 const RADIO_NAME = "KVPN";
 // Change Stream URL Here, Supports, ICECAST, ZENO, SHOUTCAST, RADIOJAR and any other stream service.
 const URL_STREAMING = "https://k-one.pvpjamz.com"; //https://stream.pvpjamz.com
-//P laylist data json url
+// Playlist data json url
 const PlayerData = "https://eajt.nl/kvpn/playlist.json";
 
 let musicaAtual = null;
