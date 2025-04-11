@@ -136,19 +136,22 @@ body {
 
 .volume-icon {
   font-size: 0.4em !important;
-  margin-top: -4px;
+  /* margin-top: -4px; */
   text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
   border: none;
+  vertical-align: middle;
 }
 
 .volume-slide {
   text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5);
+  vertical-align: middle;
+  margin-bottom: 0.6em;
 }
 
 .volume-control {
   /* display: none; */
-  padding: 10px;
-  border-radius: 5px;
+  /* padding: 10px; */
+  border-radius: 3px;
 }
 
 .volume-slide input[type="range"]::-webkit-slider-runnable-track {
@@ -285,9 +288,6 @@ input[type="range"]::-ms-thumb {
 .info-current-song {
   margin-top: 1em;
 }
-.volume-slide {
-  /* margin-bottom: 1em; */
-}
 
 .playlist-part.current-title,
 .playlist-part.historic-title {
@@ -310,10 +310,10 @@ input[type="range"]::-ms-thumb {
 .toplay {
   margin-top: 2em;
   margin-bottom: 2em;
-  opacity: 0.4;
+  opacity: 0.6;
 }
 .historic {
-  opacity: 0.3;
+  opacity: 0.5;
 }
 
 .historic article,
@@ -425,18 +425,6 @@ input[type="range"]::-ms-thumb {
     margin-top: 20px;
     text-align: left;
   }
-
-  .volume-control {
-    /* margin-top: 1em; */
-  }
-
-  .volume-control {
-    display: flex;
-  }
-
-  /* .call-lyrics {
-    margin-top: 20px;
-  } */
 }
 
 #buttonPlay {

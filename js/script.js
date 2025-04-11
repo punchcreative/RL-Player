@@ -12,10 +12,6 @@ window.addEventListener("load", () => {
   page.changeTitlePage();
   page.setVolume();
 
-  const player = new Player();
-  // Start the player onload, but most browsers will block autoplay
-  // player.play();
-
   // Load playlist data
   getStreamingData();
 
@@ -23,6 +19,9 @@ window.addEventListener("load", () => {
 
   // Set timer for renewing playlist info
   const streamingInterval = setInterval(getStreamingData, 10000);
+  const player = new Player();
+  // Start the player onload, but most browsers will block autoplay
+  // player.pause();
 });
 
 // DOM control
@@ -211,6 +210,7 @@ class Player {
     this.play = function () {
       // Set volume level to start with, get it from the input fields value in index.html
       var defaultVolume = 20; //document.getElementById("volume").value;
+      audio.volume = intToDecimal(defaultVolume);
 
       if (typeof Storage !== "undefined") {
         if (localStorage.getItem("volume") !== null) {
@@ -223,8 +223,8 @@ class Player {
         page.changeVolumeIndicator(audio.volume);
       }
 
-      // audio.play();
-      // audio.muted = false;
+      audio.play();
+      audio.muted = false;
 
       togglePlay();
 
@@ -305,6 +305,7 @@ function setCopyright() {
   let jaar = new Date().getFullYear();
   copy.textContent = "RL Player | ©" + jaar + " " + RADIO_NAME;
 }
+
 function volumeUp() {
   var vol = audio.volume;
   if (audio) {

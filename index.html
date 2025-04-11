@@ -61,14 +61,14 @@
                             onclick="togglePlay()"
                           ></i>
                         </div>
-                        <div class="col-12 volume-control-elements">
+                        <div class="col-12 volume-control-elements d-none d-md-block">
                           <div
-                            class="row volume-control justify-content-center"
+                            class="row volume-control align-items-center justify-content-center"
                           >
-                            <div class="volume-icon col-2 col-md-1">
+                            <div class="volume-icon col-2 col-md-2">
                               <i class="fa fa-volume-up"></i>
                             </div>
-                            <div class="volume-slide col-8 col-md-5">
+                            <div class="volume-slide col-8 col-md-6">
                               <input
                                 type="range"
                                 id="volume"
@@ -118,8 +118,8 @@
       src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js"
     ></script>
     <script type="text/javascript" src="js/bootstrap.min.js"></script>
-    <script type="text/javascript" src="js/script.js"></script>
-    <!-- <script>
+    <script type="text/javascript" src="js/script.js" defer></script>
+    <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", function () {
           navigator.serviceWorker.register("service-worker.js").then(
@@ -132,6 +132,6 @@
           );
         });
       }
-    </script> -->
+    </script>
   </body>
 </html>

@@ -1,10 +1,25 @@
 {
+  "manifest_version": 3,
   "name": "KVPN Mixed Cloud Music",
   "short_name": "KVPN",
-  "start_url": "index.html",
+  "description": "KVPN Mixed Cloud Music",
+  "version": "1.0.0",
+  "author": "Erik Kroon",
+  "permissions": ["storage", "activeTab", "scripting", "webRequest"],
+  "start_url": "https://eajt.nl/kvpn/",
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "img/icon-16.png",
+      "48": "img/icon-48.png",
+      "128": "img/icon-128.png"
+    }
+  },
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#555555",
-  "theme_color": "#555555",
+  "orientation": "portrait",
+  "background_color": "#282828",
+  "theme_color": "#0071BC",
   "icons": [
     {
       "src": "img/cover.png",
