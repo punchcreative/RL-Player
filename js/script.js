@@ -5,7 +5,7 @@ const URL_STREAMING = "https://k-one.pvpjamz.com"; //https://stream.pvpjamz.com
 const PlayerData = "./playlist.json";
 
 let musicaAtual = null;
-let audio = new Audio(); // Global variable for the audio element
+let audio; // Global variable for the audio element
 
 window.addEventListener("load", () => {
   console.log("Page loaded");
@@ -89,6 +89,13 @@ async function getStreamingData() {
       // console.log("getStreamingData - Current Song:", currentSong);
       // console.log("getStreamingData - Current Artist:", currentArtist);
 
+      if (currentSong.length > 25) {
+        var string = currentSong;
+        var length = 25;
+        const trimmedString = string.substring(0, length) + "...";
+        currentSong = trimmedString;
+      }
+
       const safeCurrentSong = (currentSong || "")
         .replace(/'/g, "'")
         .replace(/&/g, "&");
@@ -131,6 +138,12 @@ async function getStreamingData() {
           const textSize = "text-size-" + i;
           const article = document.createElement("article");
           article.classList.add("col-12");
+          if (songInfo.Title.length > 20) {
+            var string = songInfo.Title;
+            var length = 20;
+            const trimmedString = string.substring(0, length) + "...";
+            songInfo.Title = trimmedString;
+          }
           article.innerHTML = `
                         <div class="music-info text-center">
                           <p class="song ${textSize}">${
@@ -164,6 +177,12 @@ async function getStreamingData() {
           const textSize = "text-size-" + i;
           const article = document.createElement("article");
           article.classList.add("col-12");
+          if (songInfo.Title.length > 20) {
+            var string = songInfo.Title;
+            var length = 20;
+            const trimmedString = string.substring(0, length) + "...";
+            songInfo.Title = trimmedString;
+          }
           article.innerHTML = `
                         <div class="music-info text-center">
                           <p class="song ${textSize}">${
@@ -205,11 +224,11 @@ function setCopyright() {
     var appName = manifest.name;
     var appDescription = manifest.description;
     var appAuthor = manifest.author;
-    var appCopyright = manifest.copyright;
+
     var copy = document.getElementById("copy");
     let jaar = new Date().getFullYear();
     copy.textContent =
-      appName + " " + appVersion + " | ©" + jaar + " " + appCopyright;
+      appName + " " + appVersion + " | ©" + jaar + " " + appAuthor;
   }).fail(function () {
     console.log("Offline is not ideal for this app.");
   });
@@ -244,9 +263,7 @@ function setupAudioPlayer() {
   audio.preload = "auto"; // Preload the audio for faster playback
   audio.autoplay = false; // Autoplay is disabled for user interaction
   audio.loop = false; // Disable looping for streaming
-  audio.volume = 0.2; // Set default volume to 20%
   audio.muted = false; // Ensure audio is not muted
-  audio.controls = false; // Hide default control
 }
 
 // Player control
@@ -289,71 +306,71 @@ audio.onplay = function () {
   }
 };
 
-// // On pause, change the button to play
-// audio.onpause = function () {
-//   var botao = document.getElementById("playerButton");
-//   var bplay = document.getElementById("buttonPlay");
-//   if (botao.className === "fa fa-pause") {
-//     botao.className = "fa fa-play";
-//     bplay.firstChild.data = "PLAY";
-//   }
-// };
+// On pause, change the button to play
+audio.onpause = function () {
+  var botao = document.getElementById("playerButton");
+  var bplay = document.getElementById("buttonPlay");
+  if (botao.className === "fa fa-pause") {
+    botao.className = "fa fa-play";
+    bplay.firstChild.data = "PLAY";
+  }
+};
 
-// //Unmute when volume changed
-// audio.onvolumechange = function () {
-//   if (audio.volume > 0) {
-//     audio.muted = false;
-//   }
-// };
+//Unmute when volume changed
+audio.onvolumechange = function () {
+  if (audio.volume > 0) {
+    audio.muted = false;
+  }
+};
 
-// audio.onerror = function () {
-//   var confirmacao = confirm(
-//     "Stream Down or network error. Try loading it again?"
-//   );
+audio.onerror = function () {
+  var confirmacao = confirm(
+    "Stream Down or network error. Try loading it again?"
+  );
 
-//   if (confirmacao) {
-//     window.location.reload();
-//   }
-// };
+  if (confirmacao) {
+    window.location.reload();
+  }
+};
 
-// document.getElementById("volume").oninput = function () {
-//   audio.volume = intToDecimal(this.value);
-//   var page = new Page();
-//   page.changeVolumeIndicator(this.value);
-// };
+document.getElementById("volume").oninput = function () {
+  audio.volume = intToDecimal(this.value);
+  var page = new Page();
+  page.changeVolumeIndicator(this.value);
+};
 
-// function volumeUp() {
-//   var vol = audio.volume;
-//   if (audio) {
-//     if (audio.volume >= 0 && audio.volume < 1) {
-//       audio.volume = (vol + 0.01).toFixed(2);
-//     }
-//   }
-// }
+function volumeUp() {
+  var vol = audio.volume;
+  if (audio) {
+    if (audio.volume >= 0 && audio.volume < 1) {
+      audio.volume = (vol + 0.01).toFixed(2);
+    }
+  }
+}
 
-// function volumeDown() {
-//   var vol = audio.volume;
-//   if (audio) {
-//     if (audio.volume >= 0.01 && audio.volume <= 1) {
-//       audio.volume = (vol - 0.01).toFixed(2);
-//     }
-//   }
-// }
+function volumeDown() {
+  var vol = audio.volume;
+  if (audio) {
+    if (audio.volume >= 0.01 && audio.volume <= 1) {
+      audio.volume = (vol - 0.01).toFixed(2);
+    }
+  }
+}
 
-// function mute() {
-//   if (!audio.muted) {
-//     // document.getElementById("volIndicator").innerHTML = 0;
-//     document.getElementById("volume").value = 0;
-//     audio.volume = 0;
-//     audio.muted = true;
-//   } else {
-//     var localVolume = localStorage.getItem("volume");
-//     // document.getElementById("volIndicator").innerHTML = localVolume;
-//     document.getElementById("volume").value = localVolume;
-//     audio.volume = intToDecimal(localVolume);
-//     audio.muted = false;
-//   }
-// }
+function mute() {
+  if (!audio.muted) {
+    // document.getElementById("volIndicator").innerHTML = 0;
+    document.getElementById("volume").value = 0;
+    audio.volume = 0;
+    audio.muted = true;
+  } else {
+    var localVolume = localStorage.getItem("volume");
+    // document.getElementById("volIndicator").innerHTML = localVolume;
+    document.getElementById("volume").value = localVolume;
+    audio.volume = intToDecimal(localVolume);
+    audio.muted = false;
+  }
+}
 
 function intToDecimal(vol) {
   return vol / 100;

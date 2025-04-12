@@ -10,15 +10,15 @@
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "img/icon-16.png",
-      "48": "img/icon-48.png",
-      "128": "img/icon-128.png"
+      "16": "img/cover.png",
+      "48": "img/cover.png",
+      "128": "img/cover.png"
     }
   },
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#282828",
+  "background_color": "#0071BC",
   "theme_color": "#0071BC",
   "icons": [
     {
