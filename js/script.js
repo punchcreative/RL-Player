@@ -260,7 +260,7 @@ function togglePlay() {
 function setupAudioPlayer() {
   audio = new Audio(URL_STREAMING);
   audio.crossOrigin = "anonymous"; // Fix CORS issue
-  audio.preload = "auto"; // Preload the audio for faster playback
+  audio.preload = "none"; // Preload the audio for faster playback
   audio.autoplay = false; // Autoplay is disabled for user interaction
   audio.loop = false; // Disable looping for streaming
   audio.muted = false; // Ensure audio is not muted

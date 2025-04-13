@@ -8,6 +8,7 @@ const urlsToCache = [
   // "js/script.js",
   "img/cover.png",
   "img/background.png",
+  "img/app-icon.png",
 ];
 
 self.addEventListener("install", function (event) {
