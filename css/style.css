@@ -35,7 +35,14 @@ body {
   justify-content: center;
   overflow-x: hidden;
 }
+#page-container {
+  position: relative;
+  min-height: 100vh;
+}
 
+#player {
+  padding-bottom: 2.5rem; /* Footer height */
+}
 .cover-site {
   min-width: 100%;
   min-height: 100%;
@@ -188,11 +195,17 @@ body {
   border-radius: 20px;
 }
 
+footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 2.5rem; /* Footer height */
+}
 .copyright {
   font-size: 0.8em;
   color: #fff;
   text-align: center;
-  margin-top: 1em;
+  /* margin-top: 0.3em; */
 }
 .modal-content .btn {
   border-radius: 20px;

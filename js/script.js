@@ -16,8 +16,6 @@ window.addEventListener("load", () => {
   // Load playlist data
   setCopyright();
 
-  // Set timer for renewing playlist info
-  const streamingInterval = setInterval(getStreamingData, 10000);
   const player = new Player();
   // Start the player onload, but most browsers will block autoplay
   // player.pause();
@@ -107,8 +105,6 @@ async function getStreamingData() {
         .replace(/&/g, "&");
 
       if (safeCurrentSong !== musicaAtual) {
-        document.title = `${RADIO_NAME} | ${safeCurrentSong} - ${safeCurrentArtist}`;
-
         page.refreshCurrentSong(
           safeCurrentSong,
           safeCurrentArtist,
@@ -193,6 +189,8 @@ async function getStreamingData() {
           historicContainer.appendChild(article);
         }
         musicaAtual = safeCurrentSong;
+
+        document.title = `${RADIO_NAME} | ${safeCurrentSong} - ${safeCurrentArtist}`;
       }
     }
   } catch (error) {
@@ -234,6 +232,9 @@ function setCopyright() {
   });
 
   getStreamingData();
+  // Set timer for renewing playlist info
+  const streamingInterval = setInterval(getStreamingData, 10000);
+
   setupAudioPlayer();
 }
 
@@ -246,14 +247,17 @@ function togglePlay() {
     playerButton.classList.add("fa-play-circle");
     playerButton.style.textShadow = "0 0 5px black";
     audio.pause();
-    console.log("Audio paused");
+    audio.suspend();
+    audio.src = ""; // This stops the stream from downloading
+    // console.log("Audio paused");
   } else {
     playerButton.classList.remove("fa-play-circle");
     playerButton.classList.add("fa-pause-circle");
     playerButton.style.textShadow = "0 0 5px black";
     //audio.load(); // Do not use this when streaming.
+    audio.src = URL_STREAMING; // This restarts the stream download
     audio.play();
-    console.log("Audio playing");
+    // console.log("Audio playing");
   }
 }
 
@@ -264,6 +268,43 @@ function setupAudioPlayer() {
   audio.autoplay = false; // Autoplay is disabled for user interaction
   audio.loop = false; // Disable looping for streaming
   audio.muted = false; // Ensure audio is not muted
+
+  // On play, change the button to pause
+  audio.onplay = function () {
+    var botao = document.getElementById("playerButton");
+    var bplay = document.getElementById("buttonPlay");
+    if (botao.className === "fa fa-play") {
+      botao.className = "fa fa-pause";
+      bplay.firstChild.data = "PAUSAR";
+    }
+  };
+
+  // On pause, change the button to play
+  audio.onpause = function () {
+    var botao = document.getElementById("playerButton");
+    var bplay = document.getElementById("buttonPlay");
+    if (botao.className === "fa fa-pause") {
+      botao.className = "fa fa-play";
+      bplay.firstChild.data = "PLAY";
+    }
+  };
+
+  //Unmute when volume changed
+  audio.onvolumechange = function () {
+    if (audio.volume > 0) {
+      audio.muted = false;
+    }
+  };
+
+  audio.onerror = function () {
+    var confirmacao = confirm(
+      "Stream Down or network error. Try loading it again?"
+    );
+
+    if (confirmacao) {
+      window.location.reload();
+    }
+  };
 }
 
 // Player control
@@ -296,47 +337,32 @@ class Player {
   }
 }
 
-// On play, change the button to pause
-audio.onplay = function () {
-  var botao = document.getElementById("playerButton");
-  var bplay = document.getElementById("buttonPlay");
-  if (botao.className === "fa fa-play") {
-    botao.className = "fa fa-pause";
-    bplay.firstChild.data = "PAUSAR";
-  }
-};
+// var sourceElement = document.querySelector("source");
+// var originalSourceUrl = sourceElement.getAttribute("src");
+// var audioElement = document.querySelector("audio");
 
-// On pause, change the button to play
-audio.onpause = function () {
-  var botao = document.getElementById("playerButton");
-  var bplay = document.getElementById("buttonPlay");
-  if (botao.className === "fa fa-pause") {
-    botao.className = "fa fa-play";
-    bplay.firstChild.data = "PLAY";
-  }
-};
+// function pause() {
+//     sourceElement.setAttribute("src", "");
+//     audioElement.pause();
+//     // settimeout, otherwise pause event is not raised normally
+//     setTimeout(function () {
+//         audioElement.load(); // This stops the stream from downloading
+//     });
+// }
 
-//Unmute when volume changed
-audio.onvolumechange = function () {
-  if (audio.volume > 0) {
-    audio.muted = false;
-  }
-};
-
-audio.onerror = function () {
-  var confirmacao = confirm(
-    "Stream Down or network error. Try loading it again?"
-  );
-
-  if (confirmacao) {
-    window.location.reload();
-  }
-};
+// function play() {
+//     if (!sourceElement.getAttribute("src")) {
+//         sourceElement.setAttribute("src", originalSourceUrl);
+//         audioElement.load(); // This restarts the stream download
+//     }
+//     audioElement.play();
+// }
 
 document.getElementById("volume").oninput = function () {
-  audio.volume = intToDecimal(this.value);
+  // audio.volume = intToDecimal(this.value);
   var page = new Page();
   page.changeVolumeIndicator(this.value);
+  audio.volume = intToDecimal(this.value);
 };
 
 function volumeUp() {

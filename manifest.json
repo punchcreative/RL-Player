@@ -3,7 +3,7 @@
   "name": "RL Player",
   "short_name": "RLP",
   "description": "Player for icecast with playlist data from Radiologik",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "author": "K zelf",
   "permissions": ["storage", "activeTab", "scripting", "webRequest"],
   "start_url": "https://eajt.nl/kvpn/",
