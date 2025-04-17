@@ -8,7 +8,6 @@ let musicaAtual = null;
 let audio; // Global variable for the audio element
 
 window.addEventListener("load", () => {
-  console.log("Page loaded");
   const page = new Page();
   page.changeTitlePage();
   page.setVolume();
@@ -17,8 +16,6 @@ window.addEventListener("load", () => {
   setCopyright();
 
   const player = new Player();
-  // Start the player onload, but most browsers will block autoplay
-  // player.pause();
 });
 
 // DOM control
@@ -81,7 +78,7 @@ async function getStreamingData() {
 
     if (data) {
       const page = new Page();
-      const currentSong = data.Current.Title;
+      var currentSong = data.Current.Title;
       const currentArtist = data.Current.Artist;
       const currentDuration = data.Current.Duration;
       // console.log("getStreamingData - Current Song:", currentSong);
@@ -90,7 +87,7 @@ async function getStreamingData() {
       if (currentSong.length > 25) {
         var string = currentSong;
         var length = 25;
-        const trimmedString = string.substring(0, length) + "...";
+        var trimmedString = string.substring(0, length) + "...";
         currentSong = trimmedString;
       }
 
@@ -137,7 +134,7 @@ async function getStreamingData() {
           if (songInfo.Title.length > 20) {
             var string = songInfo.Title;
             var length = 20;
-            const trimmedString = string.substring(0, length) + "...";
+            var trimmedString = string.substring(0, length) + "...";
             songInfo.Title = trimmedString;
           }
           article.innerHTML = `
@@ -176,7 +173,7 @@ async function getStreamingData() {
           if (songInfo.Title.length > 20) {
             var string = songInfo.Title;
             var length = 20;
-            const trimmedString = string.substring(0, length) + "...";
+            var trimmedString = string.substring(0, length) + "...";
             songInfo.Title = trimmedString;
           }
           article.innerHTML = `
@@ -257,6 +254,7 @@ function togglePlay() {
     //audio.load(); // Do not use this when streaming.
     audio.src = URL_STREAMING; // This restarts the stream download
     audio.play();
+    getStreamingData();
     // console.log("Audio playing");
   }
 }
@@ -268,6 +266,7 @@ function setupAudioPlayer() {
   audio.autoplay = false; // Autoplay is disabled for user interaction
   audio.loop = false; // Disable looping for streaming
   audio.muted = false; // Ensure audio is not muted
+  togglePlay(); // Set the initial state of the player button
 
   // On play, change the button to pause
   audio.onplay = function () {

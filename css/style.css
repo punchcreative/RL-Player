@@ -34,6 +34,7 @@ body {
   flex-flow: row;
   justify-content: center;
   overflow-x: hidden;
+  background-color: #031521;
 }
 #page-container {
   position: relative;

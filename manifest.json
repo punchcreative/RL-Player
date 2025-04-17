@@ -3,8 +3,13 @@
   "name": "RL Player",
   "short_name": "RLP",
   "description": "Player for icecast with playlist data from Radiologik",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "author": "K zelf",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#031521",
+  "theme_color": "#031521",
   "permissions": ["storage", "activeTab", "scripting", "webRequest"],
   "start_url": "https://eajt.nl/kvpn/",
   "action": {
@@ -15,11 +20,6 @@
       "128": "img/cover.png"
     }
   },
-  "scope": "./",
-  "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#347AEB",
-  "theme_color": "#347AEB",
   "icons": [
     {
       "src": "img/app-icon.png",
