@@ -3,7 +3,7 @@
   "name": "RL Player",
   "short_name": "RLP",
   "description": "Player for icecast with playlist data from Radiologik",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "author": "K zelf",
   "scope": "./",
   "display": "standalone",
