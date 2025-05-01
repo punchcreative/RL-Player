@@ -244,7 +244,7 @@ function togglePlay() {
     playerButton.classList.add("fa-play-circle");
     playerButton.style.textShadow = "0 0 5px black";
     audio.pause();
-    audio.suspend();
+    // audio.suspend();
     audio.src = ""; // This stops the stream from downloading
     // console.log("Audio paused");
   } else {
@@ -266,15 +266,23 @@ function setupAudioPlayer() {
   audio.autoplay = false; // Autoplay is disabled for user interaction
   audio.loop = false; // Disable looping for streaming
   audio.muted = false; // Ensure audio is not muted
-  togglePlay(); // Set the initial state of the player button
+  audio.volume = 0.2; // Set initial volume to 20%
 
+  localStorage.setItem("volume", "20");
+  document.getElementById("volume").value = 20;
+
+  // togglePlay(); // Set the initial state of the player button
+  audio.oncanplay = function () {
+    console.log("Audio can play through");
+    audio.play(); // Uncomment if you want to autoplay when ready
+  };
   // On play, change the button to pause
   audio.onplay = function () {
     var botao = document.getElementById("playerButton");
     var bplay = document.getElementById("buttonPlay");
     if (botao.className === "fa fa-play") {
       botao.className = "fa fa-pause";
-      bplay.firstChild.data = "PAUSAR";
+      bplay.firstChild.data = "PAUSE";
     }
   };
 
@@ -335,27 +343,6 @@ class Player {
     };
   }
 }
-
-// var sourceElement = document.querySelector("source");
-// var originalSourceUrl = sourceElement.getAttribute("src");
-// var audioElement = document.querySelector("audio");
-
-// function pause() {
-//     sourceElement.setAttribute("src", "");
-//     audioElement.pause();
-//     // settimeout, otherwise pause event is not raised normally
-//     setTimeout(function () {
-//         audioElement.load(); // This stops the stream from downloading
-//     });
-// }
-
-// function play() {
-//     if (!sourceElement.getAttribute("src")) {
-//         sourceElement.setAttribute("src", originalSourceUrl);
-//         audioElement.load(); // This restarts the stream download
-//     }
-//     audioElement.play();
-// }
 
 document.getElementById("volume").oninput = function () {
   // audio.volume = intToDecimal(this.value);
