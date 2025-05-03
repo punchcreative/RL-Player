@@ -271,11 +271,6 @@ function setupAudioPlayer() {
   localStorage.setItem("volume", "20");
   document.getElementById("volume").value = 20;
 
-  // togglePlay(); // Set the initial state of the player button
-  audio.oncanplay = function () {
-    console.log("Audio can play through");
-    audio.play(); // Uncomment if you want to autoplay when ready
-  };
   // On play, change the button to pause
   audio.onplay = function () {
     var botao = document.getElementById("playerButton");
@@ -312,6 +307,15 @@ function setupAudioPlayer() {
       window.location.reload();
     }
   };
+
+  player.play();
+
+  // togglePlay(); // Set the initial state of the player button
+
+  // audio.oncanplay = function () {
+  //   console.log("Audio can play now.");
+  //   audio.play(); // Uncomment if you want to autoplay when ready
+  // };
 }
 
 // Player control
@@ -334,7 +338,6 @@ class Player {
       audio.muted = false;
 
       togglePlay();
-
       // getStreamingData();
     };
 
