@@ -245,17 +245,18 @@ function togglePlay() {
     playerButton.style.textShadow = "0 0 5px black";
     audio.pause();
     // audio.suspend();
-    audio.src = ""; // This stops the stream from downloading
-    // console.log("Audio paused");
+    // audio.src = ""; // This stops the stream from downloading
+    console.log("toggelPlay: Audio paused");
   } else {
     playerButton.classList.remove("fa-play-circle");
     playerButton.classList.add("fa-pause-circle");
     playerButton.style.textShadow = "0 0 5px black";
     //audio.load(); // Do not use this when streaming.
     audio.src = URL_STREAMING; // This restarts the stream download
-    audio.play();
+    audio.play(); // Play the audio when it can play
+
     getStreamingData();
-    // console.log("Audio playing");
+    console.log("toggelPlay: Audio playing");
   }
 }
 
@@ -307,8 +308,6 @@ function setupAudioPlayer() {
       window.location.reload();
     }
   };
-
-  player.play();
 
   // togglePlay(); // Set the initial state of the player button
 
