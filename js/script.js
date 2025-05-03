@@ -3,21 +3,6 @@ const RADIO_NAME = "KVPN";
 const URL_STREAMING = "https://k-one.pvpjamz.com"; //https://stream.pvpjamz.com
 // Playlist data json url
 const PlayerData = "./playlist.json";
-
-let musicaAtual = null;
-let audio; // Global variable for the audio element
-
-window.addEventListener("load", () => {
-  const page = new Page();
-  page.changeTitlePage();
-  page.setVolume();
-
-  // Load playlist data
-  setCopyright();
-
-  const player = new Player();
-});
-
 // DOM control
 class Page {
   constructor() {
@@ -47,6 +32,12 @@ class Page {
           currentArtist.classList.add("fade-in");
           currentDuration.classList.remove("fade-out");
           currentDuration.classList.add("fade-in");
+
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: song,
+            artist: artist,
+            album: RADIO_NAME,
+          });
         }, 500);
 
         setTimeout(function () {
@@ -72,12 +63,25 @@ class Page {
   }
 }
 
+let page = new Page();
+
+let musicaAtual = null;
+let audio; // Global variable for the audio element
+
+window.addEventListener("load", () => {
+  page = new Page();
+  page.changeTitlePage();
+  page.setVolume();
+
+  setCopyright();
+});
+
 async function getStreamingData() {
   try {
     let data = await fetchStreamingData(PlayerData);
 
     if (data) {
-      const page = new Page();
+      // const page = new Page();
       var currentSong = data.Current.Title;
       const currentArtist = data.Current.Artist;
       const currentDuration = data.Current.Duration;
@@ -107,7 +111,6 @@ async function getStreamingData() {
           safeCurrentArtist,
           safeCurrentDuration
         );
-
         // Display what is comming up next
         const toplayContainer = document.getElementById("toplaySong");
         toplayContainer.innerHTML = "";
@@ -243,16 +246,17 @@ function togglePlay() {
     playerButton.classList.remove("fa-pause-circle");
     playerButton.classList.add("fa-play-circle");
     playerButton.style.textShadow = "0 0 5px black";
+
     audio.pause();
-    // audio.suspend();
     // audio.src = ""; // This stops the stream from downloading
     console.log("toggelPlay: Audio paused");
   } else {
     playerButton.classList.remove("fa-play-circle");
     playerButton.classList.add("fa-pause-circle");
     playerButton.style.textShadow = "0 0 5px black";
-    //audio.load(); // Do not use this when streaming.
+
     audio.src = URL_STREAMING; // This restarts the stream download
+
     audio.play(); // Play the audio when it can play
 
     getStreamingData();
@@ -269,8 +273,9 @@ function setupAudioPlayer() {
   audio.muted = false; // Ensure audio is not muted
   audio.volume = 0.2; // Set initial volume to 20%
 
-  localStorage.setItem("volume", "20");
-  document.getElementById("volume").value = 20;
+  // const page = new Page();
+  page.setVolume();
+  page.changeVolumeIndicator(decimalToInt(audio.volume));
 
   // On play, change the button to pause
   audio.onplay = function () {
@@ -300,21 +305,14 @@ function setupAudioPlayer() {
   };
 
   audio.onerror = function () {
-    var confirmacao = confirm(
+    var reactie = confirm(
       "Stream Down or network error. Try loading it again?"
     );
 
-    if (confirmacao) {
+    if (reactie) {
       window.location.reload();
     }
   };
-
-  // togglePlay(); // Set the initial state of the player button
-
-  // audio.oncanplay = function () {
-  //   console.log("Audio can play now.");
-  //   audio.play(); // Uncomment if you want to autoplay when ready
-  // };
 }
 
 // Player control
@@ -337,7 +335,7 @@ class Player {
       audio.muted = false;
 
       togglePlay();
-      // getStreamingData();
+      getStreamingData();
     };
 
     this.pause = function () {
@@ -347,8 +345,7 @@ class Player {
 }
 
 document.getElementById("volume").oninput = function () {
-  // audio.volume = intToDecimal(this.value);
-  var page = new Page();
+  // const page = new Page();
   page.changeVolumeIndicator(this.value);
   audio.volume = intToDecimal(this.value);
 };
