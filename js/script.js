@@ -33,18 +33,44 @@ class Page {
           currentDuration.classList.remove("fade-out");
           currentDuration.classList.add("fade-in");
 
-          navigator.mediaSession.metadata = new MediaMetadata({
-            title: song,
-            artist: artist,
-            album: RADIO_NAME,
-          });
-        }, 500);
+          if ("mediaSession" in navigator) {
+            navigator.mediaSession.metadata = new MediaMetadata({
+              title: song,
+              artist: artist,
+              album: RADIO_NAME,
+              artwork: [
+                {
+                  src: "https://eajt.nl/kvpn/albumart/art-00.jpg",
+                  sizes: "200x200",
+                  type: "image/jpg",
+                },
+              ],
+            });
+            navigator.mediaSession.setActionHandler("play", () => {
+              togglePlay();
+            });
+            navigator.mediaSession.setActionHandler("pause", () => {
+              togglePlay();
+            });
+            navigator.mediaSession.setActionHandler("stop", () => {
+              if (isPlaying) {
+                playerButton.classList.remove("fa-pause-circle");
+                playerButton.classList.add("fa-play-circle");
+                playerButton.style.textShadow = "0 0 5px black";
+
+                audio.pause();
+                audio.src = ""; // This stops the stream from downloading
+                // console.log("stop mediaelement triggered");
+              }
+            });
+          }
+        }, 100);
 
         setTimeout(function () {
           currentSong.classList.remove("fade-in");
           currentArtist.classList.remove("fade-in");
           currentDuration.classList.remove("fade-in");
-        }, 1000);
+        }, 200);
       }
     };
 
@@ -83,14 +109,18 @@ async function getStreamingData() {
     if (data) {
       // const page = new Page();
       var currentSong = data.Current.Title;
+      var charsToplayTitle = 25; // Number of characters to display
+      var charsPlayingTitle = 40; // Number of characters to display
+      var nrToplay = 5; // Number of songs to display
+      var nrHistory = 3; // Number of songs to display
       const currentArtist = data.Current.Artist;
       const currentDuration = data.Current.Duration;
       // console.log("getStreamingData - Current Song:", currentSong);
       // console.log("getStreamingData - Current Artist:", currentArtist);
 
-      if (currentSong.length > 25) {
+      if (currentSong.length > charsPlayingTitle) {
         var string = currentSong;
-        var length = 25;
+        var length = charsPlayingTitle;
         var trimmedString = string.substring(0, length) + "...";
         currentSong = trimmedString;
       }
@@ -124,7 +154,7 @@ async function getStreamingData() {
 
         // console.log("Toplay Array:", toplayArray);
 
-        const maxToplayToDisplay = 5; // Adjust as needed
+        const maxToplayToDisplay = nrToplay; // Adjust as needed
         const limitedToplay = toplayArray.slice(
           Math.max(0, toplayArray.length - maxToplayToDisplay)
         );
@@ -134,9 +164,9 @@ async function getStreamingData() {
           const textSize = "text-size-" + i;
           const article = document.createElement("article");
           article.classList.add("col-12");
-          if (songInfo.Title.length > 20) {
+          if (songInfo.Title.length > charsToplayTitle) {
             var string = songInfo.Title;
-            var length = 20;
+            var length = charsToplayTitle;
             var trimmedString = string.substring(0, length) + "...";
             songInfo.Title = trimmedString;
           }
@@ -163,7 +193,7 @@ async function getStreamingData() {
 
         // console.log("History Array:", historyArray);
 
-        const maxHistoryToDisplay = 3; // Adjust as needed
+        const maxHistoryToDisplay = nrHistory; // Adjust as needed
         const limitedHistory = historyArray.slice(
           Math.max(0, historyArray.length - maxHistoryToDisplay)
         );
@@ -173,9 +203,9 @@ async function getStreamingData() {
           const textSize = "text-size-" + i;
           const article = document.createElement("article");
           article.classList.add("col-12");
-          if (songInfo.Title.length > 20) {
+          if (songInfo.Title.length > charsToplayTitle) {
             var string = songInfo.Title;
-            var length = 20;
+            var length = charsToplayTitle;
             var trimmedString = string.substring(0, length) + "...";
             songInfo.Title = trimmedString;
           }
@@ -264,7 +294,7 @@ function togglePlay() {
   }
 }
 
-function setupAudioPlayer() {
+async function setupAudioPlayer() {
   audio = new Audio(URL_STREAMING);
   audio.crossOrigin = "anonymous"; // Fix CORS issue
   audio.preload = "none"; // Preload the audio for faster playback
@@ -272,6 +302,9 @@ function setupAudioPlayer() {
   audio.loop = false; // Disable looping for streaming
   audio.muted = false; // Ensure audio is not muted
   audio.volume = 0.2; // Set initial volume to 20%
+
+  console.log(audio.buffered);
+  console.log(audio.readyState);
 
   // const page = new Page();
   page.setVolume();
