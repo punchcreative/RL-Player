@@ -54,25 +54,19 @@ body {
   min-width: 100%;
   min-height: 100%;
   position: fixed;
-  background-image: url("../img/cover.png");
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-  background-color: #031521;
-  transition: background-image 1s;
-  background-attachment: fixed;
 }
 
 #bgCover {
   height: 100%;
   width: 100%;
   position: absolute;
+  background-image: url("../img/cover.png");
   background-repeat: no-repeat;
   background-size: cover;
-  /* background-position: center 20%;
-  filter: blur(75px);
-  -webkit-filter: blur(75px); */
+  background-position: center;
+  background-attachment: fixed;
+  background-color: #031521;
+  background-attachment: fixed;
   transition: all 0.5s linear;
   /* transform: scale(2.2); */
 
