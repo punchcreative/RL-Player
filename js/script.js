@@ -241,7 +241,9 @@ async function fetchStreamingData(apiUrl) {
     // console.log(data);
     return data;
   } catch (error) {
-    console.log("fetchStreamingData error:", error);
+    console.log("fetchStreamingData error", error);
+    // Handle the error here, e.g., show an error message to the user or log it
+    // You can also return a default value or null if needed
     return null;
   }
 }

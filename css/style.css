@@ -27,6 +27,13 @@ body {
   font-optical-sizing: auto;
   font-weight: 200;
   font-style: normal;
+  margin: 0;
+  line-height: inherit;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  box-sizing: border-box;
 }
 
 body {
@@ -34,7 +41,6 @@ body {
   flex-flow: row;
   justify-content: center;
   overflow-x: hidden;
-  background-color: #031521;
 }
 #page-container {
   position: relative;
@@ -48,10 +54,12 @@ body {
   min-width: 100%;
   min-height: 100%;
   position: fixed;
-  background-color: #031521;
-  background: url("../img/background.png") no-repeat;
-  background-position: center;
+  background-image: url("../img/cover.png");
+  background-repeat: no-repeat;
   background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-color: #031521;
   transition: background-image 1s;
   background-attachment: fixed;
 }
@@ -62,11 +70,11 @@ body {
   position: absolute;
   background-repeat: no-repeat;
   background-size: cover;
-  background-position: center 20%;
+  /* background-position: center 20%;
   filter: blur(75px);
-  -webkit-filter: blur(75px);
+  -webkit-filter: blur(75px); */
   transition: all 0.5s linear;
-  transform: scale(2.2);
+  /* transform: scale(2.2); */
 
   z-index: 1;
 }
