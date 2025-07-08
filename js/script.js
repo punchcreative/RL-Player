@@ -2,7 +2,7 @@ const RADIO_NAME = "KVPN";
 // Change Stream URL Here, Supports, ICECAST, ZENO, SHOUTCAST, RADIOJAR and any other stream service.
 const URL_STREAMING = "https://k-one.pvpjamz.com"; //https://stream.pvpjamz.com
 // Playlist data json url
-const PlayerData = "./playlist.json";
+const PlayerData = "playlist.json";
 // DOM control
 class Page {
   constructor() {
@@ -97,8 +97,8 @@ let audio; // Global variable for the audio element
 window.addEventListener("load", () => {
   page = new Page();
   page.changeTitlePage();
-  page.setVolume();
-
+  // page.setVolume();
+  getStreamingData();
   setCopyright();
 });
 
@@ -263,37 +263,11 @@ function setCopyright() {
     console.log("Offline is not ideal for this app.");
   });
 
-  getStreamingData();
+  // getStreamingData();
   // Set timer for renewing playlist info
-  const streamingInterval = setInterval(getStreamingData, 10000);
-
+  const streamingInterval = setInterval(getStreamingData, 5000);
+  console.log("fetching playlist.json");
   setupAudioPlayer();
-}
-
-function togglePlay() {
-  const playerButton = document.getElementById("playerButton");
-  const isPlaying = playerButton.classList.contains("fa-pause-circle");
-
-  if (isPlaying) {
-    playerButton.classList.remove("fa-pause-circle");
-    playerButton.classList.add("fa-play-circle");
-    playerButton.style.textShadow = "0 0 5px black";
-
-    audio.pause();
-    // audio.src = ""; // This stops the stream from downloading
-    console.log("toggelPlay: Audio paused");
-  } else {
-    playerButton.classList.remove("fa-play-circle");
-    playerButton.classList.add("fa-pause-circle");
-    playerButton.style.textShadow = "0 0 5px black";
-
-    audio.src = URL_STREAMING; // This restarts the stream download
-
-    audio.play(); // Play the audio when it can play
-
-    getStreamingData();
-    console.log("toggelPlay: Audio playing");
-  }
 }
 
 async function setupAudioPlayer() {
@@ -305,8 +279,8 @@ async function setupAudioPlayer() {
   audio.muted = false; // Ensure audio is not muted
   audio.volume = 0.2; // Set initial volume to 20%
 
-  console.log(audio.buffered);
-  console.log(audio.readyState);
+  // console.log(audio.buffered);
+  // console.log(audio.readyState);
 
   // const page = new Page();
   page.setVolume();
@@ -314,21 +288,21 @@ async function setupAudioPlayer() {
 
   // On play, change the button to pause
   audio.onplay = function () {
-    var botao = document.getElementById("playerButton");
-    var bplay = document.getElementById("buttonPlay");
-    if (botao.className === "fa fa-play") {
-      botao.className = "fa fa-pause";
-      bplay.firstChild.data = "PAUSE";
+    var btn = document.getElementById("playerButton");
+    var btn_play = document.getElementById("buttonPlay");
+    if (btn.className === "fa fa-play") {
+      btn.className = "fa fa-pause";
+      btn_play.firstChild.data = "PAUSE";
     }
   };
 
   // On pause, change the button to play
   audio.onpause = function () {
-    var botao = document.getElementById("playerButton");
-    var bplay = document.getElementById("buttonPlay");
-    if (botao.className === "fa fa-pause") {
-      botao.className = "fa fa-play";
-      bplay.firstChild.data = "PLAY";
+    var btn = document.getElementById("playerButton");
+    var btn_play = document.getElementById("buttonPlay");
+    if (btn.className === "fa fa-pause") {
+      btn.className = "fa fa-play";
+      btn_play.firstChild.data = "PLAY";
     }
   };
 
@@ -350,32 +324,30 @@ async function setupAudioPlayer() {
   };
 }
 
-// Player control
-class Player {
-  constructor() {
-    this.play = function () {
-      // Set volume level to start with, get it from the input fields value in index.html
-      var defaultVolume = 20; //document.getElementById("volume").value;
-      audio.volume = intToDecimal(defaultVolume);
+function togglePlay() {
+  const playerButton = document.getElementById("playerButton");
+  const isPlaying = playerButton.classList.contains("fa-pause-circle");
 
-      if (localStorage.getItem("volume") !== null) {
-        audio.volume = intToDecimal(localStorage.getItem("volume"));
-        page.changeVolumeIndicator(audio.volume);
-      } else {
-        audio.volume = intToDecimal(defaultVolume);
-        page.changeVolumeIndicator(audio.volume);
-      }
+  if (isPlaying) {
+    playerButton.classList.remove("fa-pause-circle");
+    playerButton.classList.add("fa-play-circle");
+    playerButton.style.textShadow = "0 0 5px black";
 
-      audio.play();
-      audio.muted = false;
+    audio.pause();
+    // audio.src = ""; // This stops the stream from downloading
+    audio = new Audio(); // Reset the audio element to stop the stream download
+    // console.log("toggelPlay: Audio paused");
+  } else {
+    playerButton.classList.remove("fa-play-circle");
+    playerButton.classList.add("fa-pause-circle");
+    playerButton.style.textShadow = "0 0 5px black";
 
-      togglePlay();
-      getStreamingData();
-    };
+    audio = new Audio(URL_STREAMING); // This restarts the stream download
 
-    this.pause = function () {
-      audio.pause();
-    };
+    getStreamingData();
+
+    audio.play(); // Play the audio when it can play
+    // console.log("toggelPlay: Audio playing");
   }
 }
 
@@ -424,4 +396,33 @@ function intToDecimal(vol) {
 
 function decimalToInt(vol) {
   return vol * 100;
+}
+
+function subscribeToPush() {
+  if ("serviceWorker" in navigator && "PushManager" in window) {
+    navigator.serviceWorker.ready.then((registration) => {
+      registration.pushManager
+        .subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlB64ToUint8Array("YOUR_PUBLIC_KEY"),
+        })
+        .then((subscription) => {
+          // Send subscription to your server
+        })
+        .catch((error) => {
+          console.error("Push subscription failed:", error);
+        });
+    });
+  }
+}
+
+function urlB64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
 }
