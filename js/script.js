@@ -4,100 +4,96 @@ const URL_STREAMING = "https://k-one.pvpjamz.com"; //https://stream.pvpjamz.com
 // Playlist data json url
 const PlayerData = "playlist.json";
 // DOM control
-class Page {
-  constructor() {
-    this.changeTitlePage = function (title = RADIO_NAME) {
-      document.title = title;
-    };
+// Page functionality as plain functions instead of a class
 
-    this.refreshCurrentSong = function (song, artist, duration) {
-      const currentSong = document.getElementById("currentSong");
-      const currentArtist = document.getElementById("currentArtist");
+function changeTitlePage(title = RADIO_NAME) {
+  document.title = title;
+}
 
-      if (
-        song !== currentSong.textContent ||
-        artist !== currentArtist.textContent
-      ) {
-        currentSong.classList.add("fade-out");
-        currentArtist.classList.add("fade-out");
+function refreshCurrentSong(song, artist, duration) {
+  const currentSong = document.getElementById("currentSongDisplay");
+  const currentArtist = document.getElementById("currentArtistDisplay");
+  const currentDuration = document.getElementById("currentDurationDisplay");
 
-        setTimeout(function () {
-          currentSong.textContent = song;
-          currentArtist.textContent = artist;
-          currentDuration.textContent = duration;
+  if (
+    song !== currentSong.textContent ||
+    artist !== currentArtist.textContent
+  ) {
+    currentSong.classList.add("fade-out");
+    currentArtist.classList.add("fade-out");
 
-          currentSong.classList.remove("fade-out");
-          currentSong.classList.add("fade-in");
-          currentArtist.classList.remove("fade-out");
-          currentArtist.classList.add("fade-in");
-          currentDuration.classList.remove("fade-out");
-          currentDuration.classList.add("fade-in");
+    setTimeout(function () {
+      currentSong.textContent = song;
+      currentArtist.textContent = artist;
 
-          if ("mediaSession" in navigator) {
-            navigator.mediaSession.metadata = new MediaMetadata({
-              title: song,
-              artist: artist,
-              album: RADIO_NAME,
-              artwork: [
-                {
-                  src: "https://eajt.nl/kvpn/albumart/art-00.jpg",
-                  sizes: "200x200",
-                  type: "image/jpg",
-                },
-              ],
-            });
-            navigator.mediaSession.setActionHandler("play", () => {
-              togglePlay();
-            });
-            navigator.mediaSession.setActionHandler("pause", () => {
-              togglePlay();
-            });
-            navigator.mediaSession.setActionHandler("stop", () => {
-              if (isPlaying) {
-                playerButton.classList.remove("fa-pause-circle");
-                playerButton.classList.add("fa-play-circle");
-                playerButton.style.textShadow = "0 0 5px black";
+      displayTrackCountdown(song, duration);
 
-                audio.pause();
-                audio.src = ""; // This stops the stream from downloading
-                // console.log("stop mediaelement triggered");
-              }
-            });
+      currentSong.classList.remove("fade-out");
+      currentSong.classList.add("fade-in");
+      currentArtist.classList.remove("fade-out");
+      currentArtist.classList.add("fade-in");
+      currentDuration.classList.remove("fade-out");
+      currentDuration.classList.add("fade-in");
+
+      if ("mediaSession" in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: song,
+          artist: artist,
+          album: RADIO_NAME,
+          artwork: [
+            {
+              src: "https://eajt.nl/kvpn/albumart/art-00.jpg",
+              sizes: "200x200",
+              type: "image/jpg",
+            },
+          ],
+        });
+        navigator.mediaSession.setActionHandler("play", () => {
+          togglePlay();
+        });
+        navigator.mediaSession.setActionHandler("pause", () => {
+          togglePlay();
+        });
+        navigator.mediaSession.setActionHandler("stop", () => {
+          if (isPlaying) {
+            playerButton.classList.remove("fa-pause-circle");
+            playerButton.classList.add("fa-play-circle");
+            playerButton.style.textShadow = "0 0 5px black";
+
+            audio.pause();
+            audio.src = "";
           }
-        }, 100);
-
-        setTimeout(function () {
-          currentSong.classList.remove("fade-in");
-          currentArtist.classList.remove("fade-in");
-          currentDuration.classList.remove("fade-in");
-        }, 200);
+        });
       }
-    };
+    }, 100);
 
-    this.changeVolumeIndicator = function (volume) {
-      if (typeof Storage !== "undefined") {
-        localStorage.setItem("volume", volume);
-      }
-    };
-
-    this.setVolume = function () {
-      if (typeof Storage !== "undefined") {
-        const volumeLocalStorage = localStorage.getItem("volume") || 20;
-        document.getElementById("volume").value = volumeLocalStorage;
-      }
-    };
+    setTimeout(function () {
+      currentSong.classList.remove("fade-in");
+      currentArtist.classList.remove("fade-in");
+      currentDuration.classList.remove("fade-in");
+    }, 200);
   }
 }
 
-let page = new Page();
+function changeVolumeIndicator(volume) {
+  if (typeof Storage !== "undefined") {
+    localStorage.setItem("volume", volume);
+  }
+}
 
+function setVolume() {
+  if (typeof Storage !== "undefined") {
+    const volumeLocalStorage = localStorage.getItem("volume") || 20;
+    // document.getElementById("volume").value = volumeLocalStorage;
+  }
+}
+
+// Remove the Page class and use functions directly
 let musicaAtual = null;
 let audio; // Global variable for the audio element
 
 window.addEventListener("load", () => {
-  page = new Page();
-  page.changeTitlePage();
-  // page.setVolume();
+  changeTitlePage();
   getStreamingData();
   setCopyright();
 });
@@ -107,16 +103,13 @@ async function getStreamingData() {
     let data = await fetchStreamingData(PlayerData);
 
     if (data) {
-      // const page = new Page();
       var currentSong = data.Current.Title;
-      var charsToplayTitle = 25; // Number of characters to display
-      var charsPlayingTitle = 40; // Number of characters to display
-      var nrToplay = 5; // Number of songs to display
-      var nrHistory = 3; // Number of songs to display
-      const currentArtist = data.Current.Artist;
-      const currentDuration = data.Current.Duration;
-      // console.log("getStreamingData - Current Song:", currentSong);
-      // console.log("getStreamingData - Current Artist:", currentArtist);
+      var charsToplayTitle = 25;
+      var charsPlayingTitle = 40;
+      var nrToplay = 5;
+      var nrHistory = 3;
+      const currentArtistVal = data.Current.Artist;
+      let currentDurationVal = data.Current.Duration;
 
       if (currentSong.length > charsPlayingTitle) {
         var string = currentSong;
@@ -128,20 +121,23 @@ async function getStreamingData() {
       const safeCurrentSong = (currentSong || "")
         .replace(/'/g, "'")
         .replace(/&/g, "&");
-      const safeCurrentArtist = (currentArtist || "")
-        .replace(/'/g, "'")
-        .replace(/&/g, "&");
-      const safeCurrentDuration = (currentDuration || "")
+      const safeCurrentArtist = (currentArtistVal || "")
         .replace(/'/g, "'")
         .replace(/&/g, "&");
 
       if (safeCurrentSong !== musicaAtual) {
-        page.refreshCurrentSong(
+        console.log("Updating current song:", safeCurrentSong);
+        if (audio) {
+          audio.src = URL_STREAMING;
+          audio.play();
+        }
+        refreshCurrentSong(
           safeCurrentSong,
           safeCurrentArtist,
-          safeCurrentDuration
+          currentDurationVal
         );
-        // Display what is comming up next
+
+        // Display what is coming up next
         const toplayContainer = document.getElementById("toplaySong");
         toplayContainer.innerHTML = "";
 
@@ -152,9 +148,7 @@ async function getStreamingData() {
             }))
           : data.Next;
 
-        // console.log("Toplay Array:", toplayArray);
-
-        const maxToplayToDisplay = nrToplay; // Adjust as needed
+        const maxToplayToDisplay = nrToplay;
         const limitedToplay = toplayArray.slice(
           Math.max(0, toplayArray.length - maxToplayToDisplay)
         );
@@ -191,9 +185,7 @@ async function getStreamingData() {
             }))
           : data.Last;
 
-        // console.log("History Array:", historyArray);
-
-        const maxHistoryToDisplay = nrHistory; // Adjust as needed
+        const maxHistoryToDisplay = nrHistory;
         const limitedHistory = historyArray.slice(
           Math.max(0, historyArray.length - maxHistoryToDisplay)
         );
@@ -225,6 +217,78 @@ async function getStreamingData() {
     }
   } catch (error) {
     console.log("Error playlist uitlezen:", error);
+  }
+}
+
+function displayTrackCountdown(song, duration) {
+  const currentDurationElem = document.getElementById("currentDurationDisplay");
+  let countdownInterval;
+  console.log("displayTrackCountdown called with:", song, duration);
+
+  if (!currentDurationElem) {
+    console.error("Current duration element not found.");
+    return;
+  }
+  function startCountdown(duration) {
+    console.log("Starting countdown with duration:", duration || "undefined");
+    let startTime = Date.now();
+    let totalSeconds = 0;
+
+    if (typeof duration === "number") {
+      // If duration is a number but formatted as mm:ss (e.g., 3:47), treat as string
+      totalSeconds = duration;
+    } else if (
+      typeof duration === "string" ||
+      (typeof duration === "number" && duration.toString().includes(":"))
+    ) {
+      // Handle mm:ss or hh:mm:ss format
+      const durationStr = duration.toString();
+      const parts = durationStr.split(":").map(Number);
+      // console.log("Parsed duration parts:", parts);
+      if (parts.length === 0 || parts.some(isNaN)) {
+        console.error("Invalid duration format:", duration);
+        return;
+      }
+      if (parts.length === 3) {
+        // hh:mm:ss
+        totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+      } else if (parts.length === 2) {
+        // mm:ss
+        totalSeconds = parts[0] * 60 + parts[1];
+      } else if (parts.length === 1) {
+        totalSeconds = parts[0];
+      }
+    } else {
+      console.warn(
+        "Duration is not a valid type, using it directly:",
+        duration
+      );
+      totalSeconds = parseInt(duration, 10);
+    }
+
+    function updateCountdown() {
+      let elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const remaining = Math.max(totalSeconds - elapsed, 0);
+      const min = Math.floor(remaining / 60);
+      const sec = remaining % 60;
+      currentDurationElem.textContent = `${min}:${sec
+        .toString()
+        .padStart(2, "0")}`;
+    }
+
+    updateCountdown();
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+    }
+    countdownInterval = setInterval(() => {
+      updateCountdown();
+      // Do not stop or reload the stream here; only update the countdown display.
+      // The countdown will reset when displayTrackCountdown is called for a new song.
+    }, 1000);
+  }
+
+  if (currentDurationElem && song && duration) {
+    startCountdown(duration);
   }
 }
 
@@ -282,9 +346,8 @@ async function setupAudioPlayer() {
   // console.log(audio.buffered);
   // console.log(audio.readyState);
 
-  // const page = new Page();
-  page.setVolume();
-  page.changeVolumeIndicator(decimalToInt(audio.volume));
+  setVolume();
+  // changeVolumeIndicator(decimalToInt(audio.volume));
 
   // On play, change the button to pause
   audio.onplay = function () {
@@ -347,44 +410,42 @@ function togglePlay() {
     getStreamingData();
 
     audio.play(); // Play the audio when it can play
-    // console.log("toggelPlay: Audio playing");
   }
 }
 
-document.getElementById("volume").oninput = function () {
-  // const page = new Page();
-  page.changeVolumeIndicator(this.value);
-  audio.volume = intToDecimal(this.value);
-};
+// document.getElementById("volume").oninput = function () {
+//   changeVolumeIndicator(this.value);
+//   audio.volume = intToDecimal(this.value);
+// };
 
-function volumeUp() {
-  var vol = audio.volume;
-  if (audio) {
-    if (audio.volume >= 0 && audio.volume < 1) {
-      audio.volume = (vol + 0.01).toFixed(2);
-    }
-  }
-}
+// function volumeUp() {
+//   var vol = audio.volume;
+//   if (audio) {
+//     if (audio.volume >= 0 && audio.volume < 1) {
+//       audio.volume = (vol + 0.01).toFixed(2);
+//     }
+//   }
+// }
 
-function volumeDown() {
-  var vol = audio.volume;
-  if (audio) {
-    if (audio.volume >= 0.01 && audio.volume <= 1) {
-      audio.volume = (vol - 0.01).toFixed(2);
-    }
-  }
-}
+// function volumeDown() {
+//   var vol = audio.volume;
+//   if (audio) {
+//     if (audio.volume >= 0.01 && audio.volume <= 1) {
+//       audio.volume = (vol - 0.01).toFixed(2);
+//     }
+//   }
+// }
 
 function mute() {
   if (!audio.muted) {
     // document.getElementById("volIndicator").innerHTML = 0;
-    document.getElementById("volume").value = 0;
+    // document.getElementById("volume").value = 0;
     audio.volume = 0;
     audio.muted = true;
   } else {
     var localVolume = localStorage.getItem("volume");
     // document.getElementById("volIndicator").innerHTML = localVolume;
-    document.getElementById("volume").value = localVolume;
+    // document.getElementById("volume").value = localVolume;
     audio.volume = intToDecimal(localVolume);
     audio.muted = false;
   }
