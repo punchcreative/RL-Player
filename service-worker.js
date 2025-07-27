@@ -26,8 +26,37 @@ const cacheAssets = [
   "fonts/fontawesome-webfont.svg",
   "fonts/FontAwesome.otf",
 ];
+self.addEventListener("fetch", (event) => {
+  // Listen for requests to a file in the root of the app, e.g. "playlist.json"
+  const url = new URL(event.request.url);
+  if (url.pathname === "/kvpn/playlist.json") {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(activeCacheName);
+        try {
+          const networkResponse = await fetch(event.request);
+          // Update cache with latest playlist.json
+          cache.put(event.request, networkResponse.clone());
 
-// Check cahce in browser
+          // Notify clients about the change
+          const clientsList = await self.clients.matchAll();
+          // for (const client of clientsList) {
+          //   console.log("Notifying client about playlist change");
+          //   // Ensure the client is focused and ready to receive messages
+          //   if (client.visibilityState === "visible") {
+          //     client.postMessage({ type: "playlist-changed" });
+          //   }
+          // }
+          return networkResponse;
+        } catch {
+          // Fallback to cache if offline
+          const cachedResponse = await cache.match(event.request);
+          return cachedResponse || Response.error();
+        }
+      })()
+    );
+  }
+});
 self.addEventListener("fetch", (event) => {
   // Check if this is a navigation request
   if (event.request.mode === "navigate") {

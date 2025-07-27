@@ -3,8 +3,22 @@ const RADIO_NAME = "KVPN";
 const URL_STREAMING = "https://k-one.pvpjamz.com"; //https://stream.pvpjamz.com
 // Playlist data json url
 const PlayerData = "playlist.json";
-// DOM control
-// Page functionality as plain functions instead of a class
+
+// Listen for playlist-changed messages from the service worker or other clients
+if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+  console.log("Service Worker is active, setting up message listener.");
+  navigator.serviceWorker.addEventListener("message", (event) => {
+    if (event.data && event.data.type === "playlist-changed") {
+      console.log(
+        "Received playlist-changed message, refreshing playlist.json"
+      );
+      getStreamingData();
+      console.log(
+        "Received playlist-changed message, refreshing playlist.json"
+      );
+    }
+  });
+}
 
 function changeTitlePage(title = RADIO_NAME) {
   document.title = title;
@@ -81,9 +95,9 @@ function changeVolumeIndicator(volume) {
   }
 }
 
-function setVolume() {
+function setVolume(volume) {
   if (typeof Storage !== "undefined") {
-    const volumeLocalStorage = localStorage.getItem("volume") || 20;
+    const volumeLocalStorage = localStorage.getItem("volume") || volume;
     // document.getElementById("volume").value = volumeLocalStorage;
   }
 }
@@ -127,10 +141,10 @@ async function getStreamingData() {
 
       if (safeCurrentSong !== musicaAtual) {
         console.log("Updating current song:", safeCurrentSong);
-        if (audio) {
-          audio.src = URL_STREAMING;
-          audio.play();
-        }
+        // if (audio) {
+        //   audio.src = URL_STREAMING;
+        //   audio.play();
+        // }
         refreshCurrentSong(
           safeCurrentSong,
           safeCurrentArtist,
@@ -223,46 +237,42 @@ async function getStreamingData() {
 function displayTrackCountdown(song, duration) {
   const currentDurationElem = document.getElementById("currentDurationDisplay");
   let countdownInterval;
-  console.log("displayTrackCountdown called with:", song, duration);
 
   if (!currentDurationElem) {
     console.error("Current duration element not found.");
     return;
   }
+  // Stop any previous countdown when a new song starts
+  if (window.countdownInterval) {
+    clearInterval(window.countdownInterval);
+    window.countdownInterval = null;
+  }
+
   function startCountdown(duration) {
     console.log("Starting countdown with duration:", duration || "undefined");
     let startTime = Date.now();
     let totalSeconds = 0;
 
     if (typeof duration === "number") {
-      // If duration is a number but formatted as mm:ss (e.g., 3:47), treat as string
       totalSeconds = duration;
     } else if (
       typeof duration === "string" ||
       (typeof duration === "number" && duration.toString().includes(":"))
     ) {
-      // Handle mm:ss or hh:mm:ss format
       const durationStr = duration.toString();
       const parts = durationStr.split(":").map(Number);
-      // console.log("Parsed duration parts:", parts);
       if (parts.length === 0 || parts.some(isNaN)) {
         console.error("Invalid duration format:", duration);
         return;
       }
       if (parts.length === 3) {
-        // hh:mm:ss
         totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
       } else if (parts.length === 2) {
-        // mm:ss
         totalSeconds = parts[0] * 60 + parts[1];
       } else if (parts.length === 1) {
         totalSeconds = parts[0];
       }
     } else {
-      console.warn(
-        "Duration is not a valid type, using it directly:",
-        duration
-      );
       totalSeconds = parseInt(duration, 10);
     }
 
@@ -277,13 +287,8 @@ function displayTrackCountdown(song, duration) {
     }
 
     updateCountdown();
-    if (countdownInterval) {
-      clearInterval(countdownInterval);
-    }
-    countdownInterval = setInterval(() => {
+    window.countdownInterval = setInterval(() => {
       updateCountdown();
-      // Do not stop or reload the stream here; only update the countdown display.
-      // The countdown will reset when displayTrackCountdown is called for a new song.
     }, 1000);
   }
 
@@ -326,11 +331,11 @@ function setCopyright() {
   }).fail(function () {
     console.log("Offline is not ideal for this app.");
   });
-
   // getStreamingData();
   // Set timer for renewing playlist info
-  const streamingInterval = setInterval(getStreamingData, 5000);
+  const streamingInterval = setInterval(getStreamingData, 1050);
   console.log("fetching playlist.json");
+
   setupAudioPlayer();
 }
 
@@ -343,10 +348,7 @@ async function setupAudioPlayer() {
   audio.muted = false; // Ensure audio is not muted
   audio.volume = 0.2; // Set initial volume to 20%
 
-  // console.log(audio.buffered);
-  // console.log(audio.readyState);
-
-  setVolume();
+  setVolume(audio.volume);
   // changeVolumeIndicator(decimalToInt(audio.volume));
 
   // On play, change the button to pause
