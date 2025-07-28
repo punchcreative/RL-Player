@@ -13,9 +13,6 @@ if (navigator.serviceWorker && navigator.serviceWorker.controller) {
         "Received playlist-changed message, refreshing playlist.json"
       );
       getStreamingData();
-      console.log(
-        "Received playlist-changed message, refreshing playlist.json"
-      );
     }
   });
 }
@@ -333,8 +330,8 @@ function setCopyright() {
   });
   // getStreamingData();
   // Set timer for renewing playlist info
-  const streamingInterval = setInterval(getStreamingData, 1050);
-  console.log("fetching playlist.json");
+  // const streamingInterval = setInterval(getStreamingData, 5000);
+  // console.log("fetching playlist.json");
 
   setupAudioPlayer();
 }

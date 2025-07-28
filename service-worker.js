@@ -26,27 +26,31 @@ const cacheAssets = [
   "fonts/fontawesome-webfont.svg",
   "fonts/FontAwesome.otf",
 ];
+
+// Service workers can't directly listen for FTP uploads or external file changes.
+// The fetch event only triggers when a client requests the file.
+// To detect a change after FTP upload, you must rely on clients requesting "playlist.json".
+// This code ensures the latest version is fetched and cached when requested.
+
 self.addEventListener("fetch", (event) => {
-  // Listen for requests to a file in the root of the app, e.g. "playlist.json"
   const url = new URL(event.request.url);
   if (url.pathname === "/kvpn/playlist.json") {
     event.respondWith(
       (async () => {
         const cache = await caches.open(activeCacheName);
         try {
-          const networkResponse = await fetch(event.request);
-          // Update cache with latest playlist.json
+          // Always fetch from network to get the latest playlist.json after FTP upload
+          const networkResponse = await fetch(event.request, {
+            cache: "reload",
+          });
           cache.put(event.request, networkResponse.clone());
 
-          // Notify clients about the change
+          // Optionally notify clients about the change
           const clientsList = await self.clients.matchAll();
           // for (const client of clientsList) {
-          //   console.log("Notifying client about playlist change");
-          //   // Ensure the client is focused and ready to receive messages
-          //   if (client.visibilityState === "visible") {
-          //     client.postMessage({ type: "playlist-changed" });
-          //   }
+          //   client.postMessage({ type: "playlist-changed" });
           // }
+
           return networkResponse;
         } catch {
           // Fallback to cache if offline
@@ -57,6 +61,7 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
+
 self.addEventListener("fetch", (event) => {
   // Check if this is a navigation request
   if (event.request.mode === "navigate") {
@@ -82,7 +87,7 @@ self.addEventListener("error", (event) => {
   console.error("Service Worker error:", event);
 });
 
-// workbox voorbereiding
+workbox voorbereiding
 self.addEventListener("install", (event) => {
   // Precache assets on install
   event.waitUntil(
@@ -106,6 +111,7 @@ self.addEventListener("install", (event) => {
   );
   self.skipWaiting();
 });
+
 self.addEventListener("activate", (event) => {
   // Specify allowed cache keys
   const cacheAllowList = [activeCacheName];
