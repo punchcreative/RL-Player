@@ -1,4 +1,4 @@
-const activeCacheVersion = 215;
+const activeCacheVersion = 1120;
 const activeCacheName = `rlplayer-${activeCacheVersion}`;
 
 // files and folders to cache
@@ -87,7 +87,7 @@ self.addEventListener("error", (event) => {
   console.error("Service Worker error:", event);
 });
 
-workbox voorbereiding
+// workbox voorbereiding
 self.addEventListener("install", (event) => {
   // Precache assets on install
   event.waitUntil(

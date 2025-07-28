@@ -5,17 +5,17 @@ const URL_STREAMING = "https://k-one.pvpjamz.com"; //https://stream.pvpjamz.com
 const PlayerData = "playlist.json";
 
 // Listen for playlist-changed messages from the service worker or other clients
-if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-  console.log("Service Worker is active, setting up message listener.");
-  navigator.serviceWorker.addEventListener("message", (event) => {
-    if (event.data && event.data.type === "playlist-changed") {
-      console.log(
-        "Received playlist-changed message, refreshing playlist.json"
-      );
-      getStreamingData();
-    }
-  });
-}
+// if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+//   console.log("Service Worker is active, setting up message listener.");
+//   navigator.serviceWorker.addEventListener("message", (event) => {
+//     if (event.data && event.data.type === "playlist-changed") {
+//       console.log(
+//         "Received playlist-changed message, refreshing playlist.json"
+//       );
+//       getStreamingData();
+//     }
+//   });
+// }
 
 function changeTitlePage(title = RADIO_NAME) {
   document.title = title;
