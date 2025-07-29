@@ -86,11 +86,11 @@ function refreshCurrentSong(song, artist, duration) {
   }
 }
 
-function changeVolumeIndicator(volume) {
-  if (typeof Storage !== "undefined") {
-    localStorage.setItem("volume", volume);
-  }
-}
+// function changeVolumeIndicator(volume) {
+//   if (typeof Storage !== "undefined") {
+//     localStorage.setItem("volume", volume);
+//   }
+// }
 
 function setVolume(volume) {
   if (typeof Storage !== "undefined") {
@@ -100,12 +100,13 @@ function setVolume(volume) {
 }
 
 // Remove the Page class and use functions directly
-let musicaAtual = null;
+let musicActual = null;
 let audio; // Global variable for the audio element
+let fetchIntervalId = null;
 
 window.addEventListener("load", () => {
   changeTitlePage();
-  getStreamingData();
+  fetchIntervalId = setInterval(getStreamingData, 1000);
   setCopyright();
 });
 
@@ -136,8 +137,15 @@ async function getStreamingData() {
         .replace(/'/g, "'")
         .replace(/&/g, "&");
 
-      if (safeCurrentSong !== musicaAtual) {
+      if (safeCurrentSong !== musicActual) {
         console.log("Updating current song:", safeCurrentSong);
+        if (musicActual && fetchIntervalId) {
+          clearInterval(fetchIntervalId);
+          fetchIntervalId = null;
+          console.log("Cleared previous interval for fetching data.");
+        }
+        musicActual = safeCurrentSong;
+
         // if (audio) {
         //   audio.src = URL_STREAMING;
         //   audio.play();
@@ -221,7 +229,6 @@ async function getStreamingData() {
                       `;
           historicContainer.appendChild(article);
         }
-        musicaAtual = safeCurrentSong;
 
         document.title = `${RADIO_NAME} | ${safeCurrentSong} - ${safeCurrentArtist}`;
       }
@@ -273,6 +280,13 @@ function displayTrackCountdown(song, duration) {
       totalSeconds = parseInt(duration, 10);
     }
 
+    // Start new interval for data fetch after coutdown ends
+    setTimeout(() => {
+      if (fetchIntervalId) return; // Prevent multiple intervals
+      fetchIntervalId = setInterval(getStreamingData, 1000);
+      console.log("Interval restarted after song ended.");
+    }, totalSeconds * 1000 - 2000);
+
     function updateCountdown() {
       let elapsed = Math.floor((Date.now() - startTime) / 1000);
       const remaining = Math.max(totalSeconds - elapsed, 0);
@@ -302,9 +316,8 @@ async function fetchStreamingData(apiUrl) {
         `Error fetching playlist: ${response.status} ${response.statusText}`
       );
     }
-
     const data = await response.json();
-    // console.log(data);
+    console.log("Fetched streaming data:", data);
     return data;
   } catch (error) {
     console.log("fetchStreamingData error", error);
@@ -330,8 +343,7 @@ function setCopyright() {
   });
   // getStreamingData();
   // Set timer for renewing playlist info
-  // const streamingInterval = setInterval(getStreamingData, 5000);
-  // console.log("fetching playlist.json");
+  // const streamingInterval = setInterval(getStreamingData, 1000);
 
   setupAudioPlayer();
 }
@@ -343,7 +355,7 @@ async function setupAudioPlayer() {
   audio.autoplay = false; // Autoplay is disabled for user interaction
   audio.loop = false; // Disable looping for streaming
   audio.muted = false; // Ensure audio is not muted
-  audio.volume = 0.2; // Set initial volume to 20%
+  audio.volume = 1; // Set initial volume to 100% as volume slider functionality is removerd in v 1.1.9
 
   setVolume(audio.volume);
   // changeVolumeIndicator(decimalToInt(audio.volume));
@@ -405,8 +417,6 @@ function togglePlay() {
     playerButton.style.textShadow = "0 0 5px black";
 
     audio = new Audio(URL_STREAMING); // This restarts the stream download
-
-    getStreamingData();
 
     audio.play(); // Play the audio when it can play
   }

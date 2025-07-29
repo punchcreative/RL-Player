@@ -1,4 +1,4 @@
-const activeCacheVersion = 1120;
+const activeCacheVersion = 1122;
 const activeCacheName = `rlplayer-${activeCacheVersion}`;
 
 // files and folders to cache
@@ -44,13 +44,6 @@ self.addEventListener("fetch", (event) => {
             cache: "reload",
           });
           cache.put(event.request, networkResponse.clone());
-
-          // Optionally notify clients about the change
-          const clientsList = await self.clients.matchAll();
-          // for (const client of clientsList) {
-          //   client.postMessage({ type: "playlist-changed" });
-          // }
-
           return networkResponse;
         } catch {
           // Fallback to cache if offline
