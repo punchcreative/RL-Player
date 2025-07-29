@@ -16,7 +16,7 @@
   "permissions": ["storage", "activeTab", "scripting", "webRequest"],
   "start_url": "/kvpn/",
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "/popup.html",
     "default_icon": {
       "16": "img/cover.png",
       "48": "img/cover.png",

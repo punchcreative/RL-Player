@@ -4,19 +4,6 @@ const URL_STREAMING = "https://k-one.pvpjamz.com"; //https://stream.pvpjamz.com
 // Playlist data json url
 const PlayerData = "playlist.json";
 
-// Listen for playlist-changed messages from the service worker or other clients
-// if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-//   console.log("Service Worker is active, setting up message listener.");
-//   navigator.serviceWorker.addEventListener("message", (event) => {
-//     if (event.data && event.data.type === "playlist-changed") {
-//       console.log(
-//         "Received playlist-changed message, refreshing playlist.json"
-//       );
-//       getStreamingData();
-//     }
-//   });
-// }
-
 function changeTitlePage(title = RADIO_NAME) {
   document.title = title;
 }
@@ -86,19 +73,6 @@ function refreshCurrentSong(song, artist, duration) {
   }
 }
 
-// function changeVolumeIndicator(volume) {
-//   if (typeof Storage !== "undefined") {
-//     localStorage.setItem("volume", volume);
-//   }
-// }
-
-function setVolume(volume) {
-  if (typeof Storage !== "undefined") {
-    const volumeLocalStorage = localStorage.getItem("volume") || volume;
-    // document.getElementById("volume").value = volumeLocalStorage;
-  }
-}
-
 // Remove the Page class and use functions directly
 let musicActual = null;
 let audio; // Global variable for the audio element
@@ -138,18 +112,14 @@ async function getStreamingData() {
         .replace(/&/g, "&");
 
       if (safeCurrentSong !== musicActual) {
-        console.log("Updating current song:", safeCurrentSong);
+        // console.log("Updating current song:", safeCurrentSong);
         if (musicActual && fetchIntervalId) {
           clearInterval(fetchIntervalId);
           fetchIntervalId = null;
-          console.log("Cleared previous interval for fetching data.");
+          // console.log("Cleared previous interval for fetching data.");
         }
         musicActual = safeCurrentSong;
 
-        // if (audio) {
-        //   audio.src = URL_STREAMING;
-        //   audio.play();
-        // }
         refreshCurrentSong(
           safeCurrentSong,
           safeCurrentArtist,
@@ -253,7 +223,7 @@ function displayTrackCountdown(song, duration) {
   }
 
   function startCountdown(duration) {
-    console.log("Starting countdown with duration:", duration || "undefined");
+    // console.log("Starting countdown with duration:", duration || "undefined");
     let startTime = Date.now();
     let totalSeconds = 0;
 
@@ -284,7 +254,7 @@ function displayTrackCountdown(song, duration) {
     setTimeout(() => {
       if (fetchIntervalId) return; // Prevent multiple intervals
       fetchIntervalId = setInterval(getStreamingData, 1000);
-      console.log("Interval restarted after song ended.");
+      // console.log("Interval restarted after song ended.");
     }, totalSeconds * 1000 - 2000);
 
     function updateCountdown() {
@@ -317,7 +287,7 @@ async function fetchStreamingData(apiUrl) {
       );
     }
     const data = await response.json();
-    console.log("Fetched streaming data:", data);
+    // console.log("Fetched streaming data:", data);
     return data;
   } catch (error) {
     console.log("fetchStreamingData error", error);
@@ -339,11 +309,8 @@ function setCopyright() {
     copy.textContent =
       appName + " " + appVersion + " | ©" + jaar + " " + appAuthor;
   }).fail(function () {
-    console.log("Offline is not ideal for this app.");
+    console.log("Being offline is not ideal for this app ;-)");
   });
-  // getStreamingData();
-  // Set timer for renewing playlist info
-  // const streamingInterval = setInterval(getStreamingData, 1000);
 
   setupAudioPlayer();
 }
@@ -357,7 +324,11 @@ async function setupAudioPlayer() {
   audio.muted = false; // Ensure audio is not muted
   audio.volume = 1; // Set initial volume to 100% as volume slider functionality is removerd in v 1.1.9
 
-  setVolume(audio.volume);
+  // Set the volume to a default value, e.g., 1 (100%) if volume slider is activated in the future
+  // audio.volume = intToDecimal(100); // Uncomment if you want to use volume slider functionality in the future
+  // document.getElementById("volume").value = 100; // Set the volume slider to 100% if volume slider is activated in the future
+
+  //setVolume(audio.volume);
   // changeVolumeIndicator(decimalToInt(audio.volume));
 
   // On play, change the button to pause
@@ -410,7 +381,6 @@ function togglePlay() {
     audio.pause();
     // audio.src = ""; // This stops the stream from downloading
     audio = new Audio(); // Reset the audio element to stop the stream download
-    // console.log("toggelPlay: Audio paused");
   } else {
     playerButton.classList.remove("fa-play-circle");
     playerButton.classList.add("fa-pause-circle");
@@ -422,6 +392,26 @@ function togglePlay() {
   }
 }
 
+// function setVolume(volume) {
+//   if (typeof Storage !== "undefined") {
+//     const volumeLocalStorage = localStorage.getItem("volume") || volume;
+//     document.getElementById("volume").value = volumeLocalStorage;
+//   }
+// }
+
+// function intToDecimal(vol) {
+//   return vol / 100;
+// }
+
+// function decimalToInt(vol) {
+//   return vol * 100;
+// }
+
+// function changeVolumeIndicator(volume) {
+//   if (typeof Storage !== "undefined") {
+//     localStorage.setItem("volume", volume);
+//   }
+// }
 // document.getElementById("volume").oninput = function () {
 //   changeVolumeIndicator(this.value);
 //   audio.volume = intToDecimal(this.value);
@@ -445,54 +435,46 @@ function togglePlay() {
 //   }
 // }
 
-function mute() {
-  if (!audio.muted) {
-    // document.getElementById("volIndicator").innerHTML = 0;
-    // document.getElementById("volume").value = 0;
-    audio.volume = 0;
-    audio.muted = true;
-  } else {
-    var localVolume = localStorage.getItem("volume");
-    // document.getElementById("volIndicator").innerHTML = localVolume;
-    // document.getElementById("volume").value = localVolume;
-    audio.volume = intToDecimal(localVolume);
-    audio.muted = false;
-  }
-}
+// function mute() {
+//   if (!audio.muted) {
+//     // document.getElementById("volIndicator").innerHTML = 0;
+//     // document.getElementById("volume").value = 0;
+//     audio.volume = 0;
+//     audio.muted = true;
+//   } else {
+//     var localVolume = localStorage.getItem("volume");
+//     // document.getElementById("volIndicator").innerHTML = localVolume;
+//     // document.getElementById("volume").value = localVolume;
+//     audio.volume = intToDecimal(localVolume);
+//     audio.muted = false;
+//   }
+// }
 
-function intToDecimal(vol) {
-  return vol / 100;
-}
+// function subscribeToPush() {
+//   if ("serviceWorker" in navigator && "PushManager" in window) {
+//     navigator.serviceWorker.ready.then((registration) => {
+//       registration.pushManager
+//         .subscribe({
+//           userVisibleOnly: true,
+//           applicationServerKey: urlB64ToUint8Array("YOUR_PUBLIC_KEY"),
+//         })
+//         .then((subscription) => {
+//           // Send subscription to your server
+//         })
+//         .catch((error) => {
+//           console.error("Push subscription failed:", error);
+//         });
+//     });
+//   }
+// }
 
-function decimalToInt(vol) {
-  return vol * 100;
-}
-
-function subscribeToPush() {
-  if ("serviceWorker" in navigator && "PushManager" in window) {
-    navigator.serviceWorker.ready.then((registration) => {
-      registration.pushManager
-        .subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlB64ToUint8Array("YOUR_PUBLIC_KEY"),
-        })
-        .then((subscription) => {
-          // Send subscription to your server
-        })
-        .catch((error) => {
-          console.error("Push subscription failed:", error);
-        });
-    });
-  }
-}
-
-function urlB64ToUint8Array(base64String) {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
+// function urlB64ToUint8Array(base64String) {
+//   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+//   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+//   const rawData = window.atob(base64);
+//   const outputArray = new Uint8Array(rawData.length);
+//   for (let i = 0; i < rawData.length; ++i) {
+//     outputArray[i] = rawData.charCodeAt(i);
+//   }
+//   return outputArray;
+// }
