@@ -1,8 +1,66 @@
+// import md5 from "md5";
+
 const RADIO_NAME = "KVPN";
 // Change Stream URL Here, Supports, ICECAST, ZENO, SHOUTCAST, RADIOJAR and any other stream service.
 const URL_STREAMING = "https://k-one.pvpjamz.com"; //https://stream.pvpjamz.com
 // Playlist data json url
 const PlayerData = "playlist.json";
+
+// const correctPasswordHash = md5("Th3#1by~R"); // Set your desired password here
+/**
+ * Since 'md5' is not available or cannot be imported, use the Web Crypto API for hashing.
+ * We'll use SHA-256 instead, which is more secure than MD5.
+ */
+
+// Helper function to hash a string using SHA-256 and return a hex string
+async function sha256(str) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Store the correct password hash
+const correctPasswordHashPromise = sha256("Th3#1by~R");
+
+function initializePlayer() {
+  changeTitlePage();
+  fetchIntervalId = setInterval(getStreamingData, 1000);
+  setCopyright();
+}
+
+function checkPassword() {
+  // Check if the password has already been accepted
+  if (localStorage.getItem("passwordAccepted") === "true") {
+    console.log("Password already accepted.");
+    // Continue with the rest of your application logic here
+    initializePlayer();
+  } else {
+    const password = prompt(
+      "This stream is for private use only. Please enter the password to access this content:"
+    );
+
+    // Check if the password is correct using SHA-256
+    sha256(password).then((hash) => {
+      correctPasswordHashPromise.then((correctHash) => {
+        if (hash === correctHash) {
+          console.log("Password accepted.");
+          localStorage.setItem("passwordAccepted", "true");
+          // Continue with the rest of your application logic here
+          initializePlayer();
+        } else {
+          console.warn("Incorrect password.");
+          document.body.innerHTML =
+            "<strong>Access Denied</strong><p>Incorrect password.</p>";
+        }
+      });
+    });
+  }
+}
+
+// Call the checkPassword function when the page loads
+window.addEventListener("load", checkPassword);
 
 function changeTitlePage(title = RADIO_NAME) {
   document.title = title;
@@ -78,12 +136,6 @@ let musicActual = null;
 let audio; // Global variable for the audio element
 let fetchIntervalId = null;
 
-window.addEventListener("load", () => {
-  changeTitlePage();
-  fetchIntervalId = setInterval(getStreamingData, 1000);
-  setCopyright();
-});
-
 async function getStreamingData() {
   try {
     let data = await fetchStreamingData(PlayerData);
@@ -113,7 +165,7 @@ async function getStreamingData() {
 
       if (safeCurrentSong !== musicActual) {
         // console.log("Updating current song:", safeCurrentSong);
-        if (musicActual && fetchIntervalId) {
+        if (musicActual !== null && fetchIntervalId) {
           clearInterval(fetchIntervalId);
           fetchIntervalId = null;
           // console.log("Cleared previous interval for fetching data.");
