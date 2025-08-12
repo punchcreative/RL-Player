@@ -272,10 +272,11 @@ function displayTrackCountdown(song, duration) {
   if (window.countdownInterval) {
     clearInterval(window.countdownInterval);
     window.countdownInterval = null;
+    console.log("Previous countdown cleared.");
   }
 
   function startCountdown(duration) {
-    // console.log("Starting countdown with duration:", duration || "undefined");
+    console.log("Starting countdown with duration:", duration || "undefined");
     let startTime = Date.now();
     let totalSeconds = 0;
 
@@ -306,7 +307,7 @@ function displayTrackCountdown(song, duration) {
     setTimeout(() => {
       if (fetchIntervalId) return; // Prevent multiple intervals
       fetchIntervalId = setInterval(getStreamingData, 1000);
-      // console.log("Interval restarted after song ended.");
+      console.log("Interval getStreamingData restarted after song ended.");
     }, totalSeconds * 1000 - 2000);
 
     function updateCountdown() {
@@ -320,6 +321,8 @@ function displayTrackCountdown(song, duration) {
     }
 
     updateCountdown();
+
+    // Start track time countdown every second
     window.countdownInterval = setInterval(() => {
       updateCountdown();
     }, 1000);

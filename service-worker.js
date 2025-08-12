@@ -1,4 +1,4 @@
-const activeCacheVersion = 1130;
+const activeCacheVersion = 1132;
 const activeCacheName = `rlplayer-${activeCacheVersion}`;
 
 // files and folders to cache
@@ -140,65 +140,3 @@ self.addEventListener("activate", (event) => {
 
 //   event.waitUntil(self.registration.showNotification(data.title, options));
 // });
-
-//Offline analytics
-// self.addEventListener("fetch", (event) => {
-//   if (event.request.url.endsWith("/track-interaction")) {
-//     event.respondWith(
-//       (async () => {
-//         const db = await openDatabase();
-//         const tx = db.transaction("interactions", "readwrite");
-//         const store = tx.objectStore("interactions");
-//         store.put({
-//           url: event.request.url,
-//           timestamp: Date.now(),
-//         });
-//         await tx.complete;
-//         return new Response("Interaction tracked", { status: 202 });
-//       })()
-//     );
-//   }
-// });
-
-// async function openDatabase() {
-//   return new Promise((resolve, reject) => {
-//     const request = indexedDB.open("analytics", 1);
-//     request.onerror = () => reject(request.error);
-//     request.onsuccess = () => resolve(request.result);
-//     request.onupgradeneeded = () => {
-//       const db = request.result;
-//       db.createObjectStore("interactions", {
-//         keyPath: "id",
-//         autoIncrement: true,
-//       });
-//     };
-//   });
-// }
-
-// Synchroniseer offline analytics bij verbinding
-// self.addEventListener("sync", (event) => {
-//   if (event.tag === "sync-analytics") {
-//     event.waitUntil(syncAnalytics());
-//   }
-// });
-
-// async function syncAnalytics() {
-//   const db = await openDatabase();
-//   const tx = db.transaction("interactions", "readonly");
-//   const store = tx.objectStore("interactions");
-//   const allRecords = await store.getAll();
-
-//   const response = await fetch("/sync-analytics", {
-//     method: "POST",
-//     body: JSON.stringify(allRecords),
-//     headers: {
-//       "Content-Type": "application/json",
-//     },
-//   });
-
-//   if (response.ok) {
-//     const tx = db.transaction("interactions", "readwrite");
-//     const store = tx.objectStore("interactions");
-//     await store.clear();
-//   }
-// }
