@@ -143,9 +143,8 @@ body {
 }
 
 .play-pause {
-  font-size: 65px;
+  font-size: 45px;
   color: white;
-  padding-top: 0.1em;
 }
 
 .play-pause i {
@@ -153,26 +152,24 @@ body {
   color: white;
 }
 
-.volume-icon {
+/* .volume-icon {
   font-size: 0.4em !important;
-  /* margin-top: -4px; */
+  margin-top: -4px;
   text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
   border: none;
   vertical-align: middle;
-}
+} */
 
-.volume-slide {
+/* .volume-slide {
   text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5);
   vertical-align: middle;
   margin-bottom: 0.6em;
 }
 
 .volume-control {
-  /* display: none; */
-  /* padding: 10px; */
   border-radius: 3px;
-}
-
+} */
+/* 
 .volume-slide input[type="range"]::-webkit-slider-runnable-track {
   background: rgba(0, 0, 0, 0.3);
   accent-color: rgba(0, 0, 0, 0.6);
@@ -189,17 +186,61 @@ body {
   outline: none;
   border-radius: 3px;
   border: none;
+} */
+
+.slider {
+  -webkit-appearance: none; /* Remove default styling */
+  appearance: none; /* Remove default styling */
+  width: 100%; /* Full width */
+  height: 3px; /* Height of the track */
+  background: #3b3b3b; /* Track color */
+  border-radius: 5px; /* Rounded corners */
+  outline: none; /* Remove outline */
+  opacity: 0.7; /* Transparency */
+  transition: opacity 0.2s; /* Transition effect */
 }
 
-.percentual-volume {
+.slider:hover {
+  opacity: 1; /* Full opacity on hover */
+}
+
+/* Slider Thumb */
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none; /* Remove default styling */
+  appearance: none; /* Remove default styling */
+  width: 10px; /* Width of the thumb */
+  height: 10px; /* Height of the thumb */
+  background: #ffffff; /* Thumb color */
+  cursor: pointer; /* Pointer cursor on hover */
+  border-radius: 50%; /* Round thumb */
+}
+
+.slider::-moz-range-thumb {
+  width: 10px; /* Width of the thumb */
+  height: 10px; /* Height of the thumb */
+  background: #ffffff; /* Thumb color */
+  cursor: pointer; /* Pointer cursor on hover */
+  border-radius: 50%; /* Round thumb */
+}
+
+.slider::-moz-range-track {
+  background: rgba(107, 107, 107, 0.3);
+  accent-color: rgba(0, 0, 0, 0.6);
+  height: 0.05rem;
+  outline: none;
+  border-radius: 3px;
+  border: none;
+}
+
+/* .percentual-volume {
   text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
-  border: none; /* Adicionado para remover a borda */
-}
+  border: none;
+} */
 
-.vagalume a {
+/* .volume a {
   color: #fff;
   text-decoration: underline;
-}
+} */
 
 .modal-content {
   background-color: rgba(0, 0, 0, 0.8);
@@ -225,8 +266,8 @@ footer {
 }
 
 /* Chrome */
-input[type="range"] {
-  /* -webkit-appearance: none; */
+/* input[type="range"] {
+  -webkit-appearance: none;
   background: transparent;
   width: 100%;
 }
@@ -253,10 +294,10 @@ input[type="range"]::-webkit-slider-thumb {
   cursor: pointer;
   -webkit-appearance: none;
   margin-top: -8px;
-}
+} */
 
 /* Firefox */
-input[type="range"]::-moz-range-track {
+/* input[type="range"]::-moz-range-track {
   width: 100%;
   height: 5px;
   cursor: pointer;
@@ -276,7 +317,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /* IE e Edge */
-input[type="range"]::-ms-track {
+/* input[type="range"]::-ms-track {
   width: 100%;
   height: 5px;
   cursor: pointer;
@@ -308,7 +349,7 @@ input[type="range"]::-ms-thumb {
   border-radius: 50%;
   background: #fff;
   cursor: pointer;
-}
+} */
 
 .info-current-song {
   margin-top: 1em;

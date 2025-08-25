@@ -6,6 +6,18 @@ const URL_STREAMING = "https://k-one.pvpjamz.com"; //https://stream.pvpjamz.com
 // Playlist data json url
 const PlayerData = "playlist.json";
 
+// set the initial volume to start at
+let initialVol;
+
+if (typeof Storage !== "undefined") {
+  const volumeLocalStorage = localStorage.getItem("volume") || volume;
+  console.log("Volume from localStorage or default:", volumeLocalStorage);
+  document.getElementById("volume").value = volumeLocalStorage;
+  initialVol = intToDecimal(volumeLocalStorage);
+} else {
+  initialVol = 0.2;
+}
+
 // const correctPasswordHash = md5("Th3#1by~R"); // Set your desired password here
 /**
  * Since 'md5' is not available or cannot be imported, use the Web Crypto API for hashing.
@@ -377,14 +389,14 @@ async function setupAudioPlayer() {
   audio.autoplay = false; // Autoplay is disabled for user interaction
   audio.loop = false; // Disable looping for streaming
   audio.muted = false; // Ensure audio is not muted
-  audio.volume = 1; // Set initial volume to 100% as volume slider functionality is removerd in v 1.1.9
 
-  // Set the volume to a default value, e.g., 1 (100%) if volume slider is activated in the future
-  // audio.volume = intToDecimal(100); // Uncomment if you want to use volume slider functionality in the future
-  // document.getElementById("volume").value = 100; // Set the volume slider to 100% if volume slider is activated in the future
+  document.getElementById("volume").oninput = function () {
+    changeVolumeIndicator(this.value);
+    audio.volume = intToDecimal(this.value);
+  };
 
-  //setVolume(audio.volume);
-  // changeVolumeIndicator(decimalToInt(audio.volume));
+  setVolume(initialVol);
+  changeVolumeIndicator(decimalToInt(initialVol));
 
   // On play, change the button to pause
   audio.onplay = function () {
@@ -442,35 +454,50 @@ function togglePlay() {
     playerButton.style.textShadow = "0 0 5px black";
 
     audio = new Audio(URL_STREAMING); // This restarts the stream download
-
+    setVolume(initialVol);
     audio.play(); // Play the audio when it can play
   }
 }
 
-// function setVolume(volume) {
-//   if (typeof Storage !== "undefined") {
-//     const volumeLocalStorage = localStorage.getItem("volume") || volume;
-//     document.getElementById("volume").value = volumeLocalStorage;
-//   }
-// }
+function setVolume(volume) {
+  if (typeof Storage !== "undefined") {
+    const volumeLocalStorage = localStorage.getItem("volume") || volume;
+    console.log("Volume from localStorage or default:", volumeLocalStorage);
+    document.getElementById("volume").value = volumeLocalStorage;
+    audio.volume = intToDecimal(volumeLocalStorage);
+  } else {
+    audio.volume = volume;
+  }
+}
 
-// function intToDecimal(vol) {
-//   return vol / 100;
-// }
+function intToDecimal(vol) {
+  return vol / 100;
+}
 
-// function decimalToInt(vol) {
-//   return vol * 100;
-// }
+function decimalToInt(vol) {
+  return vol * 100;
+}
 
-// function changeVolumeIndicator(volume) {
-//   if (typeof Storage !== "undefined") {
-//     localStorage.setItem("volume", volume);
-//   }
-// }
-// document.getElementById("volume").oninput = function () {
-//   changeVolumeIndicator(this.value);
-//   audio.volume = intToDecimal(this.value);
-// };
+function changeVolumeIndicator(volume) {
+  if (typeof Storage !== "undefined") {
+    localStorage.setItem("volume", volume);
+  }
+}
+
+function mute() {
+  if (!audio.muted) {
+    document.getElementById("volIndicator").innerHTML = 0;
+    document.getElementById("volume").value = 0;
+    audio.volume = 0;
+    audio.muted = true;
+  } else {
+    var localVolume = localStorage.getItem("volume");
+    document.getElementById("volIndicator").innerHTML = localVolume;
+    document.getElementById("volume").value = localVolume;
+    audio.volume = intToDecimal(localVolume);
+    audio.muted = false;
+  }
+}
 
 // function volumeUp() {
 //   var vol = audio.volume;
@@ -487,21 +514,6 @@ function togglePlay() {
 //     if (audio.volume >= 0.01 && audio.volume <= 1) {
 //       audio.volume = (vol - 0.01).toFixed(2);
 //     }
-//   }
-// }
-
-// function mute() {
-//   if (!audio.muted) {
-//     // document.getElementById("volIndicator").innerHTML = 0;
-//     // document.getElementById("volume").value = 0;
-//     audio.volume = 0;
-//     audio.muted = true;
-//   } else {
-//     var localVolume = localStorage.getItem("volume");
-//     // document.getElementById("volIndicator").innerHTML = localVolume;
-//     // document.getElementById("volume").value = localVolume;
-//     audio.volume = intToDecimal(localVolume);
-//     audio.muted = false;
 //   }
 // }
 
