@@ -17,12 +17,7 @@ if (typeof Storage !== "undefined") {
 } else {
   initialVol = 0.2;
 }
-
-// const correctPasswordHash = md5("Th3#1by~R"); // Set your desired password here
-/**
- * Since 'md5' is not available or cannot be imported, use the Web Crypto API for hashing.
- * We'll use SHA-256 instead, which is more secure than MD5.
- */
+console.log("Initial volume set to:", initialVol);
 
 // Helper function to hash a string using SHA-256 and return a hex string
 async function sha256(str) {
@@ -466,7 +461,7 @@ function setVolume(volume) {
     document.getElementById("volume").value = volumeLocalStorage;
     audio.volume = intToDecimal(volumeLocalStorage);
   } else {
-    audio.volume = volume;
+    audio.volume = intToDecimal(volume);
   }
 }
 
