@@ -2,20 +2,64 @@
 
 const RADIO_NAME = "KVPN";
 // Change Stream URL Here, Supports, ICECAST, ZENO, SHOUTCAST, RADIOJAR and any other stream service.
-const URL_STREAMING = "https://k-one.pvpjamz.com"; //https://stream.pvpjamz.com
+// List of stream URLs to try
+const STREAM_URLS = ["https://k-one.pvpjamz.com"];
+
+// Function to check if a stream URL is reachable
+async function getReachableStreamUrl(urls) {
+  for (const url of urls) {
+    try {
+      // Try to fetch the stream with a HEAD request (if supported)
+      const response = await fetch(url, { method: "HEAD", mode: "cors" });
+      // Check if the response is OK (not 404, etc.)
+      if (response.ok) {
+        return url;
+      } else {
+        console.warn(`Stream URL ${url} returned status: ${response.status}`);
+      }
+    } catch (error) {
+      // Continue to next URL
+    }
+  }
+  return null;
+}
+
+// Initialize the streaming URL
+let URL_STREAMING = STREAM_URLS[0];
+
+getReachableStreamUrl(STREAM_URLS).then((reachableUrl) => {
+  if (reachableUrl) {
+    URL_STREAMING = reachableUrl;
+    console.log("Using streaming URL:", URL_STREAMING);
+  } else {
+    alert("No streaming server is reachable at the moment.");
+  }
+});
 // Playlist data json url
 const PlayerData = "playlist.json";
 
 // set the initial volume to start at
 let initialVol;
 
-if (typeof Storage !== "undefined") {
-  const volumeLocalStorage = localStorage.getItem("volume") || volume;
-  console.log("Volume from localStorage or default:", volumeLocalStorage);
-  document.getElementById("volume").value = volumeLocalStorage;
-  initialVol = intToDecimal(volumeLocalStorage);
+function isMobileDevice() {
+  return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+}
+
+// Optionally, you can log or use the mobile check:
+if (isMobileDevice()) {
+  console.log("Mobile device detected.");
+  initialVol = 100;
 } else {
-  initialVol = 0.2;
+  if (typeof Storage !== "undefined") {
+    const volumeLocalStorage = localStorage.getItem("volume") || 20;
+    console.log("Volume from localStorage or default:", volumeLocalStorage);
+    document.getElementById("volume").value = volumeLocalStorage;
+    initialVol = intToDecimal(volumeLocalStorage);
+  } else {
+    initialVol = 20;
+  }
 }
 console.log("Initial volume set to:", initialVol);
 
@@ -97,6 +141,11 @@ function refreshCurrentSong(song, artist, duration) {
       currentArtist.classList.add("fade-in");
       currentDuration.classList.remove("fade-out");
       currentDuration.classList.add("fade-in");
+
+      // MediaSession API does not provide direct events for phone calls or interruptions.
+      // It only allows you to handle media controls (play, pause, etc.) from OS-level controls.
+      // Pausing/resuming on phone call interruptions is handled by the browser/OS automatically for <audio> elements.
+      // You cannot detect a phone call directly via JavaScript or MediaSession API due to privacy/security reasons.
 
       if ("mediaSession" in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
@@ -379,11 +428,46 @@ function setCopyright() {
 
 async function setupAudioPlayer() {
   audio = new Audio(URL_STREAMING);
-  audio.crossOrigin = "anonymous"; // Fix CORS issue
-  audio.preload = "none"; // Preload the audio for faster playback
-  audio.autoplay = false; // Autoplay is disabled for user interaction
-  audio.loop = false; // Disable looping for streaming
-  audio.muted = false; // Ensure audio is not muted
+  audio.crossOrigin = "anonymous";
+  audio.preload = "none";
+  audio.autoplay = false;
+  audio.loop = false;
+  audio.muted = false;
+
+  let retryCount = 0;
+  let retryTimer = null;
+
+  function handleStreamError() {
+    if (retryCount < 6) {
+      retryCount++;
+      console.warn(
+        `Stream error detected. Retrying in 10 seconds... (${retryCount}/6)`
+      );
+      retryTimer = setTimeout(() => {
+        audio.src = URL_STREAMING;
+        audio.load();
+        audio.play().catch(() => {}); // Try to play again
+      }, 10000);
+    } else {
+      clearTimeout(retryTimer);
+      retryTimer = null;
+      const reactie = confirm(
+        "Stream Down or network error. Do you want to retry again?"
+      );
+      if (reactie) {
+        retryCount = 0;
+        audio.src = URL_STREAMING;
+        audio.load();
+        audio.play().catch(() => {});
+      } else {
+        audio.pause();
+        audio.src = "";
+      }
+    }
+  }
+
+  audio.addEventListener("error", handleStreamError);
+  audio.addEventListener("stalled", handleStreamError);
 
   document.getElementById("volume").oninput = function () {
     changeVolumeIndicator(this.value);
@@ -393,7 +477,6 @@ async function setupAudioPlayer() {
   setVolume(initialVol);
   changeVolumeIndicator(decimalToInt(initialVol));
 
-  // On play, change the button to pause
   audio.onplay = function () {
     var btn = document.getElementById("playerButton");
     var btn_play = document.getElementById("buttonPlay");
@@ -401,9 +484,13 @@ async function setupAudioPlayer() {
       btn.className = "fa fa-pause";
       btn_play.firstChild.data = "PAUSE";
     }
+    retryCount = 0; // Reset retry count on successful play
+    if (retryTimer) {
+      clearTimeout(retryTimer);
+      retryTimer = null;
+    }
   };
 
-  // On pause, change the button to play
   audio.onpause = function () {
     var btn = document.getElementById("playerButton");
     var btn_play = document.getElementById("buttonPlay");
@@ -413,20 +500,9 @@ async function setupAudioPlayer() {
     }
   };
 
-  //Unmute when volume changed
   audio.onvolumechange = function () {
     if (audio.volume > 0) {
       audio.muted = false;
-    }
-  };
-
-  audio.onerror = function () {
-    var reactie = confirm(
-      "Stream Down or network error. Try loading it again?"
-    );
-
-    if (reactie) {
-      window.location.reload();
     }
   };
 }
@@ -441,16 +517,15 @@ function togglePlay() {
     playerButton.style.textShadow = "0 0 5px black";
 
     audio.pause();
-    // audio.src = ""; // This stops the stream from downloading
-    audio = new Audio(); // Reset the audio element to stop the stream download
+    audio = new Audio();
   } else {
     playerButton.classList.remove("fa-play-circle");
     playerButton.classList.add("fa-pause-circle");
     playerButton.style.textShadow = "0 0 5px black";
 
-    audio = new Audio(URL_STREAMING); // This restarts the stream download
+    audio = new Audio(URL_STREAMING);
     setVolume(initialVol);
-    audio.play(); // Play the audio when it can play
+    audio.play();
   }
 }
 
