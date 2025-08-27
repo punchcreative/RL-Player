@@ -4,6 +4,12 @@ const RADIO_NAME = "KVPN";
 // Change Stream URL Here, Supports, ICECAST, ZENO, SHOUTCAST, RADIOJAR and any other stream service.
 // List of stream URLs to try
 const STREAM_URLS = ["https://k-one.pvpjamz.com"];
+// Playlist data json url
+const PlayerData = "playlist.json";
+// set the initial volume to start at
+let initialVol = 100;
+// Initialize the streaming URL
+let URL_STREAMING = STREAM_URLS[0];
 
 // Function to check if a stream URL is reachable
 async function getReachableStreamUrl(urls) {
@@ -24,9 +30,6 @@ async function getReachableStreamUrl(urls) {
   return null;
 }
 
-// Initialize the streaming URL
-let URL_STREAMING = STREAM_URLS[0];
-
 getReachableStreamUrl(STREAM_URLS).then((reachableUrl) => {
   if (reachableUrl) {
     URL_STREAMING = reachableUrl;
@@ -35,28 +38,38 @@ getReachableStreamUrl(STREAM_URLS).then((reachableUrl) => {
     alert("No streaming server is reachable at the moment.");
   }
 });
-// Playlist data json url
-const PlayerData = "playlist.json";
 
-// set the initial volume to start at
-let initialVol;
-
-function isMobileDevice() {
-  return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent
-  );
+function setVolume(volume) {
+  if (typeof Storage !== "undefined") {
+    const volumeLocalStorage =
+      parseInt(localStorage.getItem("volume"), 1) || 100;
+    console.log("Volume from localStorage or default:", volumeLocalStorage);
+    document.getElementById("volume").value = volumeLocalStorage;
+    audio.volume = intToDecimal(volumeLocalStorage);
+  } else {
+    audio.volume = intToDecimal(volume);
+  }
 }
 
-if (typeof Storage !== "undefined") {
-  const volumeLocalStorage = localStorage.getItem("volume") || 20;
-  console.log("Volume from localStorage or default:", volumeLocalStorage);
-  document.getElementById("volume").value = volumeLocalStorage;
-  initialVol = intToDecimal(volumeLocalStorage);
-} else {
-  initialVol = 100;
+function changeVolumeLocalStorage(volume) {
+  if (typeof Storage !== "undefined") {
+    localStorage.setItem("volume", volume);
+  }
 }
+// function isMobileDevice() {
+//   return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+//     navigator.userAgent
+//   );
+// }
 
-console.log("Initial volume set to:", initialVol);
+// if (typeof Storage !== "undefined") {
+//   const volumeLocalStorage = localStorage.getItem("volume") || 100;
+//   console.log("Volume from localStorage or default:", volumeLocalStorage);
+//   document.getElementById("volume").value = volumeLocalStorage;
+//   initialVol = intToDecimal(volumeLocalStorage);
+// } else {
+//   initialVol = 100;
+// }
 
 // Helper function to hash a string using SHA-256 and return a hex string
 async function sha256(str) {
@@ -465,12 +478,13 @@ async function setupAudioPlayer() {
   audio.addEventListener("stalled", handleStreamError);
 
   document.getElementById("volume").oninput = function () {
-    changeVolumeIndicator(this.value);
+    changeVolumeLocalStorage(this.value);
     audio.volume = intToDecimal(this.value);
   };
 
   setVolume(initialVol);
-  changeVolumeIndicator(decimalToInt(initialVol));
+  console.log("Initial volume set to:", initialVol);
+  changeVolumeLocalStorage(decimalToInt(initialVol));
 
   audio.onplay = function () {
     var btn = document.getElementById("playerButton");
@@ -632,10 +646,10 @@ timerButton.addEventListener("click", function () {
   // Only add the SVG if not already present
   if (!circleContainer.querySelector("#timerCircleProgress")) {
     circleContainer.innerHTML = `
-      <svg width="26" height="26" viewBox="0 0 26 26" style="transform: rotate(-90deg);">
-        <circle cx="13" cy="13" r="12" stroke="#031521" stroke-width="2" fill="none" opacity="0.2"/>
-        <circle id="timerCircleProgress" cx="13" cy="13" r="12" stroke="#ffffffff" stroke-width="3" fill="none"
-          stroke-dasharray="75.36" stroke-dashoffset="0" style="transition: stroke-dashoffset 1s linear;"/>
+      <svg width="24" height="24" viewBox="0 0 24 24" style="transform: rotate(-90deg);">
+        <circle cx="12" cy="12" r="11" stroke="#031521" stroke-width="2" fill="none" opacity="0.2"/>
+        <circle id="timerCircleProgress" cx="12" cy="12" r="11" stroke="#ffffffff" stroke-width="1" fill="none"
+          stroke-dasharray="69.12" stroke-dashoffset="0" style="transition: stroke-dashoffset 1s linear;"/>
       </svg>
     `;
   } else {
@@ -735,23 +749,6 @@ function intToDecimal(vol) {
 
 function decimalToInt(vol) {
   return vol * 100;
-}
-
-function setVolume(volume) {
-  if (typeof Storage !== "undefined") {
-    const volumeLocalStorage = localStorage.getItem("volume") || 100;
-    console.log("Volume from localStorage or default:", volumeLocalStorage);
-    document.getElementById("volume").value = volumeLocalStorage;
-    audio.volume = intToDecimal(volumeLocalStorage);
-  } else {
-    audio.volume = intToDecimal(volume);
-  }
-}
-
-function changeVolumeIndicator(volume) {
-  if (typeof Storage !== "undefined") {
-    localStorage.setItem("volume", volume);
-  }
 }
 
 function mute() {
