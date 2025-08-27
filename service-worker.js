@@ -1,4 +1,4 @@
-const activeCacheVersion = 1135;
+const activeCacheVersion = 1136;
 const activeCacheName = `rlplayer-${activeCacheVersion}`;
 
 // files and folders to cache
@@ -8,7 +8,10 @@ const cacheAssets = [
   "offline.html",
   "css/style.css",
   "css/bootstrap.min.css",
-  "css/font-awesome.min.css",
+  "css/fontawesome.min.css",
+  "css/regular.min.css",
+  "css/solid.min.css",
+  "css/thin.min.css",
   "css/animate.css",
   "js/script.js",
   "js/bootstrap.min.js",
@@ -19,12 +22,10 @@ const cacheAssets = [
   "img/icon-wit-koptelefoon.png",
   "img/icon-wit.png",
   "manifest.json",
-  "fonts/fontawesome-webfont.woff2",
-  "fonts/fontawesome-webfont.woff",
-  "fonts/fontawesome-webfont.ttf",
-  "fonts/fontawesome-webfont.eot",
-  "fonts/fontawesome-webfont.svg",
-  "fonts/FontAwesome.otf",
+  "webfonts/fa-light-300.woff2",
+  "webfonts/fa-solid-900.woff2",
+  "webfonts/fa-regular-400.woff2",
+  "webfonts/fa-thin-100.woff2",
 ];
 
 // Service workers can't directly listen for FTP uploads or external file changes.

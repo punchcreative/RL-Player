@@ -47,20 +47,15 @@ function isMobileDevice() {
   );
 }
 
-// Optionally, you can log or use the mobile check:
-if (isMobileDevice()) {
-  console.log("Mobile device detected.");
-  initialVol = 100;
+if (typeof Storage !== "undefined") {
+  const volumeLocalStorage = localStorage.getItem("volume") || 20;
+  console.log("Volume from localStorage or default:", volumeLocalStorage);
+  document.getElementById("volume").value = volumeLocalStorage;
+  initialVol = intToDecimal(volumeLocalStorage);
 } else {
-  if (typeof Storage !== "undefined") {
-    const volumeLocalStorage = localStorage.getItem("volume") || 20;
-    console.log("Volume from localStorage or default:", volumeLocalStorage);
-    document.getElementById("volume").value = volumeLocalStorage;
-    initialVol = intToDecimal(volumeLocalStorage);
-  } else {
-    initialVol = 20;
-  }
+  initialVol = 100;
 }
+
 console.log("Initial volume set to:", initialVol);
 
 // Helper function to hash a string using SHA-256 and return a hex string
@@ -567,6 +562,13 @@ timerButton.addEventListener("click", function () {
   modal.style.justifyContent = "center";
   modal.style.zIndex = "9999";
 
+  // Allow closing modal by clicking outside the box
+  modal.addEventListener("click", function (e) {
+    if (e.target === modal) {
+      document.body.removeChild(modal);
+    }
+  });
+
   const box = document.createElement("div");
   box.style.background = "#fff";
   box.style.padding = "24px";
@@ -574,13 +576,19 @@ timerButton.addEventListener("click", function () {
   box.style.textAlign = "center";
   box.style.minWidth = "220px";
 
-  box.innerHTML = `<strong>Set sleep timer:</strong><br><br>`;
+  box.innerHTML = `<strong>Set or stop a sleep timer</strong><br><br>`;
 
-  const validTimes = [2, 30, 45, 60];
+  const validTimes = [15, 30, 45, 60];
   validTimes.forEach((min) => {
     const btn = document.createElement("button");
     btn.textContent = `${min} min`;
     btn.style.margin = "3px";
+    btn.style.color = "white";
+    btn.style.backgroundColor = "#031521";
+    btn.style.border = "none";
+    btn.style.borderRadius = "4px";
+    btn.style.padding = "4px 6px";
+
     btn.onclick = () => {
       setSleepTimer(min);
       document.body.removeChild(modal);
@@ -592,6 +600,11 @@ timerButton.addEventListener("click", function () {
   const cancelBtn = document.createElement("button");
   cancelBtn.textContent = "Stop timer";
   cancelBtn.style.margin = "3px";
+  cancelBtn.style.color = "white";
+  cancelBtn.style.backgroundColor = "#031521";
+  cancelBtn.style.border = "none";
+  cancelBtn.style.borderRadius = "4px";
+  cancelBtn.style.padding = "4px 6px";
   cancelBtn.onclick = () => {
     cancelSleepTimer();
     document.body.removeChild(modal);
@@ -602,6 +615,37 @@ timerButton.addEventListener("click", function () {
   modal.appendChild(box);
   document.body.appendChild(modal);
 
+  // Add a circular countdown animation for the sleep timer
+  // Create SVG circle if not already present
+  let circleContainer = document.getElementById("timerCircleContainer");
+  if (!circleContainer) {
+    circleContainer = document.createElement("div");
+    circleContainer.id = "timerCircleContainer";
+    circleContainer.style.display = "inline-block";
+    circleContainer.style.verticalAlign = "middle";
+    circleContainer.style.marginLeft = "8px";
+    timerCountdownDisplay.parentNode.insertBefore(
+      circleContainer,
+      timerCountdownDisplay.nextSibling
+    );
+  }
+  // Only add the SVG if not already present
+  if (!circleContainer.querySelector("#timerCircleProgress")) {
+    circleContainer.innerHTML = `
+      <svg width="26" height="26" viewBox="0 0 26 26" style="transform: rotate(-90deg);">
+        <circle cx="13" cy="13" r="12" stroke="#031521" stroke-width="2" fill="none" opacity="0.2"/>
+        <circle id="timerCircleProgress" cx="13" cy="13" r="12" stroke="#ffffffff" stroke-width="3" fill="none"
+          stroke-dasharray="75.36" stroke-dashoffset="0" style="transition: stroke-dashoffset 1s linear;"/>
+      </svg>
+    `;
+  } else {
+    // Reset progress if timer is restarted
+    const circle = circleContainer.querySelector("#timerCircleProgress");
+    circle.setAttribute("stroke-dashoffset", "0");
+  }
+  // Show the circle only if a timer is running
+  circleContainer.style.display = sleepTimerEndTime ? "inline-block" : "none";
+
   function setSleepTimer(selected) {
     if (sleepTimerId) clearTimeout(sleepTimerId);
     if (sleepTimerCountdownId) clearInterval(sleepTimerCountdownId);
@@ -610,8 +654,15 @@ timerButton.addEventListener("click", function () {
     if (audio && audio.paused) {
       togglePlay();
     }
-    // Add ml-2 class to timerCountdownDisplay when timer starts
     timerCountdownDisplay.classList.add("ml-2");
+    circleContainer.style.display = "inline-block";
+
+    // Circle animation setup
+    const circle = circleContainer.querySelector("#timerCircleProgress");
+    const totalSeconds = selected * 60;
+    const circumference = 2 * Math.PI * 12; // r=12
+    circle.setAttribute("stroke-dasharray", circumference);
+    circle.setAttribute("stroke-dashoffset", "0");
 
     sleepTimerId = setTimeout(() => {
       if (audio && !audio.paused) {
@@ -622,9 +673,8 @@ timerButton.addEventListener("click", function () {
         document.getElementById("playerButton").classList.add("fa-circle-play");
       }
       sleepTimerId = null;
-      timerCountdownDisplay.textContent = "";
-      // Remove ml-2 class when timer is canceled/stopped
       timerCountdownDisplay.classList.remove("ml-2");
+      circleContainer.style.display = "none";
       if (sleepTimerCountdownId) {
         clearInterval(sleepTimerCountdownId);
         sleepTimerCountdownId = null;
@@ -632,28 +682,28 @@ timerButton.addEventListener("click", function () {
       sleepTimerEndTime = null;
     }, selected * 60 * 1000);
 
-    function updateSleepTimerCountdownDisplay() {
+    function updateSleepTimerCircle() {
       if (!sleepTimerEndTime) return;
       const now = Date.now();
       const remainingMs = sleepTimerEndTime - now;
       if (remainingMs <= 0) {
-        timerCountdownDisplay.textContent = "";
-        timerCountdownDisplay.classList.remove("ml-2");
+        circle.setAttribute("stroke-dashoffset", circumference);
+        circle.setAttribute("stroke", "#fff"); // Set color to white when finished
+        circleContainer.style.display = "none";
         clearInterval(sleepTimerCountdownId);
         sleepTimerCountdownId = null;
         sleepTimerEndTime = null;
         return;
       }
-      const remainingSec = Math.floor(remainingMs / 1000);
-      const min = Math.floor(remainingSec / 60);
-      const sec = remainingSec % 60;
-      timerCountdownDisplay.textContent = `${min}:${sec
-        .toString()
-        .padStart(2, "0")}`;
+      const elapsed = totalSeconds - Math.floor(remainingMs / 1000);
+      const progress = elapsed / totalSeconds;
+      const offset = circumference * progress;
+      circle.setAttribute("stroke-dashoffset", offset);
+      circle.setAttribute("stroke", "#fff"); // Set color to white during progress
     }
 
-    updateSleepTimerCountdownDisplay();
-    sleepTimerCountdownId = setInterval(updateSleepTimerCountdownDisplay, 1000);
+    updateSleepTimerCircle();
+    sleepTimerCountdownId = setInterval(updateSleepTimerCircle, 1000);
   }
 
   function cancelSleepTimer() {
@@ -661,12 +711,18 @@ timerButton.addEventListener("click", function () {
       clearTimeout(sleepTimerId);
       sleepTimerId = null;
       timerCountdownDisplay.textContent = "";
+      timerCountdownDisplay.classList.remove("ml-2");
       if (sleepTimerCountdownId) {
         clearInterval(sleepTimerCountdownId);
         sleepTimerCountdownId = null;
       }
       sleepTimerEndTime = null;
-      // alert("Sleep timer canceled.");
+      // Hide and remove the progress circle
+      const circleContainer = document.getElementById("timerCircleContainer");
+      if (circleContainer) {
+        circleContainer.style.display = "none";
+        circleContainer.innerHTML = "";
+      }
     } else {
       alert("No sleep timer is set.");
     }
@@ -686,7 +742,7 @@ function setVolume(volume) {
     const volumeLocalStorage = localStorage.getItem("volume") || 100;
     console.log("Volume from localStorage or default:", volumeLocalStorage);
     document.getElementById("volume").value = volumeLocalStorage;
-    FontFace;
+    audio.volume = intToDecimal(volumeLocalStorage);
   } else {
     audio.volume = intToDecimal(volume);
   }
@@ -712,24 +768,6 @@ function mute() {
     audio.muted = false;
   }
 }
-
-// function volumeUp() {
-//   var vol = audio.volume;
-//   if (audio) {
-//     if (audio.volume >= 0 && audio.volume < 1) {
-//       audio.volume = (vol + 0.01).toFixed(2);
-//     }
-//   }
-// }
-
-// function volumeDown() {
-//   var vol = audio.volume;
-//   if (audio) {
-//     if (audio.volume >= 0.01 && audio.volume <= 1) {
-//       audio.volume = (vol - 0.01).toFixed(2);
-//     }
-//   }
-// }
 
 // function subscribeToPush() {
 //   if ("serviceWorker" in navigator && "PushManager" in window) {
