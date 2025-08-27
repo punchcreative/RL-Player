@@ -142,13 +142,30 @@ body {
   text-overflow: ellipsis;
 }
 
-.play-pause {
-  font-size: 45px;
+.play-pause #playerButton {
+  font-size: 2.5em;
+  color: white;
+}
+.play-pause #timerButton {
+  font-size: 1em;
+  color: white;
+}
+.play-pause #timerDisplay {
+  font-size: 0.8em;
+  color: rgba(255, 255, 255, 0.636);
+}
+/* Ícon play */
+.fa-circle-play,
+.fa-timer {
   color: white;
 }
 
-.play-pause i {
-  cursor: pointer;
+/* Ícon pause */
+.fa-circle-pause {
+  color: white;
+}
+
+.close {
   color: white;
 }
 
@@ -319,8 +336,8 @@ footer {
     height: auto;
     margin-top: 4em;
   }
-  .play-pause {
-    font-size: 60px;
+  .play-pause #playerButton {
+    font-size: 3em;
     color: white;
   }
 }
@@ -363,76 +380,6 @@ footer {
     margin-top: 20px;
     text-align: left;
   }
-}
-
-#buttonPlay {
-  padding-left: 4px;
-}
-#playerButton {
-  color: white;
-}
-
-.btn-play {
-  background-color: white;
-  border: none;
-  color: black;
-  padding: 10px 20px;
-  font-size: 0.4em;
-  font-weight: bold;
-  cursor: pointer;
-  border-radius: 20px;
-  width: auto;
-  transition: transform 0.2s;
-  box-shadow: 1px 3px #30303022;
-}
-
-.btn-play:focus {
-  outline: 0;
-}
-
-.btn-play:hover {
-  box-shadow: 1px 5px #30303022;
-  transform: scale(1.1);
-}
-
-.btn-play-circle {
-  background-color: white;
-  border: none;
-  color: black;
-  padding: 10px 20px;
-  font-size: 1.1em;
-  font-weight: bold;
-  cursor: pointer;
-  border-radius: 50%; /* Torna o botão circular */
-  width: 60px; /* Define uma largura fixa */
-  height: 60px; /* Define uma altura fixa (igual à largura) */
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s;
-  box-shadow: 1px 3px #30303022;
-}
-
-.btn-play-circle:focus {
-  outline: 0;
-}
-
-.btn-play-circle:hover {
-  box-shadow: 1px 5px #30303022;
-  transform: scale(1.1);
-}
-
-/* Ícone de play */
-.fa-play-circle {
-  color: white;
-}
-
-/* Ícone de pause */
-.fa-pause-circle {
-  color: white;
-}
-
-.close {
-  color: white;
 }
 
 .fade-out {

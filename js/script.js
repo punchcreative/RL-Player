@@ -9,8 +9,8 @@ const STREAM_URLS = ["https://k-one.pvpjamz.com"];
 async function getReachableStreamUrl(urls) {
   for (const url of urls) {
     try {
-      // Try to fetch the stream with a HEAD request (if supported)
-      const response = await fetch(url, { method: "HEAD", mode: "cors" });
+      // Try to fetch the stream with a GET request (HEAD often not supported by streaming servers)
+      const response = await fetch(url, { method: "GET", mode: "cors" });
       // Check if the response is OK (not 404, etc.)
       if (response.ok) {
         return url;
@@ -168,8 +168,8 @@ function refreshCurrentSong(song, artist, duration) {
         });
         navigator.mediaSession.setActionHandler("stop", () => {
           if (isPlaying) {
-            playerButton.classList.remove("fa-pause-circle");
-            playerButton.classList.add("fa-play-circle");
+            playerButton.classList.remove("fa-circle-pause");
+            playerButton.classList.add("fa-circle-play");
             playerButton.style.textShadow = "0 0 5px black";
 
             audio.pause();
@@ -509,18 +509,18 @@ async function setupAudioPlayer() {
 
 function togglePlay() {
   const playerButton = document.getElementById("playerButton");
-  const isPlaying = playerButton.classList.contains("fa-pause-circle");
+  const isPlaying = playerButton.classList.contains("fa-circle-pause");
 
   if (isPlaying) {
-    playerButton.classList.remove("fa-pause-circle");
-    playerButton.classList.add("fa-play-circle");
+    playerButton.classList.remove("fa-circle-pause");
+    playerButton.classList.add("fa-circle-play");
     playerButton.style.textShadow = "0 0 5px black";
 
     audio.pause();
     audio = new Audio();
   } else {
-    playerButton.classList.remove("fa-play-circle");
-    playerButton.classList.add("fa-pause-circle");
+    playerButton.classList.remove("fa-circle-play");
+    playerButton.classList.add("fa-circle-pause");
     playerButton.style.textShadow = "0 0 5px black";
 
     audio = new Audio(URL_STREAMING);
@@ -529,16 +529,149 @@ function togglePlay() {
   }
 }
 
-function setVolume(volume) {
-  if (typeof Storage !== "undefined") {
-    const volumeLocalStorage = localStorage.getItem("volume") || volume;
-    console.log("Volume from localStorage or default:", volumeLocalStorage);
-    document.getElementById("volume").value = volumeLocalStorage;
-    audio.volume = intToDecimal(volumeLocalStorage);
-  } else {
-    audio.volume = intToDecimal(volume);
+// Sleep timer logic
+let sleepTimerId = null;
+let sleepTimerCountdownId = null;
+let sleepTimerEndTime = null;
+const timerButton = document.getElementById("timerButton");
+
+// Use the existing <span id="timerDisplay"> for countdown display
+const timerCountdownDisplay = document.getElementById("timerDisplay");
+
+function updateSleepTimerCountdown() {
+  if (!sleepTimerEndTime) return;
+  const now = Date.now();
+  const remainingMs = sleepTimerEndTime - now;
+  if (remainingMs <= 0) {
+    timerCountdownDisplay.textContent = "";
+    clearInterval(sleepTimerCountdownId);
+    sleepTimerCountdownId = null;
+    sleepTimerEndTime = null;
+    return;
   }
+  const remainingMin = Math.ceil(remainingMs / 60000);
+  timerCountdownDisplay.textContent = `${remainingMin} min`;
 }
+
+timerButton.addEventListener("click", function () {
+  // Create a modal dialog for timer selection
+  const modal = document.createElement("div");
+  modal.style.position = "fixed";
+  modal.style.top = "0";
+  modal.style.left = "0";
+  modal.style.width = "100vw";
+  modal.style.height = "100vh";
+  modal.style.background = "rgba(0, 0, 0, 0.3)";
+  modal.style.display = "flex";
+  modal.style.alignItems = "center";
+  modal.style.justifyContent = "center";
+  modal.style.zIndex = "9999";
+
+  const box = document.createElement("div");
+  box.style.background = "#fff";
+  box.style.padding = "24px";
+  box.style.borderRadius = "8px";
+  box.style.textAlign = "center";
+  box.style.minWidth = "220px";
+
+  box.innerHTML = `<strong>Set sleep timer:</strong><br><br>`;
+
+  const validTimes = [2, 30, 45, 60];
+  validTimes.forEach((min) => {
+    const btn = document.createElement("button");
+    btn.textContent = `${min} min`;
+    btn.style.margin = "3px";
+    btn.onclick = () => {
+      setSleepTimer(min);
+      document.body.removeChild(modal);
+    };
+    box.appendChild(btn);
+  });
+
+  // Cancel button
+  const cancelBtn = document.createElement("button");
+  cancelBtn.textContent = "Stop timer";
+  cancelBtn.style.margin = "3px";
+  cancelBtn.onclick = () => {
+    cancelSleepTimer();
+    document.body.removeChild(modal);
+  };
+  box.appendChild(document.createElement("br"));
+  box.appendChild(cancelBtn);
+
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+
+  function setSleepTimer(selected) {
+    if (sleepTimerId) clearTimeout(sleepTimerId);
+    if (sleepTimerCountdownId) clearInterval(sleepTimerCountdownId);
+    sleepTimerEndTime = Date.now() + selected * 60 * 1000;
+    // If not playing, start playing and toggle play/pause
+    if (audio && audio.paused) {
+      togglePlay();
+    }
+    // Add ml-2 class to timerCountdownDisplay when timer starts
+    timerCountdownDisplay.classList.add("ml-2");
+
+    sleepTimerId = setTimeout(() => {
+      if (audio && !audio.paused) {
+        audio.pause();
+        document
+          .getElementById("playerButton")
+          .classList.remove("fa-circle-pause");
+        document.getElementById("playerButton").classList.add("fa-circle-play");
+      }
+      sleepTimerId = null;
+      timerCountdownDisplay.textContent = "";
+      // Remove ml-2 class when timer is canceled/stopped
+      timerCountdownDisplay.classList.remove("ml-2");
+      if (sleepTimerCountdownId) {
+        clearInterval(sleepTimerCountdownId);
+        sleepTimerCountdownId = null;
+      }
+      sleepTimerEndTime = null;
+    }, selected * 60 * 1000);
+
+    function updateSleepTimerCountdownDisplay() {
+      if (!sleepTimerEndTime) return;
+      const now = Date.now();
+      const remainingMs = sleepTimerEndTime - now;
+      if (remainingMs <= 0) {
+        timerCountdownDisplay.textContent = "";
+        timerCountdownDisplay.classList.remove("ml-2");
+        clearInterval(sleepTimerCountdownId);
+        sleepTimerCountdownId = null;
+        sleepTimerEndTime = null;
+        return;
+      }
+      const remainingSec = Math.floor(remainingMs / 1000);
+      const min = Math.floor(remainingSec / 60);
+      const sec = remainingSec % 60;
+      timerCountdownDisplay.textContent = `${min}:${sec
+        .toString()
+        .padStart(2, "0")}`;
+    }
+
+    updateSleepTimerCountdownDisplay();
+    sleepTimerCountdownId = setInterval(updateSleepTimerCountdownDisplay, 1000);
+  }
+
+  function cancelSleepTimer() {
+    if (sleepTimerId) {
+      clearTimeout(sleepTimerId);
+      sleepTimerId = null;
+      timerCountdownDisplay.textContent = "";
+      if (sleepTimerCountdownId) {
+        clearInterval(sleepTimerCountdownId);
+        sleepTimerCountdownId = null;
+      }
+      sleepTimerEndTime = null;
+      // alert("Sleep timer canceled.");
+    } else {
+      alert("No sleep timer is set.");
+    }
+  }
+});
 
 function intToDecimal(vol) {
   return vol / 100;
@@ -546,6 +679,17 @@ function intToDecimal(vol) {
 
 function decimalToInt(vol) {
   return vol * 100;
+}
+
+function setVolume(volume) {
+  if (typeof Storage !== "undefined") {
+    const volumeLocalStorage = localStorage.getItem("volume") || 100;
+    console.log("Volume from localStorage or default:", volumeLocalStorage);
+    document.getElementById("volume").value = volumeLocalStorage;
+    FontFace;
+  } else {
+    audio.volume = intToDecimal(volume);
+  }
 }
 
 function changeVolumeIndicator(volume) {

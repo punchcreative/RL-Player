@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>RL Player</title>
     <link rel="icon" type="image/png" href="img/app-icon.png" />
-    <link rel="stylesheet" href="css/font-awesome.min.css" />
+    <link rel="stylesheet" href="css/fontawesome.min.css" />
+    <link rel="stylesheet" href="css/solid.min.css" />
+    <link rel="stylesheet" href="css/regular.min.css" />
+    <link rel="stylesheet" href="css/thin.min.css" />
     <link rel="stylesheet" type="text/css" href="css/animate.css" />
     <link rel="stylesheet" href="css/style.css" />
     <link rel="manifest" href="manifest.json" />
@@ -67,26 +70,43 @@
                     </div>
                     <div class="col-12 play-pause mb-3">
                       <div class="row justify-content-center">
-                        <div class="play-pause col-12 text-center">
-                          <i
+                        <div class="play-pause col-12 text-center mb-3 d-flex flex-column align-items-center justify-content-center">
+                          <span
                             id="playerButton"
-                            class="fa fa-play-circle"
+                            class="fa-solid fa-circle-play mb-3"
                             onclick="togglePlay()"
-                          ></i>
+                            style="font-size: 2.5rem;"
+                          ></span>
+                          <div class="d-flex align-items-center justify-content-center">
+                            <span
+                              id="timerButton"
+                              class="fa-thin fa-solid fa-timer h-100"
+                              style="font-size: 1.5rem;"
+                            ></span>
+                            <span
+                              id="timerDisplay"
+                              class="timer-display h-100"
+                            ></span>
+                          </div>
                         </div>
+                      </div>
+
+                      <div class="row justify-content-center">
                         <div class="col-12 volume-control-elements d-none d-lg-block">
-                          <div
-                            class="row volume-control align-items-center justify-content-center"
-                          >
-                            <div class="volume-slide col-6 col-md-4">
-                              <input
-                                type="range"
-                                id="volume"
-                                step="1"
-                                min="0"
-                                max="100"
-                                class="slider"
-                              />
+                          <div class="row justify-content-center">
+                            <div class="col-12">
+                              <div class="row volume-control align-items-center justify-content-center">
+                                <div class="volume-slide col-6 col-md-4">
+                                  <input
+                                    type="range"
+                                    id="volume"
+                                    step="1"
+                                    min="0"
+                                    max="100"
+                                    class="slider"
+                                  />
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
