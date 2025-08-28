@@ -1,11 +1,129 @@
 // import md5 from "md5";
 
 const RADIO_NAME = "KVPN";
+
+// Helper function to hash a string using SHA-256 and return a hex string
+async function sha256(str) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Store the correct password hash
+// Instead of storing the actual password in the code, store only the hash here.
+// Generate the hash once (e.g., using a Node.js script or browser console) and paste it below.
+// Example: sha256("Th3#1by~R") => "e7c7...yourhash..."
+// Never store the plain password in your codebase.
+
+const correctPasswordHash =
+  "dc18b42a2ea8cf3fb313c20d32945a631ec4fa450b16f9d1567f933e16bd0565";
+const correctPasswordHashPromise = Promise.resolve(correctPasswordHash);
+
+function showLoader() {
+  // Hide the player while loading
+  const player = document.getElementById("player");
+  if (player) player.style.display = "none";
+
+  // Remove existing loader if present
+  let existing = document.getElementById("radioLoader");
+  if (existing) existing.remove();
+
+  const loader = document.createElement("div");
+  loader.id = "radioLoader";
+  loader.className = "radio-loader";
+  loader.style.position = "fixed";
+  loader.style.top = "0";
+  loader.style.left = "0";
+  loader.style.width = "100vw";
+  loader.style.height = "100vh";
+  loader.style.display = "flex";
+  loader.style.alignItems = "center";
+  loader.style.justifyContent = "center";
+  loader.style.background = "rgba(0,0,0,0.8)";
+  loader.style.zIndex = "99999";
+
+  const lettersContainer = document.createElement("div");
+  lettersContainer.className = "radio-loader-letters";
+  lettersContainer.style.display = "flex";
+  lettersContainer.style.gap = "0.2em";
+  lettersContainer.style.fontSize = "2em";
+  lettersContainer.style.fontWeight = "light";
+  lettersContainer.style.color = "#fff";
+  lettersContainer.style.letterSpacing = "0.15em";
+
+  // Each letter gets its own span for animation
+  for (let i = 0; i < RADIO_NAME.length; i++) {
+    const span = document.createElement("span");
+    span.textContent = RADIO_NAME[i];
+    span.className = "radio-loader-letter";
+    span.style.opacity = "0";
+    span.style.transition = "opacity 0.5s";
+    lettersContainer.appendChild(span);
+  }
+
+  loader.appendChild(lettersContainer);
+  document.body.appendChild(loader);
+
+  // Animate letters in and out
+  let idx = 0;
+  let direction = 1; // 1: fade in, -1: fade out
+  const spans = lettersContainer.querySelectorAll(".radio-loader-letter");
+  function animateLetters() {
+    spans.forEach((span, i) => {
+      span.style.opacity =
+        i === idx && direction === 1
+          ? "1"
+          : i === idx && direction === -1
+          ? "0"
+          : span.style.opacity;
+    });
+    if (direction === 1) {
+      idx++;
+      if (idx >= spans.length) {
+        direction = -1;
+        idx = spans.length - 1;
+        setTimeout(animateLetters, 400);
+        return;
+      }
+    } else {
+      idx--;
+      if (idx < 0) {
+        direction = 1;
+        idx = 0;
+        setTimeout(animateLetters, 400);
+        return;
+      }
+    }
+    setTimeout(animateLetters, 200);
+  }
+  animateLetters();
+}
+
+// Modify hideLoader to show the player after loading
+function hideLoader() {
+  const loader = document.getElementById("radioLoader");
+  if (loader) loader.remove();
+  const player = document.getElementById("player");
+  if (player) player.style.display = "";
+}
+
+// Show loader on page load
+window.addEventListener("DOMContentLoaded", showLoader);
+
+// Hide loader after playlist loads (call hideLoader in getStreamingData when data is ready)
+
 // Change Stream URL Here, Supports, ICECAST, ZENO, SHOUTCAST, RADIOJAR and any other stream service.
 // List of stream URLs to try
 const STREAM_URLS = ["https://k-one.pvpjamz.com"];
 // Playlist data json url
 const PlayerData = "playlist.json";
+// Only use localStorage volume if not on mobile device
+// Only check for phones (not tablets) using user agent
+const isPhone = /iPhone|Android.*Mobile|Windows Phone|iPod/i.test(
+  navigator.userAgent
+);
 // set the initial volume to start at
 let initialVol = 100;
 // Initialize the streaming URL
@@ -33,55 +151,33 @@ async function getReachableStreamUrl(urls) {
 getReachableStreamUrl(STREAM_URLS).then((reachableUrl) => {
   if (reachableUrl) {
     URL_STREAMING = reachableUrl;
-    console.log("Using streaming URL:", URL_STREAMING);
+    // console.log("Using streaming URL:", URL_STREAMING);
   } else {
     alert("No streaming server is reachable at the moment.");
   }
 });
 
 function setVolume(volume) {
-  if (typeof Storage !== "undefined") {
+  // console.log("setVolume gets value:", volume);
+  // console.log("isPhone:", isPhone);
+  if (typeof Storage !== "undefined" && !isPhone) {
     const volumeLocalStorage =
-      parseInt(localStorage.getItem("volume"), 1) || 100;
+      parseInt(localStorage.getItem("volume"), 10) || 100;
     console.log("Volume from localStorage or default:", volumeLocalStorage);
     document.getElementById("volume").value = volumeLocalStorage;
     audio.volume = intToDecimal(volumeLocalStorage);
   } else {
     audio.volume = intToDecimal(volume);
   }
+  // console.log("setVolume sets value:", audio.volume);
 }
 
 function changeVolumeLocalStorage(volume) {
-  if (typeof Storage !== "undefined") {
+  if (typeof Storage !== "undefined" && !isPhone) {
+    // console.log("Storing volume in localStorage:", volume);
     localStorage.setItem("volume", volume);
   }
 }
-// function isMobileDevice() {
-//   return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-//     navigator.userAgent
-//   );
-// }
-
-// if (typeof Storage !== "undefined") {
-//   const volumeLocalStorage = localStorage.getItem("volume") || 100;
-//   console.log("Volume from localStorage or default:", volumeLocalStorage);
-//   document.getElementById("volume").value = volumeLocalStorage;
-//   initialVol = intToDecimal(volumeLocalStorage);
-// } else {
-//   initialVol = 100;
-// }
-
-// Helper function to hash a string using SHA-256 and return a hex string
-async function sha256(str) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(str);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-// Store the correct password hash
-const correctPasswordHashPromise = sha256("Th3#1by~R");
 
 function initializePlayer() {
   changeTitlePage();
@@ -92,24 +188,83 @@ function initializePlayer() {
 function checkPassword() {
   // Check if the password has already been accepted
   if (localStorage.getItem("passwordAccepted") === "true") {
-    console.log("Password already accepted.");
+    // console.log("Password already accepted.");
     // Continue with the rest of your application logic here
     initializePlayer();
   } else {
-    const password = prompt(
-      "This stream is for private use only. Please enter the password to access this content:"
-    );
+    // Create a custom modal for password input with show/hide toggle
+    const modal = document.createElement("div");
+    modal.style.position = "fixed";
+    modal.style.top = "0";
+    modal.style.left = "0";
+    modal.style.width = "100vw";
+    modal.style.height = "100vh";
+    modal.style.background = "rgba(0,0,0,0.7)";
+    modal.style.display = "flex";
+    modal.style.alignItems = "center";
+    modal.style.justifyContent = "center";
+    modal.style.zIndex = "99999";
+
+    const box = document.createElement("div");
+    box.style.background = "#fff";
+    box.style.padding = "24px";
+    box.style.borderRadius = "8px";
+    box.style.textAlign = "center";
+    box.style.minWidth = "280px";
+
+    box.innerHTML = `
+      <strong>This stream is for private use only.</strong>
+      <p>Please enter the password to access this content:</p>
+      <input type="password" id="passwordInput" style="width: 80%; padding: 6px; font-size: 1em;" autofocus />
+      <br>
+      <label style="font-size:0.95em;cursor:pointer;">
+      <input type="checkbox" id="togglePassword" style="margin-right:4px;" />
+      Show password
+      </label>
+      <br><br>
+      <button id="submitPassword" style="padding: 6px 16px; background: #031521; color: #fff; border: none; border-radius: 4px;">Submit</button>
+    `;
+
+    modal.appendChild(box);
+    document.body.appendChild(modal);
+
+    // Show/hide password logic
+    const passwordInput = box.querySelector("#passwordInput");
+    const togglePassword = box.querySelector("#togglePassword");
+    togglePassword.addEventListener("change", function () {
+      passwordInput.type = this.checked ? "text" : "password";
+    });
+
+    // Submit logic
+    box.querySelector("#submitPassword").onclick = function () {
+      const password = passwordInput.value;
+      document.body.removeChild(modal);
+      // Continue with password check
+      sha256(password).then((hash) => {
+        correctPasswordHashPromise.then((correctHash) => {
+          if (hash === correctHash) {
+            // console.log("Password accepted.");
+            localStorage.setItem("passwordAccepted", "true");
+            initializePlayer();
+          } else {
+            // console.warn("Incorrect password.");
+            document.body.innerHTML =
+              "<strong>Access Denied</strong><p>Incorrect password.</p>";
+          }
+        });
+      });
+    };
 
     // Check if the password is correct using SHA-256
     sha256(password).then((hash) => {
       correctPasswordHashPromise.then((correctHash) => {
         if (hash === correctHash) {
-          console.log("Password accepted.");
+          // console.log("Password accepted.");
           localStorage.setItem("passwordAccepted", "true");
           // Continue with the rest of your application logic here
           initializePlayer();
         } else {
-          console.warn("Incorrect password.");
+          // console.warn("Incorrect password.");
           document.body.innerHTML =
             "<strong>Access Denied</strong><p>Incorrect password.</p>";
         }
@@ -205,6 +360,7 @@ async function getStreamingData() {
     let data = await fetchStreamingData(PlayerData);
 
     if (data) {
+      hideLoader();
       var currentSong = data.Current.Title;
       var charsToplayTitle = 25;
       var charsPlayingTitle = 40;
@@ -329,18 +485,18 @@ function displayTrackCountdown(song, duration) {
   let countdownInterval;
 
   if (!currentDurationElem) {
-    console.error("Current duration element not found.");
+    // console.error("Current duration element not found.");
     return;
   }
   // Stop any previous countdown when a new song starts
   if (window.countdownInterval) {
     clearInterval(window.countdownInterval);
     window.countdownInterval = null;
-    console.log("Previous countdown cleared.");
+    // console.log("Previous countdown cleared.");
   }
 
   function startCountdown(duration) {
-    console.log("Starting countdown with duration:", duration || "undefined");
+    // console.log("Starting countdown with duration:", duration || "undefined");
     let startTime = Date.now();
     let totalSeconds = 0;
 
@@ -353,7 +509,7 @@ function displayTrackCountdown(song, duration) {
       const durationStr = duration.toString();
       const parts = durationStr.split(":").map(Number);
       if (parts.length === 0 || parts.some(isNaN)) {
-        console.error("Invalid duration format:", duration);
+        // console.error("Invalid duration format:", duration);
         return;
       }
       if (parts.length === 3) {
@@ -371,7 +527,7 @@ function displayTrackCountdown(song, duration) {
     setTimeout(() => {
       if (fetchIntervalId) return; // Prevent multiple intervals
       fetchIntervalId = setInterval(getStreamingData, 1000);
-      console.log("Interval getStreamingData restarted after song ended.");
+      // console.log("Interval getStreamingData restarted after song ended.");
     }, totalSeconds * 1000 - 2000);
 
     function updateCountdown() {
@@ -409,7 +565,7 @@ async function fetchStreamingData(apiUrl) {
     // console.log("Fetched streaming data:", data);
     return data;
   } catch (error) {
-    console.log("fetchStreamingData error", error);
+    // console.log("fetchStreamingData error", error);
     // Handle the error here, e.g., show an error message to the user or log it
     // You can also return a default value or null if needed
     return null;
@@ -428,7 +584,23 @@ function setCopyright() {
     copy.textContent =
       appName + " " + appVersion + " | ©" + jaar + " " + appAuthor;
   }).fail(function () {
-    console.log("Being offline is not ideal for this app ;-)");
+    // Show a message to the user on screen
+    const offlineMsg = document.createElement("div");
+    offlineMsg.textContent = "You are offline. Some features may not work.";
+    offlineMsg.style.position = "fixed";
+    offlineMsg.style.top = "0";
+    offlineMsg.style.left = "0";
+    offlineMsg.style.width = "100vw";
+    offlineMsg.style.background = "#ffcc00";
+    offlineMsg.style.color = "#031521";
+    offlineMsg.style.textAlign = "center";
+    offlineMsg.style.padding = "12px";
+    offlineMsg.style.zIndex = "99999";
+    document.body.appendChild(offlineMsg);
+
+    setTimeout(() => {
+      offlineMsg.remove();
+    }, 5000);
   });
 
   setupAudioPlayer();
@@ -479,12 +651,9 @@ async function setupAudioPlayer() {
 
   document.getElementById("volume").oninput = function () {
     changeVolumeLocalStorage(this.value);
+    // console.log("Volume slider changed to:", this.value);
     audio.volume = intToDecimal(this.value);
   };
-
-  setVolume(initialVol);
-  console.log("Initial volume set to:", initialVol);
-  changeVolumeLocalStorage(decimalToInt(initialVol));
 
   audio.onplay = function () {
     var btn = document.getElementById("playerButton");
@@ -519,8 +688,9 @@ async function setupAudioPlayer() {
 function togglePlay() {
   const playerButton = document.getElementById("playerButton");
   const isPlaying = playerButton.classList.contains("fa-circle-pause");
-
+  // console.log("Toggle play state:", isPlaying);
   if (isPlaying) {
+    // console.log("Pausing audio");
     playerButton.classList.remove("fa-circle-pause");
     playerButton.classList.add("fa-circle-play");
     playerButton.style.textShadow = "0 0 5px black";
@@ -528,6 +698,7 @@ function togglePlay() {
     audio.pause();
     audio = new Audio();
   } else {
+    // console.log("Playing audio");
     playerButton.classList.remove("fa-circle-play");
     playerButton.classList.add("fa-circle-pause");
     playerButton.style.textShadow = "0 0 5px black";
