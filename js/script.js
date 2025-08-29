@@ -189,7 +189,7 @@ function initializePlayer() {
 
 function checkPassword() {
   // Check if the password has already been accepted
-  if (localStorage.getItem("passwordAccepted") === "true") {
+  if (localStorage.getItem("passwordAccepted") === correctPasswordHash) {
     // console.log("Password already accepted.");
     // Continue with the rest of your application logic here
     initializePlayer();
@@ -246,7 +246,7 @@ function checkPassword() {
         correctPasswordHashPromise.then((correctHash) => {
           if (hash === correctHash) {
             // console.log("Password accepted.");
-            localStorage.setItem("passwordAccepted", "true");
+            localStorage.setItem("passwordAccepted", correctPasswordHash);
             initializePlayer();
           } else {
             // console.warn("Incorrect password.");
@@ -256,22 +256,6 @@ function checkPassword() {
         });
       });
     };
-
-    // Check if the password is correct using SHA-256
-    sha256(password).then((hash) => {
-      correctPasswordHashPromise.then((correctHash) => {
-        if (hash === correctHash) {
-          // console.log("Password accepted.");
-          localStorage.setItem("passwordAccepted", "true");
-          // Continue with the rest of your application logic here
-          initializePlayer();
-        } else {
-          // console.warn("Incorrect password.");
-          document.body.innerHTML =
-            "<strong>Access Denied</strong><p>Incorrect password.</p>";
-        }
-      });
-    });
   }
 }
 
@@ -703,6 +687,10 @@ function togglePlay() {
 
     audio.pause();
     audio = new Audio();
+    if (sleepTimerId) {
+      cancelSleepTimer();
+      console.log("Sleep timer canceled on pause.");
+    }
   } else {
     // console.log("Playing audio");
     playerButton.classList.remove("fa-circle-play");
@@ -799,6 +787,7 @@ timerButton.addEventListener("click", function () {
   cancelBtn.onclick = () => {
     cancelSleepTimer();
     document.body.removeChild(modal);
+    console.log("Sleep timer canceled from modal.");
   };
   box.appendChild(document.createElement("br"));
   box.appendChild(cancelBtn);
@@ -808,21 +797,21 @@ timerButton.addEventListener("click", function () {
 
   // Add a circular countdown animation for the sleep timer
   // Create SVG circle if not already present
-  let circleContainer = document.getElementById("timerCircleContainer");
-  if (!circleContainer) {
-    circleContainer = document.createElement("div");
-    circleContainer.id = "timerCircleContainer";
-    circleContainer.style.display = "inline-block";
-    circleContainer.style.verticalAlign = "middle";
-    circleContainer.style.marginLeft = "8px";
+  let timerCircleContainer = document.getElementById("timerCircleContainer");
+  if (!timerCircleContainer) {
+    timerCircleContainer = document.createElement("div");
+    timerCircleContainer.id = "timerCircleContainer";
+    timerCircleContainer.style.display = "inline-block";
+    timerCircleContainer.style.verticalAlign = "middle";
+    timerCircleContainer.style.marginLeft = "8px";
     timerCountdownDisplay.parentNode.insertBefore(
-      circleContainer,
+      timerCircleContainer,
       timerCountdownDisplay.nextSibling
     );
   }
   // Only add the SVG if not already present
-  if (!circleContainer.querySelector("#timerCircleProgress")) {
-    circleContainer.innerHTML = `
+  if (!timerCircleContainer.querySelector("#timerCircleProgress")) {
+    timerCircleContainer.innerHTML = `
       <svg width="24" height="24" viewBox="0 0 24 24" style="transform: rotate(-90deg);">
         <circle cx="12" cy="12" r="11" stroke="#031521" stroke-width="3" fill="none" opacity="0.4"/>
         <circle id="timerCircleProgress" cx="12" cy="12" r="11" stroke="#26599dff" stroke-width="3" fill="none"
@@ -833,7 +822,7 @@ timerButton.addEventListener("click", function () {
 
   // Helper to set initial offset based on selected sleep time
   function setInitialCircleOffset(selected) {
-    const circle = circleContainer.querySelector("#timerCircleProgress");
+    const circle = timerCircleContainer.querySelector("#timerCircleProgress");
     const circumference = 2 * Math.PI * 11; // r=11
     let offset = 0;
     if (selected === 15) {
@@ -851,7 +840,7 @@ timerButton.addEventListener("click", function () {
   }
 
   // Show the circle only if a timer is running or being set
-  circleContainer.style.display = "inline-block";
+  timerCircleContainer.style.display = "inline-block";
 
   // When a button is clicked, set initial offset
   validTimes.forEach((min) => {
@@ -882,10 +871,10 @@ timerButton.addEventListener("click", function () {
         "%"
     );
     timerCountdownDisplay.classList.add("ml-2");
-    circleContainer.style.display = "inline-block";
+    timerCircleContainer.style.display = "inline-block";
 
     // Circle animation setup
-    const circle = circleContainer.querySelector("#timerCircleProgress");
+    const circle = timerCircleContainer.querySelector("#timerCircleProgress");
     const totalSeconds = selected * 60;
     const circumference = 2 * Math.PI * 11; // r=11
     circle.setAttribute("stroke-dasharray", circumference);
@@ -901,7 +890,7 @@ timerButton.addEventListener("click", function () {
       }
       sleepTimerId = null;
       timerCountdownDisplay.classList.remove("ml-2");
-      circleContainer.style.display = "none";
+      timerCircleContainer.style.display = "none";
       if (sleepTimerCountdownId) {
         clearInterval(sleepTimerCountdownId);
         sleepTimerCountdownId = null;
@@ -916,7 +905,7 @@ timerButton.addEventListener("click", function () {
       if (remainingMs <= 0) {
         circle.setAttribute("stroke-dashoffset", circumference);
         circle.setAttribute("stroke", "#fff"); // Set color to white when finished
-        circleContainer.style.display = "none";
+        timerCircleContainer.style.display = "none";
         clearInterval(sleepTimerCountdownId);
         sleepTimerCountdownId = null;
         sleepTimerEndTime = null;
@@ -945,33 +934,38 @@ timerButton.addEventListener("click", function () {
     updateSleepTimerCircle();
     sleepTimerCountdownId = setInterval(updateSleepTimerCircle, 1000);
   }
-
-  function cancelSleepTimer() {
-    if (sleepTimerId) {
-      clearTimeout(sleepTimerId);
-      sleepTimerId = null;
-      timerCountdownDisplay.textContent = "";
-      timerCountdownDisplay.classList.remove("ml-2");
-      if (sleepTimerCountdownId) {
-        clearInterval(sleepTimerCountdownId);
-        sleepTimerCountdownId = null;
-      }
-      sleepTimerEndTime = null;
-      // Hide and remove the progress circle
-      const circleContainer = document.getElementById("timerCircleContainer");
-      if (circleContainer) {
-        circleContainer.style.display = "none";
-        circleContainer.innerHTML = "";
-      }
-      if (audio && !audio.paused) {
-        setVolume(100);
-        console.log("Sleep timer ended, audio paused. Volume set to 100%");
-      }
-    } else {
-      alert("No sleep timer is set.");
-    }
-  }
 });
+
+function cancelSleepTimer() {
+  // Find the progress circle
+  const timerCircleElement = document.getElementById("timerCircleContainer");
+  if (sleepTimerId) {
+    clearTimeout(sleepTimerId);
+    sleepTimerId = null;
+    timerCountdownDisplay.textContent = "";
+    timerCountdownDisplay.classList.remove("ml-2");
+    if (sleepTimerCountdownId) {
+      clearInterval(sleepTimerCountdownId);
+      sleepTimerCountdownId = null;
+    }
+    sleepTimerEndTime = null;
+
+    if (timerCircleElement) {
+      timerCircleElement.style.display = "none";
+      timerCircleElement.innerHTML = "";
+    }
+    if (audio && !audio.paused) {
+      setVolume(100);
+      console.log("Sleep timer ended, audio paused. Volume set to 100%");
+    }
+  } else {
+    if (timerCircleElement) {
+      timerCircleElement.style.display = "none";
+      timerCircleElement.innerHTML = "";
+    }
+    alert("No sleep timer is set.");
+  }
+}
 
 function intToDecimal(vol) {
   return vol / 100;
