@@ -126,6 +126,8 @@ const isPhone = /iPhone|Android.*Mobile|Windows Phone|iPod/i.test(
 );
 // set the initial volume to start at
 let initialVol = 100;
+const dimVolumeSleeptimer = 50; // Volume to set when sleep timer is active (0-100)
+
 // Initialize the streaming URL
 let URL_STREAMING = STREAM_URLS[0];
 
@@ -426,12 +428,14 @@ async function getStreamingData() {
             songInfo.Title = trimmedString;
           }
           article.innerHTML = `
-                        <div class="music-info text-center">
-                          <p class="song ${textSize}">${
-            songInfo.Artist || ""
-          } - ${songInfo.Title || ""}</p>
-                        </div>
-                      `;
+            <div class="music-info text-center">
+              <p class="song ${textSize}">${
+            songInfo.Artist
+              ? `${songInfo.Artist} - ${songInfo.Title || ""}`
+              : `${songInfo.Title || ""}`
+          }</p>
+            </div>
+          `;
           toplayContainer.appendChild(article);
         }
 
@@ -465,8 +469,10 @@ async function getStreamingData() {
           article.innerHTML = `
                         <div class="music-info text-center">
                           <p class="song ${textSize}">${
-            songInfo.Artist || ""
-          } - ${songInfo.Title || ""}</p>
+            songInfo.Artist
+              ? `${songInfo.Artist} - ${songInfo.Title || ""}`
+              : `${songInfo.Title || ""}`
+          }</p>
                         </div>
                       `;
           historicContainer.appendChild(article);
@@ -761,7 +767,7 @@ timerButton.addEventListener("click", function () {
   box.style.textAlign = "center";
   box.style.minWidth = "220px";
 
-  box.innerHTML = `<strong>Set or stop a sleep timer</strong><br><br>`;
+  box.innerHTML = `Set or stop a sleep timer. <strong>Audio gets dimmed by, this will be undone after the timer ends or is canceled.</strong><br><br>`;
 
   const validTimes = [15, 30, 45, 60];
   validTimes.forEach((min) => {
@@ -818,18 +824,46 @@ timerButton.addEventListener("click", function () {
   if (!circleContainer.querySelector("#timerCircleProgress")) {
     circleContainer.innerHTML = `
       <svg width="24" height="24" viewBox="0 0 24 24" style="transform: rotate(-90deg);">
-        <circle cx="12" cy="12" r="11" stroke="#031521" stroke-width="2" fill="none" opacity="0.2"/>
-        <circle id="timerCircleProgress" cx="12" cy="12" r="11" stroke="#ffffffff" stroke-width="1" fill="none"
+        <circle cx="12" cy="12" r="11" stroke="#031521" stroke-width="3" fill="none" opacity="0.4"/>
+        <circle id="timerCircleProgress" cx="12" cy="12" r="11" stroke="#26599dff" stroke-width="3" fill="none"
           stroke-dasharray="69.12" stroke-dashoffset="0" style="transition: stroke-dashoffset 1s linear;"/>
       </svg>
     `;
-  } else {
-    // Reset progress if timer is restarted
-    const circle = circleContainer.querySelector("#timerCircleProgress");
-    circle.setAttribute("stroke-dashoffset", "0");
   }
-  // Show the circle only if a timer is running
-  circleContainer.style.display = sleepTimerEndTime ? "inline-block" : "none";
+
+  // Helper to set initial offset based on selected sleep time
+  function setInitialCircleOffset(selected) {
+    const circle = circleContainer.querySelector("#timerCircleProgress");
+    const circumference = 2 * Math.PI * 11; // r=11
+    let offset = 0;
+    if (selected === 15) {
+      offset = circumference * 0.75; // 25% visible
+    } else if (selected === 30) {
+      offset = circumference * 0.5; // 50% visible
+    } else if (selected === 45) {
+      offset = circumference * 0.25; // 75% visible
+    } else {
+      offset = 0; // 100% visible
+    }
+    circle.setAttribute("stroke-dasharray", circumference);
+    circle.setAttribute("stroke-dashoffset", offset);
+    circle.setAttribute("stroke", "#26599dff");
+  }
+
+  // Show the circle only if a timer is running or being set
+  circleContainer.style.display = "inline-block";
+
+  // When a button is clicked, set initial offset
+  validTimes.forEach((min) => {
+    const btn = box.querySelector(`button:contains('${min} min')`);
+    if (btn) {
+      btn.onmouseover = () => setInitialCircleOffset(min);
+      btn.onfocus = () => setInitialCircleOffset(min);
+    }
+  });
+
+  // Set initial offset for default (first) button
+  setInitialCircleOffset(validTimes[0]);
 
   function setSleepTimer(selected) {
     if (sleepTimerId) clearTimeout(sleepTimerId);
@@ -838,24 +872,32 @@ timerButton.addEventListener("click", function () {
     // If not playing, start playing and toggle play/pause
     if (audio && audio.paused) {
       togglePlay();
+      setVolume(dimVolumeSleeptimer);
+    } else {
+      setVolume(dimVolumeSleeptimer);
     }
+    console.log(
+      "Sleep timer started, audio started. Volume set to " +
+        dimVolumeSleeptimer +
+        "%"
+    );
     timerCountdownDisplay.classList.add("ml-2");
     circleContainer.style.display = "inline-block";
 
     // Circle animation setup
     const circle = circleContainer.querySelector("#timerCircleProgress");
     const totalSeconds = selected * 60;
-    const circumference = 2 * Math.PI * 12; // r=12
+    const circumference = 2 * Math.PI * 11; // r=11
     circle.setAttribute("stroke-dasharray", circumference);
-    circle.setAttribute("stroke-dashoffset", "0");
+
+    // Set initial offset for selected time
+    setInitialCircleOffset(selected);
 
     sleepTimerId = setTimeout(() => {
       if (audio && !audio.paused) {
-        audio.pause();
-        document
-          .getElementById("playerButton")
-          .classList.remove("fa-circle-pause");
-        document.getElementById("playerButton").classList.add("fa-circle-play");
+        togglePlay();
+        setVolume(100);
+        console.log("Sleep timer ended, audio paused. Volume set to 100%");
       }
       sleepTimerId = null;
       timerCountdownDisplay.classList.remove("ml-2");
@@ -881,10 +923,23 @@ timerButton.addEventListener("click", function () {
         return;
       }
       const elapsed = totalSeconds - Math.floor(remainingMs / 1000);
+      // Progress: 0 (start) to 1 (end)
       const progress = elapsed / totalSeconds;
-      const offset = circumference * progress;
+      // Initial offset for selected time
+      let initialOffset = 0;
+      if (selected === 15) {
+        initialOffset = circumference * 0.75;
+      } else if (selected === 30) {
+        initialOffset = circumference * 0.5;
+      } else if (selected === 45) {
+        initialOffset = circumference * 0.25;
+      } else {
+        initialOffset = 0;
+      }
+      // Animate offset from initialOffset to circumference
+      const offset = initialOffset + (circumference - initialOffset) * progress;
       circle.setAttribute("stroke-dashoffset", offset);
-      circle.setAttribute("stroke", "#fff"); // Set color to white during progress
+      circle.setAttribute("stroke", "#26599dff");
     }
 
     updateSleepTimerCircle();
@@ -907,6 +962,10 @@ timerButton.addEventListener("click", function () {
       if (circleContainer) {
         circleContainer.style.display = "none";
         circleContainer.innerHTML = "";
+      }
+      if (audio && !audio.paused) {
+        setVolume(100);
+        console.log("Sleep timer ended, audio paused. Volume set to 100%");
       }
     } else {
       alert("No sleep timer is set.");

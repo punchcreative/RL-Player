@@ -1,4 +1,4 @@
-const activeCacheVersion = 1137;
+const activeCacheVersion = 1138;
 const activeCacheName = `rlplayer-${activeCacheVersion}`;
 
 // files and folders to cache
