@@ -1,6 +1,15 @@
-// import md5 from "md5";
-
-const RADIO_NAME = "KVPN";
+let APP_VERSION,
+  APP_NAME,
+  APP_DESCRIPTION,
+  APP_AUTHOR,
+  RADIO_NAME,
+  STREAM_URL,
+  DEFAULT_VOLUME,
+  THEME_COLOR,
+  PLAYLIST,
+  METADATA,
+  APP_URL,
+  DIM_VOLUME_SLEEP_TIMER;
 
 // Helper function to hash a string using SHA-256 and return a hex string
 async function sha256(str) {
@@ -11,17 +20,15 @@ async function sha256(str) {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// Store the correct password hash
-// Instead of storing the actual password in the code, store only the hash here.
-// Generate the hash once (e.g., using a Node.js script or browser console) and paste it below.
-// Example: sha256("Th3#1by~R") => "e7c7...yourhash..."
-// Never store the plain password in your codebase.
+// Initialize the streaming URL
+let URL_STREAMING;
 
 const correctPasswordHash =
   "dc18b42a2ea8cf3fb313c20d32945a631ec4fa450b16f9d1567f933e16bd0565";
 const correctPasswordHashPromise = Promise.resolve(correctPasswordHash);
 
 function showLoader() {
+  var nameToSplit = RADIO_NAME || "LOADING";
   // Hide the player while loading
   const player = document.getElementById("player");
   if (player) player.style.display = "none";
@@ -54,9 +61,9 @@ function showLoader() {
   lettersContainer.style.letterSpacing = "0.15em";
 
   // Each letter gets its own span for animation
-  for (let i = 0; i < RADIO_NAME.length; i++) {
+  for (let i = 0; i < nameToSplit.length; i++) {
     const span = document.createElement("span");
-    span.textContent = RADIO_NAME[i];
+    span.textContent = nameToSplit[i];
     span.className = "radio-loader-letter";
     span.style.opacity = "0";
     span.style.transition = "opacity 0.5s";
@@ -109,55 +116,40 @@ function hideLoader() {
   if (player) player.style.display = "";
 }
 
-// Show loader on page load
+// Call the loadAppVars function when the page loads (first thing to happen)
+window.addEventListener("load", loadAppVars);
+
+// Show loader on DOM ready, but it will use RADIO_NAME once loaded
 window.addEventListener("DOMContentLoaded", showLoader);
 
-// Hide loader after playlist loads (call hideLoader in getStreamingData when data is ready)
-
-// Change Stream URL Here, Supports, ICECAST, ZENO, SHOUTCAST, RADIOJAR and any other stream service.
-// List of stream URLs to try
-const STREAM_URLS = ["https://k-one.pvpjamz.com"];
 // Playlist data json url
-const PlayerData = "playlist.json";
+const PlayerData = PLAYLIST || "playlist.json";
 // Only use localStorage volume if not on mobile device
 // Only check for phones (not tablets) using user agent
 const isPhone = /iPhone|Android.*Mobile|Windows Phone|iPod/i.test(
   navigator.userAgent
 );
 // set the initial volume to start at
-let initialVol = 100;
-const dimVolumeSleeptimer = 50; // Volume to set when sleep timer is active (0-100)
+let initialVol = DEFAULT_VOLUME || 100;
+const dimVolumeSleeptimer = DIM_VOLUME_SLEEP_TIMER || 50; // Volume to set when sleep timer is active (0-100)
 
-// Initialize the streaming URL
-let URL_STREAMING = STREAM_URLS[0];
-
-// Function to check if a stream URL is reachable
-async function getReachableStreamUrl(urls) {
-  for (const url of urls) {
-    try {
-      // Try to fetch the stream with a GET request (HEAD often not supported by streaming servers)
-      const response = await fetch(url, { method: "GET", mode: "cors" });
-      // Check if the response is OK (not 404, etc.)
-      if (response.ok) {
-        return url;
-      } else {
-        console.warn(`Stream URL ${url} returned status: ${response.status}`);
-      }
-    } catch (error) {
-      // Continue to next URL
+// Function to check if a stream URL is reachable and set it directly, without timeout
+async function setStreamingUrl(url) {
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      mode: "cors",
+    });
+    if (response.ok) {
+      URL_STREAMING = url;
+      return;
     }
+    console.warn(`Stream URL ${url} returned status: ${response.status}`);
+  } catch (error) {
+    // Ignore error, will alert below
   }
-  return null;
+  alert("Streaming server is not reachable at the moment.");
 }
-
-getReachableStreamUrl(STREAM_URLS).then((reachableUrl) => {
-  if (reachableUrl) {
-    URL_STREAMING = reachableUrl;
-    // console.log("Using streaming URL:", URL_STREAMING);
-  } else {
-    alert("No streaming server is reachable at the moment.");
-  }
-});
 
 function setVolume(volume) {
   // console.log("setVolume gets value:", volume);
@@ -186,7 +178,75 @@ function initializePlayer() {
   fetchIntervalId = setInterval(getStreamingData, 1000);
   setCopyright();
 }
+function loadAppVars() {
+  // Fetch the manifest file for app configuration
+  fetch("manifest.json")
+    .then((response) => response.json())
+    .then((manifest) => {
+      // Assign manifest values to global variables
+      APP_VERSION = manifest.version;
+      APP_NAME = manifest.name;
+      APP_DESCRIPTION = manifest.description;
+      APP_AUTHOR = manifest.author;
+      RADIO_NAME = manifest.custom_radio_config.station_name;
+      STREAM_URL = manifest.custom_radio_config.stream_url;
+      DEFAULT_VOLUME = manifest.custom_radio_config.default_volume;
+      THEME_COLOR = manifest.custom_radio_config.theme_color;
+      PLAYLIST = manifest.api_endpoints.playlist;
+      METADATA = manifest.api_endpoints.metadata;
+      APP_URL = manifest.api_endpoints.app_url;
+      DIM_VOLUME_SLEEP_TIMER =
+        manifest.custom_radio_config.dim_volume_sleep_timer;
 
+      // Log all key variables to console for debugging
+      console.log("APP_VERSION:", APP_VERSION);
+      console.log("APP_NAME:", APP_NAME);
+      console.log("APP_DESCRIPTION:", APP_DESCRIPTION);
+      console.log("APP_AUTHOR:", APP_AUTHOR);
+      console.log("RADIO_NAME:", RADIO_NAME);
+      console.log("STREAM_URL:", STREAM_URL);
+      console.log("DEFAULT_VOLUME:", DEFAULT_VOLUME);
+      console.log("THEME_COLOR:", THEME_COLOR);
+      console.log("PLAYLIST:", PLAYLIST);
+      console.log("METADATA:", METADATA);
+      console.log("APP_URL:", APP_URL);
+      console.log("DIM_VOLUME_SLEEP_TIMER:", DIM_VOLUME_SLEEP_TIMER);
+
+      // Set up streaming URL after loading from manifest
+      if (typeof STREAM_URL === "string" && STREAM_URL.trim() !== "") {
+        setStreamingUrl(STREAM_URL);
+      } else {
+        console.warn(
+          "STREAM_URL is undefined or empty. Skipping setStreamingUrl."
+        );
+      }
+
+      // Update the loader with the correct radio name if it's currently showing
+      const existingLoader = document.getElementById("radioLoader");
+      if (existingLoader) {
+        const lettersContainer = existingLoader.querySelector(
+          ".radio-loader-letters"
+        );
+        if (lettersContainer) {
+          // Clear existing letters
+          lettersContainer.innerHTML = "";
+
+          // Add new letters with the correct radio name
+          for (let i = 0; i < RADIO_NAME.length; i++) {
+            const span = document.createElement("span");
+            span.textContent = RADIO_NAME[i];
+            span.className = "radio-loader-letter";
+            span.style.opacity = "0";
+            span.style.transition = "opacity 0.5s";
+            lettersContainer.appendChild(span);
+          }
+        }
+      }
+
+      // After loading app variables, proceed with password check
+      checkPassword();
+    });
+}
 function checkPassword() {
   // Check if the password has already been accepted
   if (localStorage.getItem("passwordAccepted") === correctPasswordHash) {
@@ -259,9 +319,6 @@ function checkPassword() {
   }
 }
 
-// Call the checkPassword function when the page loads
-window.addEventListener("load", checkPassword);
-
 function changeTitlePage(title = RADIO_NAME) {
   document.title = title;
 }
@@ -303,7 +360,7 @@ function refreshCurrentSong(song, artist, duration) {
           album: RADIO_NAME,
           artwork: [
             {
-              src: "https://eajt.nl/kvpn/albumart/art-00.jpg",
+              src: APP_URL + "albumart/art-00.jpg",
               sizes: "200x200",
               type: "image/jpg",
             },
@@ -563,35 +620,14 @@ async function fetchStreamingData(apiUrl) {
 }
 
 function setCopyright() {
-  $.get("manifest.json", function (manifest) {
-    var appVersion = manifest.version;
-    var appName = manifest.name;
-    var appDescription = manifest.description;
-    var appAuthor = manifest.author;
+  var appVersion = APP_VERSION;
+  var appName = APP_NAME;
+  var appAuthor = APP_AUTHOR;
 
-    var copy = document.getElementById("copy");
-    let jaar = new Date().getFullYear();
-    copy.textContent =
-      appName + " " + appVersion + " | ©" + jaar + " " + appAuthor;
-  }).fail(function () {
-    // Show a message to the user on screen
-    const offlineMsg = document.createElement("div");
-    offlineMsg.textContent = "You are offline. Some features may not work.";
-    offlineMsg.style.position = "fixed";
-    offlineMsg.style.top = "0";
-    offlineMsg.style.left = "0";
-    offlineMsg.style.width = "100vw";
-    offlineMsg.style.background = "#ffcc00";
-    offlineMsg.style.color = "#031521";
-    offlineMsg.style.textAlign = "center";
-    offlineMsg.style.padding = "12px";
-    offlineMsg.style.zIndex = "99999";
-    document.body.appendChild(offlineMsg);
-
-    setTimeout(() => {
-      offlineMsg.remove();
-    }, 5000);
-  });
+  var copy = document.getElementById("copy");
+  let jaar = new Date().getFullYear();
+  copy.textContent =
+    appName + " " + appVersion + " | ©" + jaar + " " + appAuthor;
 
   setupAudioPlayer();
 }
@@ -686,8 +722,11 @@ function togglePlay() {
     playerButton.style.textShadow = "0 0 5px black";
 
     audio.pause();
-    audio = new Audio();
-    if (sleepTimerId) {
+    // audio.load(); // Clear the source instead of creating new Audio object
+
+    if (!sleepTimerId) {
+      removeSleepTimerElement();
+    } else {
       cancelSleepTimer();
       console.log("Sleep timer canceled on pause.");
     }
@@ -745,6 +784,7 @@ timerButton.addEventListener("click", function () {
   modal.addEventListener("click", function (e) {
     if (e.target === modal) {
       document.body.removeChild(modal);
+      cancelSleepTimer();
     }
   });
 
@@ -801,9 +841,10 @@ timerButton.addEventListener("click", function () {
   if (!timerCircleContainer) {
     timerCircleContainer = document.createElement("div");
     timerCircleContainer.id = "timerCircleContainer";
-    timerCircleContainer.style.display = "inline-block";
-    timerCircleContainer.style.verticalAlign = "middle";
-    timerCircleContainer.style.marginLeft = "8px";
+    timerCircleContainer.style.display = "flex";
+    timerCircleContainer.style.alignItems = "center";
+    timerCircleContainer.style.justifyContent = "center";
+    timerCircleContainer.style.gap = "0.5rem";
     timerCountdownDisplay.parentNode.insertBefore(
       timerCircleContainer,
       timerCountdownDisplay.nextSibling
@@ -812,10 +853,10 @@ timerButton.addEventListener("click", function () {
   // Only add the SVG if not already present
   if (!timerCircleContainer.querySelector("#timerCircleProgress")) {
     timerCircleContainer.innerHTML = `
-      <svg width="24" height="24" viewBox="0 0 24 24" style="transform: rotate(-90deg);">
-        <circle cx="12" cy="12" r="11" stroke="#031521" stroke-width="3" fill="none" opacity="0.4"/>
-        <circle id="timerCircleProgress" cx="12" cy="12" r="11" stroke="#26599dff" stroke-width="3" fill="none"
-          stroke-dasharray="69.12" stroke-dashoffset="0" style="transition: stroke-dashoffset 1s linear;"/>
+      <svg width="32" height="32" viewBox="0 0 32 32" style="transform: rotate(-90deg);">
+        <circle cx="15" cy="15" r="12" stroke="#ffffffff" stroke-width="1" fill="none" opacity="0.4"/>
+        <circle id="timerCircleProgress" cx="15" cy="15" r="11" stroke="#26599dff" stroke-width="2" fill="none"
+          stroke-dasharray="75.4" stroke-dashoffset="0" style="transition: stroke-dashoffset 1s linear;"/>
       </svg>
     `;
   }
@@ -840,7 +881,9 @@ timerButton.addEventListener("click", function () {
   }
 
   // Show the circle only if a timer is running or being set
-  timerCircleContainer.style.display = "inline-block";
+  timerCircleContainer.style.display = "flex";
+  timerCircleContainer.style.alignItems = "center";
+  timerCircleContainer.style.justifyContent = "center";
 
   // When a button is clicked, set initial offset
   validTimes.forEach((min) => {
@@ -871,7 +914,9 @@ timerButton.addEventListener("click", function () {
         "%"
     );
     timerCountdownDisplay.classList.add("ml-2");
-    timerCircleContainer.style.display = "inline-block";
+    timerCircleContainer.style.display = "flex";
+    timerCircleContainer.style.alignItems = "center";
+    timerCircleContainer.style.justifyContent = "center";
 
     // Circle animation setup
     const circle = timerCircleContainer.querySelector("#timerCircleProgress");
@@ -889,7 +934,6 @@ timerButton.addEventListener("click", function () {
         console.log("Sleep timer ended, audio paused. Volume set to 100%");
       }
       sleepTimerId = null;
-      timerCountdownDisplay.classList.remove("ml-2");
       timerCircleContainer.style.display = "none";
       if (sleepTimerCountdownId) {
         clearInterval(sleepTimerCountdownId);
@@ -937,8 +981,6 @@ timerButton.addEventListener("click", function () {
 });
 
 function cancelSleepTimer() {
-  // Find the progress circle
-  const timerCircleElement = document.getElementById("timerCircleContainer");
   if (sleepTimerId) {
     clearTimeout(sleepTimerId);
     sleepTimerId = null;
@@ -950,20 +992,23 @@ function cancelSleepTimer() {
     }
     sleepTimerEndTime = null;
 
-    if (timerCircleElement) {
-      timerCircleElement.style.display = "none";
-      timerCircleElement.innerHTML = "";
-    }
+    removeSleepTimerElement();
     if (audio && !audio.paused) {
       setVolume(100);
       console.log("Sleep timer ended, audio paused. Volume set to 100%");
     }
   } else {
-    if (timerCircleElement) {
-      timerCircleElement.style.display = "none";
-      timerCircleElement.innerHTML = "";
-    }
-    alert("No sleep timer is set.");
+    removeSleepTimerElement();
+    console.log("No sleep timer is set.");
+  }
+}
+
+function removeSleepTimerElement() {
+  const timerCircleElement = document.getElementById("timerCircleContainer");
+  if (timerCircleElement) {
+    console.log("Found sleep timer element, and set display none");
+    timerCircleElement.style.display = "none";
+    timerCircleElement.innerHTML = "";
   }
 }
 

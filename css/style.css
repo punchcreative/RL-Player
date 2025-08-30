@@ -143,7 +143,7 @@ body {
 }
 
 .play-pause #playerButton {
-  font-size: 2.5em;
+  font-size: 3.5em;
   color: white;
 }
 .play-pause #timerButton {
@@ -379,6 +379,11 @@ footer {
   .info-current-song {
     margin-top: 20px;
     text-align: left;
+  }
+
+  .play-pause #playerButton {
+    font-size: 3em;
+    color: white;
   }
 }
 

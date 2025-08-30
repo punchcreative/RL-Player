@@ -1,5 +1,7 @@
-const activeCacheVersion = 1138;
+const activeCacheVersion = 1140;
 const activeCacheName = `rlplayer-${activeCacheVersion}`;
+
+console.log(`Service Worker: Using cache version ${activeCacheVersion}`);
 
 // files and folders to cache
 const cacheAssets = [
@@ -35,7 +37,12 @@ const cacheAssets = [
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
-  if (url.pathname === "/kvpn/playlist.json") {
+
+  // Special handling for playlist.json - always fetch fresh
+  if (
+    url.pathname === "/kvpn/playlist.json" ||
+    url.pathname.endsWith("/playlist.json")
+  ) {
     event.respondWith(
       (async () => {
         const cache = await caches.open(activeCacheName);
@@ -53,27 +60,65 @@ self.addEventListener("fetch", (event) => {
         }
       })()
     );
+    return;
   }
-});
 
-self.addEventListener("fetch", (event) => {
-  // Check if this is a navigation request
-  if (event.request.mode === "navigate") {
-    // Open the cache
+  // Cache-first strategy for static assets
+  if (
+    event.request.destination === "style" ||
+    event.request.destination === "script" ||
+    event.request.destination === "image" ||
+    event.request.destination === "font" ||
+    event.request.url.includes(".css") ||
+    event.request.url.includes(".js") ||
+    event.request.url.includes(".png") ||
+    event.request.url.includes(".jpg") ||
+    event.request.url.includes(".woff")
+  ) {
     event.respondWith(
       caches.open(activeCacheName).then(async (cache) => {
-        // Go to the network first
+        const cachedResponse = await cache.match(event.request);
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
         try {
-          const fetchedResponse = await fetch(event.request.url);
-          cache.put(event.request, fetchedResponse.clone());
-          return fetchedResponse;
+          const networkResponse = await fetch(event.request);
+          if (networkResponse.ok) {
+            cache.put(event.request, networkResponse.clone());
+          }
+          return networkResponse;
         } catch {
-          return await cache.match(event.request.url);
+          return Response.error();
         }
       })
     );
-  } else {
     return;
+  }
+
+  // Network-first strategy for navigation requests and HTML
+  if (
+    event.request.mode === "navigate" ||
+    event.request.destination === "document"
+  ) {
+    event.respondWith(
+      caches.open(activeCacheName).then(async (cache) => {
+        try {
+          const networkResponse = await fetch(event.request);
+          if (networkResponse.ok) {
+            cache.put(event.request, networkResponse.clone());
+          }
+          return networkResponse;
+        } catch {
+          const cachedResponse = await cache.match(event.request);
+          return (
+            cachedResponse ||
+            (await cache.match("/offline.html")) ||
+            Response.error()
+          );
+        }
+      })
+    );
   }
 });
 
