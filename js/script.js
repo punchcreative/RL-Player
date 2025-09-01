@@ -549,7 +549,13 @@ function changeTitlePage(title = RADIO_NAME) {
   document.title = title;
 }
 
-function refreshCurrentSong(song, artist, duration) {
+function refreshCurrentSong(
+  song,
+  artist,
+  duration,
+  startTime,
+  nextTrackStarttime
+) {
   const currentSong = document.getElementById("currentSongDisplay");
   const currentArtist = document.getElementById("currentArtistDisplay");
   const currentDuration = document.getElementById("currentDurationDisplay");
@@ -565,7 +571,7 @@ function refreshCurrentSong(song, artist, duration) {
       currentSong.textContent = song;
       currentArtist.textContent = artist;
 
-      displayTrackCountdown(song, duration);
+      displayTrackCountdown(song, duration, startTime, nextTrackStarttime);
 
       currentSong.classList.remove("fade-out");
       currentSong.classList.add("fade-in");
@@ -664,10 +670,16 @@ async function getStreamingData() {
         }
         musicActual = safeCurrentSong;
 
+        // Get the next track's start time for accurate countdown
+        const nextTrackStarttime =
+          data.Next && data.Next.length > 0 ? data.Next[0].Starttime : null;
+
         refreshCurrentSong(
           safeCurrentSong,
           safeCurrentArtist,
-          currentDurationVal
+          currentDurationVal,
+          currentStartTime,
+          nextTrackStarttime
         );
 
         // Display what is coming up next
@@ -778,7 +790,7 @@ async function getStreamingData() {
   }
 }
 
-function displayTrackCountdown(song, duration) {
+function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
   const currentDurationElem = document.getElementById("currentDurationDisplay");
   let countdownInterval;
 
@@ -793,9 +805,11 @@ function displayTrackCountdown(song, duration) {
     // console.log("Previous countdown cleared.");
   }
 
-  function startCountdown(duration) {
+  function startCountdown(duration, startTime, nextTrackStarttime) {
     // console.log("Starting countdown with duration:", duration || "undefined");
-    let startTime = Date.now();
+    // console.log("Song started at:", startTime || "undefined");
+    // console.log("Next track starts at:", nextTrackStarttime || "undefined");
+
     let totalSeconds = 0;
 
     if (typeof duration === "number") {
@@ -821,7 +835,128 @@ function displayTrackCountdown(song, duration) {
       totalSeconds = parseInt(duration, 10);
     }
 
-    // Start new interval for data fetch after coutdown ends
+    // Calculate elapsed time based on start time
+    let elapsedSeconds = 0;
+    let countdownStartTime = Date.now();
+
+    if (startTime) {
+      try {
+        // Handle YYYY-MM-DD HH:MM:SS format
+        // Convert to ISO format for better browser compatibility
+        let isoStartTime = startTime;
+        if (startTime.includes(" ") && !startTime.includes("T")) {
+          isoStartTime = startTime.replace(" ", "T");
+        }
+
+        const songStartTime = new Date(isoStartTime).getTime();
+        const now = Date.now();
+        elapsedSeconds = Math.floor((now - songStartTime) / 1000);
+
+        // Ensure elapsed time is not negative or greater than total duration
+        elapsedSeconds = Math.max(0, Math.min(elapsedSeconds, totalSeconds));
+
+        console.log(`Song started at: ${startTime} (${isoStartTime})`);
+        console.log(
+          `Song has been playing for ${elapsedSeconds} seconds out of ${totalSeconds} total`
+        );
+      } catch (error) {
+        console.warn(
+          "Invalid startTime format, using current time as start:",
+          error
+        );
+        console.warn(
+          "Expected format: YYYY-MM-DD HH:MM:SS, received:",
+          startTime
+        );
+        elapsedSeconds = 0;
+      }
+    }
+
+    // Calculate remaining time - use next track start time if available for maximum accuracy
+    let remainingSeconds;
+    let useNextTrackTiming = false;
+
+    if (nextTrackStarttime) {
+      try {
+        // Convert next track start time to ISO format
+        let isoNextStartTime = nextTrackStarttime;
+        if (
+          nextTrackStarttime.includes(" ") &&
+          !nextTrackStarttime.includes("T")
+        ) {
+          isoNextStartTime = nextTrackStarttime.replace(" ", "T");
+        }
+
+        const nextTrackTime = new Date(isoNextStartTime).getTime();
+        const now = Date.now();
+        remainingSeconds = Math.floor((nextTrackTime - now) / 1000);
+
+        // Only use next track timing if it's reasonable (positive and not too far in future)
+        if (remainingSeconds > 0 && remainingSeconds < totalSeconds + 30) {
+          useNextTrackTiming = true;
+          console.log(
+            `Using next track start time: ${nextTrackStarttime} (${isoNextStartTime})`
+          );
+          console.log(
+            `Accurate remaining time: ${remainingSeconds} seconds until next track`
+          );
+        } else {
+          console.warn(
+            `Next track timing seems unreasonable: ${remainingSeconds}s, falling back to duration calculation`
+          );
+        }
+      } catch (error) {
+        console.warn(
+          "Invalid nextTrackStarttime format, falling back to duration calculation:",
+          error
+        );
+      }
+    }
+
+    // Fallback to duration-based calculation if next track timing not available or unreasonable
+    if (!useNextTrackTiming) {
+      remainingSeconds = totalSeconds - elapsedSeconds;
+      console.log(
+        `Using duration-based calculation: ${remainingSeconds} seconds remaining`
+      );
+    }
+
+    // Set up polling for new data before song ends
+    let pollBeforeEnd;
+    let pollDelay;
+
+    if (useNextTrackTiming) {
+      // With exact next track timing, we can be much more precise
+      if (remainingSeconds <= 10) {
+        pollBeforeEnd = 1; // Poll 1 second before for very short remaining time
+      } else if (remainingSeconds <= 30) {
+        pollBeforeEnd = Math.max(1, Math.floor(remainingSeconds * 0.3)); // Poll at 70% through
+      } else {
+        pollBeforeEnd = 10; // Poll 10 seconds before for longer tracks
+      }
+      pollDelay = Math.max(1000, (remainingSeconds - pollBeforeEnd) * 1000);
+      console.log(
+        `Using precise next-track timing: polling in ${Math.floor(
+          pollDelay / 1000
+        )}s`
+      );
+    } else {
+      // Fallback to duration-based logic
+      if (totalSeconds < 10) {
+        pollBeforeEnd = 1; // For very short jingles, poll 1 second before end
+      } else if (totalSeconds < 30) {
+        pollBeforeEnd = Math.max(1, Math.floor(remainingSeconds * 0.5)); // 50% for short tracks
+      } else {
+        pollBeforeEnd = 30; // 30 seconds for long tracks
+      }
+      pollDelay = Math.max(1000, (remainingSeconds - pollBeforeEnd) * 1000);
+      console.log(
+        `Using duration-based timing: polling in ${Math.floor(
+          pollDelay / 1000
+        )}s`
+      );
+    }
+
     setTimeout(() => {
       if (fetchIntervalId) return; // Prevent multiple intervals
 
@@ -832,12 +967,14 @@ function displayTrackCountdown(song, duration) {
       const interval = isLocalhost ? 5000 : 1000; // 5 seconds for localhost, 1 second for production
 
       fetchIntervalId = setInterval(getStreamingData, interval);
-      // console.log("Interval getStreamingData restarted after song ended.");
-    }, totalSeconds * 1000 - 2000);
+      console.log("Interval getStreamingData started for next song detection.");
+    }, pollDelay);
 
     function updateCountdown() {
-      let elapsed = Math.floor((Date.now() - startTime) / 1000);
-      const remaining = Math.max(totalSeconds - elapsed, 0);
+      const now = Date.now();
+      const totalElapsed =
+        elapsedSeconds + Math.floor((now - countdownStartTime) / 1000);
+      const remaining = Math.max(totalSeconds - totalElapsed, 0);
       const min = Math.floor(remaining / 60);
       const sec = remaining % 60;
       currentDurationElem.textContent = `${min}:${sec
@@ -854,7 +991,7 @@ function displayTrackCountdown(song, duration) {
   }
 
   if (currentDurationElem && song && duration) {
-    startCountdown(duration);
+    startCountdown(duration, startTime, nextTrackStarttime);
   }
 }
 
