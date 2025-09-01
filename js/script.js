@@ -142,8 +142,9 @@ async function registerServiceWorker() {
   }
 }
 
-// Playlist data json url will be set after manifest loads
-let PlayerData = "playlist.json"; // Default fallback
+// playlistData data json url will be set after manifest loads
+let playlistData = "playlist.json"; // Default fallback
+
 // Only use localStorage volume if not on mobile device
 // Only check for phones (not tablets) using user agent
 const isPhone = /iPhone|Android.*Mobile|Windows Phone|iPod/i.test(
@@ -207,10 +208,9 @@ function initializePlayer() {
   changeTitlePage();
   setCopyright(); // This calls setupAudioPlayer
 
-  // Hide loader first
-  hideLoader();
+  // DON'T hide loader here - wait for first successful playlist fetch
 
-  // Ensure player is visible
+  // Ensure player is visible but keep loader showing
   const player = document.getElementById("player");
   if (player) {
     player.style.display = "";
@@ -244,7 +244,10 @@ async function waitForServiceWorkerThenStart() {
   }
 
   // Start fetching streaming data
-  console.log("Starting to fetch streaming data with PlayerData:", PlayerData);
+  console.log(
+    "Starting to fetch streaming data with playlistData:",
+    playlistData
+  );
   getStreamingData();
   fetchIntervalId = setInterval(getStreamingData, 1000);
 }
@@ -278,9 +281,9 @@ function loadAppVars() {
       DIM_VOLUME_SLEEP_TIMER =
         manifest.custom_radio_config.dim_volume_sleep_timer;
 
-      // Set PlayerData after PLAYLIST is loaded from manifest
-      PlayerData = PLAYLIST || "playlist.json";
-      console.log("PlayerData set to:", PlayerData);
+      // Set playlistData after PLAYLIST is loaded from manifest
+      playlistData = PLAYLIST || "playlist.json";
+      console.log("playlistData set to:", playlistData);
 
       // Log all key variables to console for debugging
       console.log("APP_VERSION:", APP_VERSION);
@@ -494,15 +497,22 @@ function refreshCurrentSong(song, artist, duration) {
 
 // Remove the Page class and use functions directly
 let musicActual = null;
+let isFirstLoad = true; // Flag to track first successful load
+
 async function getStreamingData() {
   try {
-    console.log("Fetching streaming data from:", PlayerData);
-    let data = await fetchStreamingData(PlayerData);
+    console.log("Fetching streaming data from:", playlistData);
+    let data = await fetchStreamingData(playlistData);
 
     console.log("Received data:", data);
 
     if (data) {
-      // hideLoader();
+      // Hide loader on first successful data fetch
+      if (isFirstLoad) {
+        console.log("First playlist data loaded successfully - hiding loader");
+        hideLoader();
+        isFirstLoad = false;
+      }
       var currentSong = data.Current.Title;
       var charsToplayTitle = 25;
       var charsPlayingTitle = 40;
@@ -644,7 +654,7 @@ async function getStreamingData() {
     }
   } catch (error) {
     console.error("Error in getStreamingData:", error);
-    console.log("PlayerData value:", PlayerData);
+    console.log("playlistData value:", playlistData);
     console.log("Playlist endpoint:", PLAYLIST);
   }
 }
