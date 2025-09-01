@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RL Player - Setup Utility</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .container {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .step {
+        border: 1px solid #e0e0e0;
+        margin: 20px 0;
+        padding: 20px;
+        border-radius: 8px;
+      }
+      .success {
+        border-color: #4caf50;
+        background: #f8fff8;
+      }
+      .error {
+        border-color: #f44336;
+        background: #fff8f8;
+      }
+      .warning {
+        border-color: #ff9800;
+        background: #fffaf0;
+      }
+      .code {
+        background: #f5f5f5;
+        padding: 10px;
+        border-radius: 4px;
+        font-family: "Monaco", "Courier New", monospace;
+        margin: 10px 0;
+      }
+      button {
+        background: #2196f3;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background: #1976d2;
+      }
+      input[type="password"] {
+        padding: 8px;
+        margin: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        width: 200px;
+      }
+      .hash-output {
+        background: #e8f5e8;
+        padding: 15px;
+        border-radius: 4px;
+        font-family: monospace;
+        word-break: break-all;
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔧 RL Player Setup Utility</h1>
+      <p>
+        This utility helps you configure RL Player securely for GitHub
+        distribution.
+      </p>
+
+      <div id="configCheck" class="step">
+        <h3>📋 Step 1: Configuration File Check</h3>
+        <div id="configStatus">Checking...</div>
+      </div>
+
+      <div class="step">
+        <h3>🔐 Step 2: Generate Password Hash</h3>
+        <p>Enter your desired password to generate a secure hash:</p>
+        <input
+          type="password"
+          id="passwordInput"
+          placeholder="Enter your password"
+        />
+        <button onclick="generateHash()">Generate Hash</button>
+        <div id="hashResult"></div>
+      </div>
+
+      <div class="step">
+        <h3>� Step 3: Configure Your Radio Station</h3>
+        <p>Customize your radio station settings:</p>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 10px;
+            align-items: center;
+            margin: 15px 0;
+          "
+        >
+          <label>Station Name:</label>
+          <input
+            type="text"
+            id="stationName"
+            placeholder="Your Radio Name"
+            style="padding: 8px; border: 1px solid #ddd; border-radius: 4px"
+          />
+
+          <label>Stream URL:</label>
+          <input
+            type="url"
+            id="streamUrl"
+            placeholder="https://your-stream-url.com"
+            style="padding: 8px; border: 1px solid #ddd; border-radius: 4px"
+          />
+
+          <label>App URL:</label>
+          <input
+            type="url"
+            id="appUrl"
+            placeholder="https://your-domain.com/app/"
+            style="padding: 8px; border: 1px solid #ddd; border-radius: 4px"
+          />
+
+          <label>Theme Color:</label>
+          <input
+            type="color"
+            id="themeColor"
+            value="#031521"
+            style="
+              padding: 2px;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+              width: 60px;
+            "
+          />
+
+          <label>Default Volume:</label>
+          <input
+            type="range"
+            id="defaultVolume"
+            min="0"
+            max="100"
+            value="100"
+            style="width: 150px"
+          />
+          <span id="volumeDisplay">100</span>
+        </div>
+        <button onclick="generateFullConfig()">Generate Complete Config</button>
+        <div id="fullConfigResult"></div>
+      </div>
+
+      <div class="step">
+        <h3>�📁 Step 4: Setup Instructions</h3>
+        <ol>
+          <li>
+            <strong>Copy config template:</strong>
+            <div class="code">cp config.example.js config.js</div>
+          </li>
+          <li>
+            <strong>Edit config.js</strong> with your generated configuration:
+          </li>
+          <li><strong>Never commit config.js</strong> - it's in .gitignore</li>
+          <li><strong>Distribute config.example.js</strong> for other users</li>
+        </ol>
+      </div>
+
+      <div class="step">
+        <h3>✅ Step 5: Verify Setup</h3>
+        <button onclick="window.location.href='index.html'">
+          Test Your Player
+        </button>
+      </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+      // Hash function (same as in main script)
+      async function hashString(string) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(string);
+        const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+      }
+
+      // Check configuration
+      function checkConfig() {
+        const status = document.getElementById("configStatus");
+        const checkDiv = document.getElementById("configCheck");
+
+        if (typeof CONFIG === "undefined") {
+          status.innerHTML = `
+                    <div style="color: #f44336;">❌ config.js not found or not loaded</div>
+                    <p>Please copy config.example.js to config.js</p>
+                `;
+          checkDiv.className = "step error";
+          return;
+        }
+
+        if (!CONFIG.PASSWORD_HASH) {
+          status.innerHTML = `
+                    <div style="color: #ff9800;">⚠️ PASSWORD_HASH not configured</div>
+                    <p>Please set PASSWORD_HASH in config.js</p>
+                `;
+          checkDiv.className = "step warning";
+          return;
+        }
+
+        if (
+          CONFIG.PASSWORD_HASH === "your-password-hash-here" ||
+          CONFIG.PASSWORD_HASH === "default-hash-please-configure"
+        ) {
+          status.innerHTML = `
+                    <div style="color: #ff9800;">⚠️ Using default password hash</div>
+                    <p>Please generate and set your own password hash</p>
+                `;
+          checkDiv.className = "step warning";
+          return;
+        }
+
+        status.innerHTML = `
+                <div style="color: #4CAF50;">✅ Configuration looks good!</div>
+                <p>Password hash is properly configured</p>
+            `;
+        checkDiv.className = "step success";
+      }
+
+      // Generate password hash
+      async function generateHash() {
+        const password = document.getElementById("passwordInput").value;
+        const resultDiv = document.getElementById("hashResult");
+
+        if (!password) {
+          resultDiv.innerHTML =
+            '<div style="color: #f44336;">Please enter a password</div>';
+          return;
+        }
+
+        try {
+          const hash = await hashString(password);
+          resultDiv.innerHTML = `
+                    <h4>Your Password Hash:</h4>
+                    <div class="hash-output">${hash}</div>
+                    <p><strong>Next:</strong> Configure your radio settings below, then generate your complete config.</p>
+                `;
+        } catch (error) {
+          resultDiv.innerHTML = `<div style="color: #f44336;">Error generating hash: ${error.message}</div>`;
+        }
+      }
+
+      // Generate complete configuration
+      async function generateFullConfig() {
+        const password = document.getElementById("passwordInput").value;
+        const stationName = document.getElementById("stationName").value;
+        const streamUrl = document.getElementById("streamUrl").value;
+        const appUrl = document.getElementById("appUrl").value;
+        const themeColor = document.getElementById("themeColor").value;
+        const defaultVolume = document.getElementById("defaultVolume").value;
+        const resultDiv = document.getElementById("fullConfigResult");
+
+        if (!password) {
+          resultDiv.innerHTML =
+            '<div style="color: #f44336;">Please generate your password hash first</div>';
+          return;
+        }
+
+        if (!stationName || !streamUrl || !appUrl) {
+          resultDiv.innerHTML =
+            '<div style="color: #f44336;">Please fill in all required fields (Station Name, Stream URL, App URL)</div>';
+          return;
+        }
+
+        try {
+          const hash = await hashString(password);
+          const config = `// Configuration file for RL Player
+// This file contains user-specific configuration that should not be committed to Git
+// Copy config.example.js to config.js and customize your values
+
+const CONFIG = {
+  // Your password hash
+  PASSWORD_HASH: "${hash}",
+
+  // App Configuration
+  APP_CONFIG: {
+    // PWA Settings
+    scope: "/",
+    background_color: "${themeColor}",
+    theme_color: "${themeColor}",
+    
+    // Radio Station Settings
+    station_name: "${stationName}",
+    stream_url: "${streamUrl}",
+    app_url: "${appUrl}",
+    
+    // Audio Settings
+    default_volume: ${defaultVolume},
+    dim_volume_sleep_timer: 50,
+  },
+};`;
+
+          resultDiv.innerHTML = `
+                    <h4>Your Complete Configuration:</h4>
+                    <div class="hash-output" style="white-space: pre-wrap; font-size: 12px;">${config}</div>
+                    <p><strong>Instructions:</strong></p>
+                    <ol style="text-align: left;">
+                        <li>Copy the entire configuration above</li>
+                        <li>Save it as <code>config.js</code> in your project root</li>
+                        <li>Never commit this file to Git (it's already in .gitignore)</li>
+                        <li>Test your player to make sure everything works</li>
+                    </ol>
+                    <p style="color: #4CAF50;"><strong>✅ Your player is now configured with personalized settings!</strong></p>
+                `;
+        } catch (error) {
+          resultDiv.innerHTML = `<div style="color: #f44336;">Error generating config: ${error.message}</div>`;
+        }
+      }
+
+      // Update volume display
+      document.addEventListener("DOMContentLoaded", function () {
+        const volumeSlider = document.getElementById("defaultVolume");
+        const volumeDisplay = document.getElementById("volumeDisplay");
+
+        if (volumeSlider && volumeDisplay) {
+          volumeSlider.addEventListener("input", function () {
+            volumeDisplay.textContent = this.value;
+          });
+        }
+      });
+
+      // Run checks on page load
+      document.addEventListener("DOMContentLoaded", checkConfig);
+    </script>
+  </body>
+</html>

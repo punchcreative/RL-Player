@@ -1,4 +1,4 @@
-const activeCacheVersion = 1141;
+const activeCacheVersion = 1144;
 const activeCacheName = `rlplayer-${activeCacheVersion}`;
 
 console.log(`Service Worker: Using cache version ${activeCacheVersion}`);
@@ -38,15 +38,24 @@ const cacheAssets = [
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // Special handling for playlist.json - always fetch fresh
+  // Only handle requests to the same origin (localhost)
+  // Let external API calls (like https://eajt.nl/kvpn/playlist.json) pass through
+  if (url.origin !== self.location.origin) {
+    console.log(
+      "Service Worker: Ignoring external request:",
+      event.request.url
+    );
+    return; // Let the browser handle external requests normally
+  }
+
+  // Special handling for local playlist.json - always fetch fresh
   if (
-    url.pathname === "/kvpn/playlist.json" ||
+    url.pathname === "/playlist.json" ||
     url.pathname.endsWith("/playlist.json") ||
-    url.pathname.includes("playlist.json") ||
     event.request.url.includes("playlist.json")
   ) {
     console.log(
-      "Service Worker: Handling playlist.json request:",
+      "Service Worker: Handling local playlist.json request:",
       event.request.url
     );
     event.respondWith(
@@ -54,7 +63,7 @@ self.addEventListener("fetch", (event) => {
         try {
           // Always fetch from network to get the latest playlist.json after FTP upload
           console.log(
-            "Service Worker: Fetching fresh playlist.json from network"
+            "Service Worker: Fetching fresh local playlist.json from network"
           );
           const networkResponse = await fetch(event.request, {
             cache: "no-cache",

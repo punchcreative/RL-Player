@@ -148,6 +148,14 @@
       src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js"
     ></script>
     <script type="text/javascript" src="js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="js/env-loader.js"></script>
     <script type="text/javascript" src="js/script.js" defer></script>
+    
+    <!-- Conditional config.js loading (fallback if .env fails) -->
+    <script>
+      // This will be handled by the main script.js loadAppVars function
+      // No need to manually load config.js here - the app will handle fallbacks
+      console.log('🔧 Configuration loading will be handled by main script');
+    </script>
   </body>
 </html>

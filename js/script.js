@@ -25,9 +25,9 @@ async function sha256(str) {
 // Initialize the streaming URL
 let URL_STREAMING;
 
-const correctPasswordHash =
-  "dc18b42a2ea8cf3fb313c20d32945a631ec4fa450b16f9d1567f933e16bd0565";
-const correctPasswordHashPromise = Promise.resolve(correctPasswordHash);
+// These will be set after CONFIG is loaded in loadAppVars()
+let correctPasswordHash = "default-hash-please-configure";
+let correctPasswordHashPromise;
 
 function showLoader() {
   var nameToSplit = RADIO_NAME || "LOADING";
@@ -208,16 +208,10 @@ function initializePlayer() {
   changeTitlePage();
   setCopyright(); // This calls setupAudioPlayer
 
-  // DON'T hide loader here - wait for first successful playlist fetch
+  // DON'T show the player yet - wait for first successful playlist fetch
+  // The player will be shown when hideLoader() is called after first data load
 
-  // Ensure player is visible but keep loader showing
-  const player = document.getElementById("player");
-  if (player) {
-    player.style.display = "";
-    console.log("Player element made visible");
-  } else {
-    console.error("Player element not found in DOM");
-  }
+  console.log("Player initialization complete, waiting for playlist data...");
 
   // Wait for service worker to be ready before starting data fetching
   waitForServiceWorkerThenStart();
@@ -248,12 +242,118 @@ async function waitForServiceWorkerThenStart() {
     "Starting to fetch streaming data with playlistData:",
     playlistData
   );
+
+  // Use longer interval for localhost to be gentle on CORS proxies
+  const isLocalhost =
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1";
+  const interval = isLocalhost ? 5000 : 1000; // 5 seconds for localhost, 1 second for production
+
+  console.log(`Using polling interval: ${interval}ms`);
   getStreamingData();
-  fetchIntervalId = setInterval(getStreamingData, 1000);
+  fetchIntervalId = setInterval(getStreamingData, interval);
 }
-function loadAppVars() {
-  console.log("Loading app variables from manifest...");
-  // Fetch the manifest file for app configuration
+// Helper function to dynamically load config.js
+function loadConfigJS() {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "config.js";
+    script.onload = () => {
+      if (typeof CONFIG !== "undefined") {
+        resolve();
+      } else {
+        reject(new Error("config.js loaded but CONFIG not defined"));
+      }
+    };
+    script.onerror = () => reject(new Error("config.js not found"));
+    document.head.appendChild(script);
+  });
+}
+
+async function loadAppVars() {
+  console.log("🔧 Loading app configuration...");
+
+  // Try to load environment variables first
+  let envLoaded = false;
+  if (window.envLoader) {
+    envLoaded = await window.envLoader.loadEnv();
+
+    if (envLoaded) {
+      // Override CONFIG with environment variables
+      window.CONFIG = window.envLoader.createConfig();
+      console.log("✅ Using .env configuration");
+
+      // Validate environment configuration
+      window.envLoader.validateConfig();
+    } else {
+      console.log("📋 .env not found, trying config.js fallback...");
+
+      // Try to load config.js dynamically
+      try {
+        await loadConfigJS();
+        console.log("✅ Using config.js fallback");
+      } catch (error) {
+        console.error("❌ Neither .env nor config.js found!");
+        console.error("📋 Please run: ./setup-env.sh or create config.js");
+
+        // Create a minimal CONFIG to prevent crashes
+        window.CONFIG = {
+          PASSWORD_HASH: "default-hash-please-configure",
+          APP_CONFIG: {
+            scope: "/",
+            background_color: "#031521",
+            theme_color: "#031521",
+            station_name: "Setup Required",
+            stream_url: "https://example.com",
+            app_url: "https://example.com",
+            default_volume: 100,
+            dim_volume_sleep_timer: 50,
+          },
+        };
+      }
+    }
+  }
+
+  // Now validate CONFIG and set up password hash
+  correctPasswordHash =
+    CONFIG?.PASSWORD_HASH || "default-hash-please-configure";
+  correctPasswordHashPromise = Promise.resolve(correctPasswordHash);
+
+  // Validate that the user has set up a real password hash
+  if (
+    correctPasswordHash === "default-hash-please-configure" ||
+    correctPasswordHash === "your-password-hash-here"
+  ) {
+    console.warn(
+      "⚠️  Using default password hash! Please configure your own password."
+    );
+    console.warn('📋 Generate hash with: await hashString("your-password")');
+  }
+
+  // Validate APP_CONFIG for personalized settings
+  if (CONFIG?.APP_CONFIG) {
+    if (
+      CONFIG.APP_CONFIG.station_name === "Your Radio Name" ||
+      CONFIG.APP_CONFIG.stream_url === "https://your-stream-url.com" ||
+      CONFIG.APP_CONFIG.app_url === "https://your-domain.com/app/"
+    ) {
+      console.warn(
+        "⚠️  Using default APP_CONFIG values! Please customize your radio settings."
+      );
+      console.warn(
+        "📋 Edit config.js to set your station name, stream URL, and app URL."
+      );
+    } else {
+      console.log(
+        "✅ Custom APP_CONFIG detected - using personalized settings."
+      );
+    }
+  } else {
+    console.info("ℹ️  No APP_CONFIG found - using manifest.json defaults.");
+  }
+
+  // Now load manifest for app metadata
+  console.log("📄 Loading manifest.json...");
   fetch("manifest.json")
     .then((response) => {
       if (!response.ok) {
@@ -271,15 +371,39 @@ function loadAppVars() {
       APP_NAME = manifest.name;
       APP_DESCRIPTION = manifest.description;
       APP_AUTHOR = manifest.author;
-      RADIO_NAME = manifest.custom_radio_config.station_name;
-      STREAM_URL = manifest.custom_radio_config.stream_url;
-      DEFAULT_VOLUME = manifest.custom_radio_config.default_volume;
-      THEME_COLOR = manifest.custom_radio_config.theme_color;
+
+      // Override with CONFIG values if available, otherwise use manifest defaults
+      if (CONFIG?.APP_CONFIG) {
+        console.log("Overriding manifest values with CONFIG.APP_CONFIG...");
+        RADIO_NAME =
+          CONFIG.APP_CONFIG.station_name ||
+          manifest.custom_radio_config.station_name;
+        STREAM_URL =
+          CONFIG.APP_CONFIG.stream_url ||
+          manifest.custom_radio_config.stream_url;
+        DEFAULT_VOLUME =
+          CONFIG.APP_CONFIG.default_volume ||
+          manifest.custom_radio_config.default_volume;
+        THEME_COLOR =
+          CONFIG.APP_CONFIG.theme_color ||
+          manifest.custom_radio_config.theme_color;
+        APP_URL =
+          CONFIG.APP_CONFIG.app_url || manifest.custom_radio_config.app_url;
+        DIM_VOLUME_SLEEP_TIMER =
+          CONFIG.APP_CONFIG.dim_volume_sleep_timer ||
+          manifest.custom_radio_config.dim_volume_sleep_timer;
+      } else {
+        console.log("Using manifest values (CONFIG.APP_CONFIG not found)...");
+        RADIO_NAME = manifest.custom_radio_config.station_name;
+        STREAM_URL = manifest.custom_radio_config.stream_url;
+        DEFAULT_VOLUME = manifest.custom_radio_config.default_volume;
+        THEME_COLOR = manifest.custom_radio_config.theme_color;
+        APP_URL = manifest.custom_radio_config.app_url;
+        DIM_VOLUME_SLEEP_TIMER =
+          manifest.custom_radio_config.dim_volume_sleep_timer;
+      }
+
       PLAYLIST = manifest.api_endpoints.playlist;
-      METADATA = manifest.api_endpoints.metadata;
-      APP_URL = manifest.api_endpoints.app_url;
-      DIM_VOLUME_SLEEP_TIMER =
-        manifest.custom_radio_config.dim_volume_sleep_timer;
 
       // Set playlistData after PLAYLIST is loaded from manifest
       playlistData = PLAYLIST || "playlist.json";
@@ -449,11 +573,6 @@ function refreshCurrentSong(song, artist, duration) {
       currentArtist.classList.add("fade-in");
       currentDuration.classList.remove("fade-out");
       currentDuration.classList.add("fade-in");
-
-      // MediaSession API does not provide direct events for phone calls or interruptions.
-      // It only allows you to handle media controls (play, pause, etc.) from OS-level controls.
-      // Pausing/resuming on phone call interruptions is handled by the browser/OS automatically for <audio> elements.
-      // You cannot detect a phone call directly via JavaScript or MediaSession API due to privacy/security reasons.
 
       if ("mediaSession" in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
@@ -705,7 +824,14 @@ function displayTrackCountdown(song, duration) {
     // Start new interval for data fetch after coutdown ends
     setTimeout(() => {
       if (fetchIntervalId) return; // Prevent multiple intervals
-      fetchIntervalId = setInterval(getStreamingData, 1000);
+
+      // Use longer interval for localhost to be gentle on CORS proxies
+      const isLocalhost =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1";
+      const interval = isLocalhost ? 5000 : 1000; // 5 seconds for localhost, 1 second for production
+
+      fetchIntervalId = setInterval(getStreamingData, interval);
       // console.log("Interval getStreamingData restarted after song ended.");
     }, totalSeconds * 1000 - 2000);
 
@@ -736,7 +862,44 @@ async function fetchStreamingData(apiUrl) {
   try {
     console.log("Attempting to fetch from URL:", apiUrl);
 
-    const response = await fetch(apiUrl, {
+    // Detect if we're running on localhost and the URL is external
+    const isLocalhost =
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
+    const isExternalUrl =
+      apiUrl.startsWith("http://") || apiUrl.startsWith("https://");
+
+    let fetchUrl = apiUrl;
+    let usingProxy = false;
+
+    // If we're on localhost and trying to fetch external data, use CORS proxy
+    if (isLocalhost && isExternalUrl && !apiUrl.includes("localhost")) {
+      console.log("Using CORS proxy for localhost development");
+
+      // Try multiple CORS proxy services for better reliability
+      const corsProxies = [
+        `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`,
+        `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`,
+        `https://cors-anywhere.herokuapp.com/${apiUrl}`,
+      ];
+
+      // Try each proxy until one works
+      for (let i = 0; i < corsProxies.length; i++) {
+        try {
+          fetchUrl = corsProxies[i];
+          usingProxy = true;
+          console.log(`Trying CORS proxy ${i + 1}:`, fetchUrl);
+          break;
+        } catch (error) {
+          console.warn(`CORS proxy ${i + 1} failed, trying next...`);
+          if (i === corsProxies.length - 1) {
+            throw error;
+          }
+        }
+      }
+    }
+
+    const response = await fetch(fetchUrl, {
       method: "GET",
       headers: {
         "Cache-Control": "no-cache",
@@ -754,28 +917,82 @@ async function fetchStreamingData(apiUrl) {
 
     // Get the raw text first to inspect it
     const text = await response.text();
-    console.log("Raw response length:", text.length);
-    console.log("Raw response (first 100 chars):", text.substring(0, 100));
+
+    // If we used CORS proxy, extract the actual content
+    let actualText = text;
+    if (usingProxy) {
+      try {
+        // Handle different proxy response formats
+        if (fetchUrl.includes("allorigins.win")) {
+          const proxyResponse = JSON.parse(text);
+          actualText = proxyResponse.contents;
+          console.log("Extracted content from allorigins.win proxy");
+        } else if (fetchUrl.includes("corsproxy.io")) {
+          // corsproxy.io returns the content directly
+          actualText = text;
+          console.log("Using content from corsproxy.io proxy");
+        } else if (fetchUrl.includes("cors-anywhere")) {
+          // cors-anywhere returns the content directly
+          actualText = text;
+          console.log("Using content from cors-anywhere proxy");
+        } else {
+          // Fallback: try to parse as proxy response, otherwise use raw
+          try {
+            const proxyResponse = JSON.parse(text);
+            actualText = proxyResponse.contents || proxyResponse.data || text;
+          } catch {
+            actualText = text;
+          }
+          console.log("Extracted content from generic CORS proxy");
+        }
+      } catch (error) {
+        console.warn("Failed to parse CORS proxy response, using raw text");
+        actualText = text;
+      }
+    }
+    console.log("Raw response length:", actualText.length);
+    console.log(
+      "Raw response (first 100 chars):",
+      actualText.substring(0, 100)
+    );
     console.log(
       "Raw response (last 100 chars):",
-      text.substring(text.length - 100)
+      actualText.substring(actualText.length - 100)
     );
 
     // Check if the JSON appears to be truncated
-    const trimmedText = text.trim();
+    const trimmedText = actualText.trim();
     if (!trimmedText.endsWith("}") && !trimmedText.endsWith("]")) {
       console.warn("JSON appears to be truncated - does not end with } or ]");
-      console.log("Last 50 characters:", text.slice(-50));
+      console.log("Last 50 characters:", actualText.slice(-50));
       throw new Error("JSON file appears to be truncated or corrupted");
     }
 
     // Try to parse the JSON
-    const data = JSON.parse(text);
+    const data = JSON.parse(actualText);
     console.log("Successfully fetched and parsed streaming data");
     return data;
   } catch (error) {
     console.error("fetchStreamingData error:", error);
     console.error("Failed URL:", apiUrl);
+
+    // If we're on localhost and external fetch failed, try local fallback
+    const isLocalhost =
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
+    const isExternalUrl =
+      apiUrl.startsWith("http://") || apiUrl.startsWith("https://");
+
+    if (isLocalhost && isExternalUrl && !apiUrl.includes("localhost")) {
+      console.warn(
+        "External fetch failed, trying local playlist.json fallback"
+      );
+      try {
+        return await fetchStreamingData("playlist.json");
+      } catch (fallbackError) {
+        console.error("Local fallback also failed:", fallbackError);
+      }
+    }
 
     if (error instanceof SyntaxError) {
       console.error(
@@ -811,6 +1028,18 @@ async function setupAudioPlayer() {
   audio.loop = false;
   audio.muted = false;
 
+  setupAudioEventListeners();
+
+  document.getElementById("volume").oninput = function () {
+    changeVolumeLocalStorage(this.value);
+    // console.log("Volume slider changed to:", this.value);
+    audio.volume = intToDecimal(this.value);
+  };
+}
+
+function setupAudioEventListeners() {
+  if (!audio) return;
+
   let retryCount = 0;
   let retryTimer = null;
 
@@ -823,7 +1052,10 @@ async function setupAudioPlayer() {
       retryTimer = setTimeout(() => {
         audio.src = URL_STREAMING;
         audio.load();
-        audio.play().catch(() => {}); // Try to play again
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {}); // Try to play again
+        }
       }, 10000);
     } else {
       clearTimeout(retryTimer);
@@ -835,7 +1067,10 @@ async function setupAudioPlayer() {
         retryCount = 0;
         audio.src = URL_STREAMING;
         audio.load();
-        audio.play().catch(() => {});
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {});
+        }
       } else {
         audio.pause();
         audio.src = "";
@@ -845,12 +1080,6 @@ async function setupAudioPlayer() {
 
   audio.addEventListener("error", handleStreamError);
   audio.addEventListener("stalled", handleStreamError);
-
-  document.getElementById("volume").oninput = function () {
-    changeVolumeLocalStorage(this.value);
-    // console.log("Volume slider changed to:", this.value);
-    audio.volume = intToDecimal(this.value);
-  };
 
   audio.onplay = function () {
     var btn = document.getElementById("playerButton");
@@ -892,8 +1121,11 @@ function togglePlay() {
     playerButton.classList.add("fa-circle-play");
     playerButton.style.textShadow = "0 0 5px black";
 
-    audio.pause();
-    // audio.load(); // Clear the source instead of creating new Audio object
+    if (audio) {
+      audio.pause();
+      // Don't create a new audio object, just reset the current one
+      audio.currentTime = 0;
+    }
 
     if (!sleepTimerId) {
       removeSleepTimerElement();
@@ -907,9 +1139,37 @@ function togglePlay() {
     playerButton.classList.add("fa-circle-pause");
     playerButton.style.textShadow = "0 0 5px black";
 
-    audio = new Audio(URL_STREAMING);
+    // Reuse existing audio object if available, otherwise create new one
+    if (!audio || audio.src !== URL_STREAMING) {
+      if (audio) {
+        // Properly clean up old audio object
+        audio.pause();
+        audio.src = "";
+        audio.load();
+      }
+      audio = new Audio(URL_STREAMING);
+      audio.crossOrigin = "anonymous";
+      audio.preload = "none";
+      audio.autoplay = false;
+      audio.loop = false;
+      audio.muted = false;
+
+      // Re-attach event listeners for the new audio object
+      setupAudioEventListeners();
+    }
+
     setVolume(initialVol);
-    audio.play();
+
+    // Handle the play promise properly
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch((error) => {
+        console.warn("Audio play failed:", error);
+        // Reset button state if play fails
+        playerButton.classList.remove("fa-circle-pause");
+        playerButton.classList.add("fa-circle-play");
+      });
+    }
   }
 }
 
