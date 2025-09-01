@@ -9,7 +9,9 @@ let APP_VERSION,
   PLAYLIST,
   METADATA,
   APP_URL,
-  DIM_VOLUME_SLEEP_TIMER;
+  DIM_VOLUME_SLEEP_TIMER,
+  fetchIntervalId,
+  audio;
 
 // Helper function to hash a string using SHA-256 and return a hex string
 async function sha256(str) {
@@ -117,13 +119,31 @@ function hideLoader() {
 }
 
 // Call the loadAppVars function when the page loads (first thing to happen)
-window.addEventListener("load", loadAppVars);
+window.addEventListener("load", () => {
+  // Register service worker first, then load app vars
+  registerServiceWorker();
+  loadAppVars();
+});
 
 // Show loader on DOM ready, but it will use RADIO_NAME once loaded
 window.addEventListener("DOMContentLoaded", showLoader);
 
-// Playlist data json url
-const PlayerData = PLAYLIST || "playlist.json";
+// Service Worker Registration
+async function registerServiceWorker() {
+  if ("serviceWorker" in navigator) {
+    try {
+      const registration = await navigator.serviceWorker.register(
+        "service-worker.js"
+      );
+      console.log("Service Worker registered successfully:", registration);
+    } catch (err) {
+      console.log("Service Worker registration failed:", err);
+    }
+  }
+}
+
+// Playlist data json url will be set after manifest loads
+let PlayerData = "playlist.json"; // Default fallback
 // Only use localStorage volume if not on mobile device
 // Only check for phones (not tablets) using user agent
 const isPhone = /iPhone|Android.*Mobile|Windows Phone|iPod/i.test(
@@ -154,11 +174,19 @@ async function setStreamingUrl(url) {
 function setVolume(volume) {
   // console.log("setVolume gets value:", volume);
   // console.log("isPhone:", isPhone);
+  if (!audio) {
+    console.warn("Audio object not yet initialized, skipping setVolume");
+    return;
+  }
+
   if (typeof Storage !== "undefined" && !isPhone) {
     const volumeLocalStorage =
       parseInt(localStorage.getItem("volume"), 10) || 100;
     console.log("Volume from localStorage or default:", volumeLocalStorage);
-    document.getElementById("volume").value = volumeLocalStorage;
+    const volumeElement = document.getElementById("volume");
+    if (volumeElement) {
+      volumeElement.value = volumeLocalStorage;
+    }
     audio.volume = intToDecimal(volumeLocalStorage);
   } else {
     audio.volume = intToDecimal(volume);
@@ -174,15 +202,67 @@ function changeVolumeLocalStorage(volume) {
 }
 
 function initializePlayer() {
+  console.log("Initializing player...");
+
   changeTitlePage();
+  setCopyright(); // This calls setupAudioPlayer
+
+  // Hide loader first
+  hideLoader();
+
+  // Ensure player is visible
+  const player = document.getElementById("player");
+  if (player) {
+    player.style.display = "";
+    console.log("Player element made visible");
+  } else {
+    console.error("Player element not found in DOM");
+  }
+
+  // Wait for service worker to be ready before starting data fetching
+  waitForServiceWorkerThenStart();
+}
+
+async function waitForServiceWorkerThenStart() {
+  console.log("Waiting for service worker to be ready...");
+
+  if ("serviceWorker" in navigator) {
+    try {
+      // Wait for service worker to be ready
+      const registration = await navigator.serviceWorker.ready;
+      console.log("Service worker is ready:", registration);
+
+      // Small delay to ensure everything is properly initialized
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    } catch (error) {
+      console.log("Service worker not available or failed:", error);
+      // Continue anyway after a short delay
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  } else {
+    console.log("Service worker not supported, continuing without it");
+  }
+
+  // Start fetching streaming data
+  console.log("Starting to fetch streaming data with PlayerData:", PlayerData);
+  getStreamingData();
   fetchIntervalId = setInterval(getStreamingData, 1000);
-  setCopyright();
 }
 function loadAppVars() {
+  console.log("Loading app variables from manifest...");
   // Fetch the manifest file for app configuration
   fetch("manifest.json")
-    .then((response) => response.json())
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(
+          `Failed to load manifest: ${response.status} ${response.statusText}`
+        );
+      }
+      return response.json();
+    })
     .then((manifest) => {
+      console.log("Manifest loaded successfully:", manifest);
+
       // Assign manifest values to global variables
       APP_VERSION = manifest.version;
       APP_NAME = manifest.name;
@@ -197,6 +277,10 @@ function loadAppVars() {
       APP_URL = manifest.api_endpoints.app_url;
       DIM_VOLUME_SLEEP_TIMER =
         manifest.custom_radio_config.dim_volume_sleep_timer;
+
+      // Set PlayerData after PLAYLIST is loaded from manifest
+      PlayerData = PLAYLIST || "playlist.json";
+      console.log("PlayerData set to:", PlayerData);
 
       // Log all key variables to console for debugging
       console.log("APP_VERSION:", APP_VERSION);
@@ -245,6 +329,12 @@ function loadAppVars() {
 
       // After loading app variables, proceed with password check
       checkPassword();
+    })
+    .catch((error) => {
+      console.error("Error loading manifest:", error);
+      alert(
+        "Failed to load application configuration. Please check your network connection and try again."
+      );
     });
 }
 function checkPassword() {
@@ -286,6 +376,15 @@ function checkPassword() {
       <br><br>
       <button id="submitPassword" style="padding: 6px 16px; background: #031521; color: #fff; border: none; border-radius: 4px;">Submit</button>
     `;
+
+    // Add Enter key support for password input
+    box
+      .querySelector("#passwordInput")
+      .addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          box.querySelector("#submitPassword").click();
+        }
+      });
 
     modal.appendChild(box);
     document.body.appendChild(modal);
@@ -395,15 +494,15 @@ function refreshCurrentSong(song, artist, duration) {
 
 // Remove the Page class and use functions directly
 let musicActual = null;
-let audio; // Global variable for the audio element
-let fetchIntervalId = null;
-
 async function getStreamingData() {
   try {
+    console.log("Fetching streaming data from:", PlayerData);
     let data = await fetchStreamingData(PlayerData);
 
+    console.log("Received data:", data);
+
     if (data) {
-      hideLoader();
+      // hideLoader();
       var currentSong = data.Current.Title;
       var charsToplayTitle = 25;
       var charsPlayingTitle = 40;
@@ -411,6 +510,7 @@ async function getStreamingData() {
       var nrHistory = 3;
       const currentArtistVal = data.Current.Artist;
       let currentDurationVal = data.Current.Duration;
+      let currentStartTime = data.Current.Starttime;
 
       if (currentSong.length > charsPlayingTitle) {
         var string = currentSong;
@@ -443,6 +543,10 @@ async function getStreamingData() {
 
         // Display what is coming up next
         const toplayContainer = document.getElementById("toplaySong");
+        if (!toplayContainer) {
+          console.error("toplaySong element not found in DOM");
+          return;
+        }
         toplayContainer.innerHTML = "";
 
         const toplayArray = data.Next
@@ -450,12 +554,18 @@ async function getStreamingData() {
               Title: item.Title,
               Artist: item.Artist,
             }))
-          : data.Next;
+          : [];
+
+        console.log("Toplay array:", toplayArray);
 
         const maxToplayToDisplay = nrToplay;
-        const limitedToplay = toplayArray.slice(
-          Math.max(0, toplayArray.length - maxToplayToDisplay)
-        );
+        const limitedToplay = toplayArray
+          ? toplayArray.slice(
+              Math.max(0, toplayArray.length - maxToplayToDisplay)
+            )
+          : [];
+
+        console.log("Limited toplay:", limitedToplay);
 
         for (let i = 0; i < limitedToplay.length; i++) {
           const songInfo = limitedToplay[i];
@@ -482,6 +592,10 @@ async function getStreamingData() {
 
         // Display the last played songs
         const historicContainer = document.getElementById("historicSong");
+        if (!historicContainer) {
+          console.error("historicSong element not found in DOM");
+          return;
+        }
         historicContainer.innerHTML = "";
 
         const historyArray = data.Last
@@ -489,12 +603,18 @@ async function getStreamingData() {
               Title: item.Title,
               Artist: item.Artist,
             }))
-          : data.Last;
+          : [];
+
+        console.log("History array:", historyArray);
 
         const maxHistoryToDisplay = nrHistory;
-        const limitedHistory = historyArray.slice(
-          Math.max(0, historyArray.length - maxHistoryToDisplay)
-        );
+        const limitedHistory = historyArray
+          ? historyArray.slice(
+              Math.max(0, historyArray.length - maxHistoryToDisplay)
+            )
+          : [];
+
+        console.log("Limited history:", limitedHistory);
 
         for (let i = 0; i < limitedHistory.length; i++) {
           const songInfo = limitedHistory[i];
@@ -523,7 +643,9 @@ async function getStreamingData() {
       }
     }
   } catch (error) {
-    console.log("Error playlist uitlezen:", error);
+    console.error("Error in getStreamingData:", error);
+    console.log("PlayerData value:", PlayerData);
+    console.log("Playlist endpoint:", PLAYLIST);
   }
 }
 
@@ -602,19 +724,58 @@ function displayTrackCountdown(song, duration) {
 
 async function fetchStreamingData(apiUrl) {
   try {
-    const response = await fetch(apiUrl);
+    console.log("Attempting to fetch from URL:", apiUrl);
+
+    const response = await fetch(apiUrl, {
+      method: "GET",
+      headers: {
+        "Cache-Control": "no-cache",
+      },
+    });
+
     if (!response.ok) {
       throw new Error(
         `Error fetching playlist: ${response.status} ${response.statusText}`
       );
     }
-    const data = await response.json();
-    // console.log("Fetched streaming data:", data);
+
+    console.log("Response status:", response.status);
+    console.log("Response content-type:", response.headers.get("content-type"));
+
+    // Get the raw text first to inspect it
+    const text = await response.text();
+    console.log("Raw response length:", text.length);
+    console.log("Raw response (first 100 chars):", text.substring(0, 100));
+    console.log(
+      "Raw response (last 100 chars):",
+      text.substring(text.length - 100)
+    );
+
+    // Check if the JSON appears to be truncated
+    const trimmedText = text.trim();
+    if (!trimmedText.endsWith("}") && !trimmedText.endsWith("]")) {
+      console.warn("JSON appears to be truncated - does not end with } or ]");
+      console.log("Last 50 characters:", text.slice(-50));
+      throw new Error("JSON file appears to be truncated or corrupted");
+    }
+
+    // Try to parse the JSON
+    const data = JSON.parse(text);
+    console.log("Successfully fetched and parsed streaming data");
     return data;
   } catch (error) {
-    // console.log("fetchStreamingData error", error);
-    // Handle the error here, e.g., show an error message to the user or log it
-    // You can also return a default value or null if needed
+    console.error("fetchStreamingData error:", error);
+    console.error("Failed URL:", apiUrl);
+
+    if (error instanceof SyntaxError) {
+      console.error(
+        "JSON parsing failed - the playlist.json file appears to be malformed or truncated"
+      );
+      console.error(
+        "This could happen if the file is being uploaded while the app is trying to read it"
+      );
+    }
+
     return null;
   }
 }

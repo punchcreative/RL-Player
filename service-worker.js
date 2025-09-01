@@ -1,4 +1,4 @@
-const activeCacheVersion = 1140;
+const activeCacheVersion = 1141;
 const activeCacheName = `rlplayer-${activeCacheVersion}`;
 
 console.log(`Service Worker: Using cache version ${activeCacheVersion}`);
@@ -41,22 +41,43 @@ self.addEventListener("fetch", (event) => {
   // Special handling for playlist.json - always fetch fresh
   if (
     url.pathname === "/kvpn/playlist.json" ||
-    url.pathname.endsWith("/playlist.json")
+    url.pathname.endsWith("/playlist.json") ||
+    url.pathname.includes("playlist.json") ||
+    event.request.url.includes("playlist.json")
   ) {
+    console.log(
+      "Service Worker: Handling playlist.json request:",
+      event.request.url
+    );
     event.respondWith(
       (async () => {
-        const cache = await caches.open(activeCacheName);
         try {
           // Always fetch from network to get the latest playlist.json after FTP upload
+          console.log(
+            "Service Worker: Fetching fresh playlist.json from network"
+          );
           const networkResponse = await fetch(event.request, {
-            cache: "reload",
+            cache: "no-cache",
+            headers: {
+              "Cache-Control": "no-cache, no-store, must-revalidate",
+            },
           });
-          cache.put(event.request, networkResponse.clone());
+
+          if (!networkResponse.ok) {
+            throw new Error(
+              `Network response not ok: ${networkResponse.status}`
+            );
+          }
+
+          console.log("Service Worker: Successfully fetched playlist.json");
           return networkResponse;
-        } catch {
-          // Fallback to cache if offline
-          const cachedResponse = await cache.match(event.request);
-          return cachedResponse || Response.error();
+        } catch (error) {
+          console.error(
+            "Service Worker: Failed to fetch playlist.json from network:",
+            error
+          );
+          // Don't use cache for playlist.json to avoid stale data
+          return Response.error();
         }
       })()
     );
@@ -126,32 +147,42 @@ self.addEventListener("error", (event) => {
   console.error("Service Worker error:", event);
 });
 
-// workbox voorbereiding
+// Service worker installation
 self.addEventListener("install", (event) => {
-  // Precache assets on install
+  console.log("Service Worker: Installing...");
+
+  // Precache critical assets only
   event.waitUntil(
     caches.open(activeCacheName).then(async (cache) => {
-      // Filter out assets that fail to fetch
-      const validAssets = [];
-      for (const url of cacheAssets) {
-        try {
-          const response = await fetch(url, { method: "HEAD" });
-          if (response.ok) {
-            validAssets.push(url);
-          } else {
-            console.warn(`Asset not found or not ok: ${url}`);
-          }
-        } catch (e) {
-          console.warn(`Failed to fetch asset: ${url}`, e);
-        }
+      // Only cache critical assets that we know exist
+      const criticalAssets = [
+        "index.html",
+        "css/style.css",
+        "css/bootstrap.min.css",
+        "js/script.js",
+        "js/bootstrap.min.js",
+        "manifest.json",
+      ];
+
+      console.log("Service Worker: Caching critical assets...");
+
+      try {
+        await cache.addAll(criticalAssets);
+        console.log("Service Worker: Critical assets cached successfully");
+      } catch (error) {
+        console.warn("Service Worker: Some assets failed to cache:", error);
+        // Don't fail installation if some assets can't be cached
       }
-      return cache.addAll(validAssets);
     })
   );
-  self.skipWaiting();
+
+  // Don't force immediate activation - let it happen naturally
+  console.log("Service Worker: Installation complete");
 });
 
 self.addEventListener("activate", (event) => {
+  console.log("Service Worker: Activating...");
+
   // Specify allowed cache keys
   const cacheAllowList = [activeCacheName];
 
@@ -163,26 +194,16 @@ self.addEventListener("activate", (event) => {
         // Delete all caches that aren't in the allow list:
         return Promise.all(
           keys.map((key) => {
-            console.log(`Cache key check: ${key}`);
             if (!cacheAllowList.includes(key)) {
-              console.log(`Cache removed: ${key}`);
+              console.log(`Service Worker: Removing old cache: ${key}`);
               return caches.delete(key);
             }
           })
         );
       })
-      .then(() => self.clients.claim())
+      .then(() => {
+        console.log("Service Worker: Activation complete, taking control");
+        return self.clients.claim();
+      })
   );
 });
-
-// Push notifications
-// self.addEventListener("push", (event) => {
-//   const data = event.data.json();
-//   const options = {
-//     body: data.body,
-//     icon: "/images/notification-icon.png",
-//     badge: "/images/notification-badge.png",
-//   };
-
-//   event.waitUntil(self.registration.showNotification(data.title, options));
-// });
