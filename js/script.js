@@ -11,7 +11,8 @@ let APP_VERSION,
   APP_URL,
   DIM_VOLUME_SLEEP_TIMER,
   fetchIntervalId,
-  audio;
+  audio,
+  userInitiatedPause = false; // Flag to track user-initiated pauses
 
 // Helper function to hash a string using SHA-256 and return a hex string
 async function sha256(str) {
@@ -663,10 +664,13 @@ async function getStreamingData() {
 
       if (safeCurrentSong !== musicActual) {
         // console.log("Updating current song:", safeCurrentSong);
-        if (musicActual !== null && fetchIntervalId) {
+        // Clear any existing polling interval when a new song is detected (including first song)
+        if (fetchIntervalId) {
           clearInterval(fetchIntervalId);
           fetchIntervalId = null;
-          // console.log("Cleared previous interval for fetching data.");
+          console.log(
+            "Cleared polling interval - new song detected, switching to smart polling"
+          );
         }
         musicActual = safeCurrentSong;
 
@@ -958,7 +962,12 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
     }
 
     setTimeout(() => {
-      if (fetchIntervalId) return; // Prevent multiple intervals
+      // Clear any existing interval to implement smart polling
+      if (fetchIntervalId) {
+        clearInterval(fetchIntervalId);
+        fetchIntervalId = null;
+        console.log("Cleared continuous polling - switching to smart polling");
+      }
 
       // Use longer interval for localhost to be gentle on CORS proxies
       const isLocalhost =
@@ -967,7 +976,9 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
       const interval = isLocalhost ? 5000 : 1000; // 5 seconds for localhost, 1 second for production
 
       fetchIntervalId = setInterval(getStreamingData, interval);
-      console.log("Interval getStreamingData started for next song detection.");
+      console.log(
+        "Smart polling: Started interval getStreamingData for next song detection."
+      );
     }, pollDelay);
 
     function updateCountdown() {
@@ -1160,10 +1171,18 @@ function setCopyright() {
 async function setupAudioPlayer() {
   audio = new Audio(URL_STREAMING);
   audio.crossOrigin = "anonymous";
-  audio.preload = "none";
+  audio.preload = "metadata"; // Changed from "none" to "metadata" for better buffering
   audio.autoplay = false;
   audio.loop = false;
   audio.muted = false;
+
+  // Add some additional properties that might help with streaming
+  if ("mozPreservesPitch" in audio) {
+    audio.mozPreservesPitch = false;
+  }
+  if ("webkitPreservesPitch" in audio) {
+    audio.webkitPreservesPitch = false;
+  }
 
   setupAudioEventListeners();
 
@@ -1179,67 +1198,186 @@ function setupAudioEventListeners() {
 
   let retryCount = 0;
   let retryTimer = null;
+  let bufferingTimeout = null;
+  let healthCheckInterval = null;
 
-  function handleStreamError() {
-    if (retryCount < 6) {
-      retryCount++;
-      console.warn(
-        `Stream error detected. Retrying in 10 seconds... (${retryCount}/6)`
-      );
-      retryTimer = setTimeout(() => {
-        audio.src = URL_STREAMING;
-        audio.load();
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {}); // Try to play again
-        }
-      }, 10000);
-    } else {
-      clearTimeout(retryTimer);
-      retryTimer = null;
-      const reactie = confirm(
-        "Stream Down or network error. Do you want to retry again?"
-      );
-      if (reactie) {
-        retryCount = 0;
-        audio.src = URL_STREAMING;
-        audio.load();
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {});
-        }
-      } else {
-        audio.pause();
-        audio.src = "";
-      }
+  function resetButtonState() {
+    const playerButton = document.getElementById("playerButton");
+    if (playerButton && playerButton.classList.contains("fa-circle-pause")) {
+      console.log("Stream stopped - resetting button state");
+      playerButton.classList.remove("fa-circle-pause");
+      playerButton.classList.add("fa-circle-play");
     }
   }
 
-  audio.addEventListener("error", handleStreamError);
-  audio.addEventListener("stalled", handleStreamError);
+  function startHealthCheck() {
+    if (healthCheckInterval) clearInterval(healthCheckInterval);
+    healthCheckInterval = setInterval(() => {
+      const playerButton = document.getElementById("playerButton");
+      if (playerButton && playerButton.classList.contains("fa-circle-pause")) {
+        // Should be playing, check if it actually is
+        if (audio.paused || audio.ended || audio.readyState < 2) {
+          console.warn("Health check failed - stream appears stopped");
+          resetButtonState();
+          // Try a quick recovery
+          audio.load();
+          const playPromise = audio.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(() => {});
+          }
+        }
+      }
+    }, 3000); // Check every 3 seconds
+  }
 
-  audio.onplay = function () {
-    var btn = document.getElementById("playerButton");
-    var btn_play = document.getElementById("buttonPlay");
-    if (btn.className === "fa fa-play") {
-      btn.className = "fa fa-pause";
-      btn_play.firstChild.data = "PAUSE";
+  function stopHealthCheck() {
+    if (healthCheckInterval) {
+      clearInterval(healthCheckInterval);
+      healthCheckInterval = null;
     }
-    retryCount = 0; // Reset retry count on successful play
+  }
+
+  function handleStreamError(eventType = "unknown") {
+    console.warn(`Stream ${eventType} detected`);
+
+    // Clear any existing timeouts to prevent loops
     if (retryTimer) {
       clearTimeout(retryTimer);
       retryTimer = null;
     }
-  };
-
-  audio.onpause = function () {
-    var btn = document.getElementById("playerButton");
-    var btn_play = document.getElementById("buttonPlay");
-    if (btn.className === "fa fa-pause") {
-      btn.className = "fa fa-play";
-      btn_play.firstChild.data = "PLAY";
+    if (bufferingTimeout) {
+      clearTimeout(bufferingTimeout);
+      bufferingTimeout = null;
     }
-  };
+
+    resetButtonState();
+
+    if (retryCount < 3) {
+      // Reduced from 6 to 3 retries
+      retryCount++;
+      console.warn(
+        `Stream error detected. Retrying in 10 seconds... (${retryCount}/3)`
+      );
+
+      // Shorter retry delay and simpler recovery
+      retryTimer = setTimeout(() => {
+        console.log("Attempting stream recovery...");
+        // Simple recovery - just try to play again without load()
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((error) => {
+            console.warn("Recovery failed, will try again:", error);
+          });
+        }
+        retryTimer = null;
+      }, 10000); // Reduced from 30 to 10 seconds
+    } else {
+      console.error("Maximum retry attempts reached. Stream may be offline.");
+      resetButtonState();
+      retryCount = 0; // Reset for future attempts
+    }
+  }
+
+  // More intelligent event listeners - only handle real errors
+  audio.addEventListener("error", (e) => {
+    console.warn("Audio error event:", e);
+    handleStreamError("error");
+  });
+
+  // Only handle stalled if it persists (not during normal loading)
+  audio.addEventListener("stalled", () => {
+    setTimeout(() => {
+      if (audio.readyState < 2) {
+        // Only if still not loaded after delay
+        console.warn("Stream stalled - no data received");
+        handleStreamError("stalled");
+      }
+    }, 10000); // Wait 10 seconds before treating as error
+  });
+
+  // Suspend is often normal, only treat as error if repeated
+  let suspendCount = 0;
+  audio.addEventListener("suspend", () => {
+    suspendCount++;
+    if (suspendCount > 3) {
+      console.warn("Multiple suspend events detected");
+      handleStreamError("suspend");
+      suspendCount = 0;
+    }
+  });
+
+  // Abort and emptied are normal during stream loading - don't treat as errors
+  audio.addEventListener("abort", () => {
+    console.log("Audio abort event (normal during loading)");
+  });
+
+  audio.addEventListener("emptied", () => {
+    console.log("Audio emptied event (normal during loading)");
+  });
+
+  // Monitor for unexpected pauses that might indicate buffering issues
+  audio.addEventListener("pause", () => {
+    stopHealthCheck(); // Stop health checking when paused
+
+    // Only handle unexpected pauses (not user-initiated)
+    if (!userInitiatedPause) {
+      setTimeout(() => {
+        const playerButton = document.getElementById("playerButton");
+        if (
+          playerButton &&
+          playerButton.classList.contains("fa-circle-pause") &&
+          audio.paused
+        ) {
+          console.warn("Unexpected pause detected - stream may have stopped");
+          resetButtonState();
+        }
+      }, 100);
+    } else {
+      console.log("User-initiated pause detected - not treating as error");
+      userInitiatedPause = false; // Reset the flag
+    }
+  });
+
+  // Detect when stream actually starts playing successfully
+  audio.addEventListener("playing", () => {
+    console.log("Stream playing successfully");
+    retryCount = 0;
+    suspendCount = 0; // Reset suspend counter when playing successfully
+    if (retryTimer) {
+      clearTimeout(retryTimer);
+      retryTimer = null;
+    }
+    if (bufferingTimeout) {
+      clearTimeout(bufferingTimeout);
+      bufferingTimeout = null;
+    }
+    startHealthCheck(); // Start monitoring stream health
+  });
+
+  // Monitor buffering state with shorter timeout for faster recovery
+  audio.addEventListener("waiting", () => {
+    console.log("Stream buffering...");
+    // Only set timeout if not already buffering
+    if (bufferingTimeout) clearTimeout(bufferingTimeout);
+    bufferingTimeout = setTimeout(() => {
+      // Only attempt recovery if still buffering and not paused by user
+      if (audio.readyState < 3 && !audio.paused) {
+        console.warn("Buffering timeout - stream may be having issues");
+        handleStreamError("buffering timeout");
+      }
+    }, 15000); // Increased to 15 seconds to avoid false positives
+  });
+
+  audio.addEventListener("canplaythrough", () => {
+    console.log("Stream ready to play through");
+    if (bufferingTimeout) {
+      clearTimeout(bufferingTimeout);
+      bufferingTimeout = null;
+    }
+  });
+
+  // Button state is now managed by togglePlay() function only
+  // Removed onplay and onpause handlers to prevent race conditions
 
   audio.onvolumechange = function () {
     if (audio.volume > 0) {
@@ -1259,6 +1397,7 @@ function togglePlay() {
     playerButton.style.textShadow = "0 0 5px black";
 
     if (audio) {
+      userInitiatedPause = true; // Set flag before pausing
       audio.pause();
       // Don't create a new audio object, just reset the current one
       audio.currentTime = 0;
@@ -1277,13 +1416,7 @@ function togglePlay() {
     playerButton.style.textShadow = "0 0 5px black";
 
     // Reuse existing audio object if available, otherwise create new one
-    if (!audio || audio.src !== URL_STREAMING) {
-      if (audio) {
-        // Properly clean up old audio object
-        audio.pause();
-        audio.src = "";
-        audio.load();
-      }
+    if (!audio) {
       audio = new Audio(URL_STREAMING);
       audio.crossOrigin = "anonymous";
       audio.preload = "none";
@@ -1291,8 +1424,11 @@ function togglePlay() {
       audio.loop = false;
       audio.muted = false;
 
-      // Re-attach event listeners for the new audio object
+      // Attach event listeners for the new audio object
       setupAudioEventListeners();
+    } else if (audio.src !== URL_STREAMING) {
+      // Just update the source without recreating the object
+      audio.src = URL_STREAMING;
     }
 
     setVolume(initialVol);
@@ -1455,7 +1591,11 @@ timerButton.addEventListener("click", function () {
 
   // When a button is clicked, set initial offset
   validTimes.forEach((min) => {
-    const btn = box.querySelector(`button:contains('${min} min')`);
+    // Find button by checking textContent instead of using invalid :contains() selector
+    const buttons = box.querySelectorAll("button");
+    const btn = Array.from(buttons).find(
+      (button) => button.textContent === `${min} min`
+    );
     if (btn) {
       btn.onmouseover = () => setInitialCircleOffset(min);
       btn.onfocus = () => setInitialCircleOffset(min);
@@ -1602,32 +1742,3 @@ function mute() {
     audio.muted = false;
   }
 }
-
-// function subscribeToPush() {
-//   if ("serviceWorker" in navigator && "PushManager" in window) {
-//     navigator.serviceWorker.ready.then((registration) => {
-//       registration.pushManager
-//         .subscribe({
-//           userVisibleOnly: true,
-//           applicationServerKey: urlB64ToUint8Array("YOUR_PUBLIC_KEY"),
-//         })
-//         .then((subscription) => {
-//           // Send subscription to your server
-//         })
-//         .catch((error) => {
-//           console.error("Push subscription failed:", error);
-//         });
-//     });
-//   }
-// }
-
-// function urlB64ToUint8Array(base64String) {
-//   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-//   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-//   const rawData = window.atob(base64);
-//   const outputArray = new Uint8Array(rawData.length);
-//   for (let i = 0; i < rawData.length; ++i) {
-//     outputArray[i] = rawData.charCodeAt(i);
-//   }
-//   return outputArray;
-// }

@@ -128,4 +128,23 @@ If you don't use the CONFIG.APP_CONFIG, the player will fall back to `manifest.j
 - **Git Security**: config.js automatically ignored by Git
 - **Validation**: Built-in checks for proper configuration
 
+- Current song display with smart polling based on track duration
+- History of played songs
+- Songs coming up (next tracks preview)
+- Sleep timer (15/30/45/60 minute auto-pause)
+- Intelligent stream error recovery and retry logic
+- Enhanced audio controls with proper state management
+- Responsive design
+- Progressive Web App (PWA)
+- Password protection for secure access
+- Service worker for offline functionality
+
 ## Support for Most Hosting Types
+
+## Technical Improvements
+
+- **Smart Polling**: Automatically adjusts data refresh rate based on current song duration
+- **Stream Reliability**: Enhanced error detection that distinguishes between real errors and normal loading events
+- **Recovery Logic**: Intelligent retry system with progressive timeouts (10s delays, max 3 attempts)
+- **Sleep Timer**: Built-in audio dimming and auto-pause functionality
+- **State Management**: Improved play/pause button handling and user action detection
