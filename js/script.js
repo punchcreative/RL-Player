@@ -758,6 +758,7 @@ let musicActual = null;
 let isFirstLoad = true; // Flag to track first successful load
 let jsonErrorRetryCount = 0; // Counter for JSON format error retries
 const MAX_JSON_ERROR_RETRIES = 3; // Maximum retries for JSON format errors
+let awaitingNextSong = false; // Flag to track when countdown reached 0:00 but no new song detected yet
 
 async function getStreamingData() {
   try {
@@ -805,7 +806,23 @@ async function getStreamingData() {
         .replace(/&/g, "&");
 
       if (safeCurrentSong !== musicActual) {
-        // debugLog.log("Updating current song:", safeCurrentSong);
+        debugLog("New song detected:", safeCurrentSong);
+
+        // Reset the awaiting next song flag since we found the new song
+        if (awaitingNextSong) {
+          debugLog("New song detected - clearing awaiting next song state");
+          awaitingNextSong = false;
+
+          // Reset duration display styling
+          const currentDuration = document.getElementById(
+            "currentDurationDisplay"
+          );
+          if (currentDuration) {
+            currentDuration.style.opacity = "1";
+            currentDuration.style.animation = "";
+          }
+        }
+
         // Clear any existing polling interval when a new song is detected (including first song)
         if (fetchIntervalId) {
           clearInterval(fetchIntervalId);
@@ -1160,9 +1177,53 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
       const remaining = Math.max(totalSeconds - totalElapsed, 0);
       const min = Math.floor(remaining / 60);
       const sec = remaining % 60;
-      currentDurationElem.textContent = `${min}:${sec
-        .toString()
-        .padStart(2, "0")}`;
+
+      // When countdown reaches 0:00, show loading indicator and trigger aggressive polling
+      if (remaining === 0 && !awaitingNextSong) {
+        debugLog(
+          "Countdown reached 0:00 - triggering immediate playlist refresh"
+        );
+        awaitingNextSong = true;
+
+        // Show "Loading next song..." in the duration display
+        currentDurationElem.textContent = "Next song...";
+        currentDurationElem.style.opacity = "0.7";
+        currentDurationElem.style.animation = "pulse 1.5s ease-in-out infinite";
+
+        // Clear existing interval and start rapid polling for new song detection
+        if (fetchIntervalId) {
+          clearInterval(fetchIntervalId);
+          fetchIntervalId = null;
+        }
+
+        // Start aggressive polling every 500ms when at 0:00 to catch song changes quickly
+        fetchIntervalId = setInterval(getStreamingData, 500);
+
+        // Also trigger an immediate check
+        getStreamingData();
+
+        // Safety timeout: if no new song is detected within 15 seconds,
+        // force refresh and reset state to prevent infinite loading
+        setTimeout(() => {
+          if (awaitingNextSong) {
+            debugLog("Timeout waiting for new song - forcing refresh");
+            awaitingNextSong = false;
+            currentDurationElem.textContent = "0:00";
+            currentDurationElem.style.opacity = "1";
+            currentDurationElem.style.animation = "";
+
+            // Trigger one more immediate check
+            getStreamingData();
+          }
+        }, 15000);
+      } else if (remaining > 0) {
+        // Normal countdown display
+        currentDurationElem.textContent = `${min}:${sec
+          .toString()
+          .padStart(2, "0")}`;
+        currentDurationElem.style.opacity = "1";
+        currentDurationElem.style.animation = "";
+      }
     }
 
     updateCountdown();
