@@ -87,15 +87,30 @@
       </div>
 
       <div class="step">
-        <h3>🔐 Step 2: Generate Password Hash</h3>
-        <p>Enter your desired password to generate a secure hash:</p>
-        <input
-          type="password"
-          id="passwordInput"
-          placeholder="Enter your password"
-        />
-        <button onclick="generateHash()">Generate Hash</button>
-        <div id="hashResult"></div>
+        <h3>🔐 Step 2: Password Protection</h3>
+        <p>Choose whether you want to enable password protection for your app:</p>
+        
+        <div style="margin: 15px 0;">
+          <label style="display: block; margin-bottom: 10px;">
+            <input type="radio" name="passwordProtection" value="disabled" checked onchange="togglePasswordSection()">
+            <strong>No Password Protection</strong> - Anyone can access the app
+          </label>
+          <label style="display: block; margin-bottom: 10px;">
+            <input type="radio" name="passwordProtection" value="enabled" onchange="togglePasswordSection()">
+            <strong>Enable Password Protection</strong> - Require password to access the app
+          </label>
+        </div>
+
+        <div id="passwordSection" style="display: none; margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 5px;">
+          <p>Enter your desired password to generate a secure hash:</p>
+          <input
+            type="password"
+            id="passwordInput"
+            placeholder="Enter your password"
+          />
+          <button onclick="generateHash()">Generate Hash</button>
+          <div id="hashResult"></div>
+        </div>
       </div>
 
       <div class="step">
@@ -238,6 +253,21 @@
         checkDiv.className = "step success";
       }
 
+      // Toggle password section visibility
+      function togglePasswordSection() {
+        const passwordSection = document.getElementById("passwordSection");
+        const selectedValue = document.querySelector('input[name="passwordProtection"]:checked').value;
+        
+        if (selectedValue === "enabled") {
+          passwordSection.style.display = "block";
+        } else {
+          passwordSection.style.display = "none";
+          // Clear password input and hash result when disabled
+          document.getElementById("passwordInput").value = "";
+          document.getElementById("hashResult").innerHTML = "";
+        }
+      }
+
       // Generate password hash
       async function generateHash() {
         const password = document.getElementById("passwordInput").value;
@@ -263,6 +293,7 @@
 
       // Generate complete configuration
       async function generateFullConfig() {
+        const passwordEnabled = document.querySelector('input[name="passwordProtection"]:checked').value === "enabled";
         const password = document.getElementById("passwordInput").value;
         const stationName = document.getElementById("stationName").value;
         const streamUrl = document.getElementById("streamUrl").value;
@@ -271,7 +302,7 @@
         const defaultVolume = document.getElementById("defaultVolume").value;
         const resultDiv = document.getElementById("fullConfigResult");
 
-        if (!password) {
+        if (passwordEnabled && !password) {
           resultDiv.innerHTML =
             '<div style="color: #f44336;">Please generate your password hash first</div>';
           return;
@@ -284,42 +315,79 @@
         }
 
         try {
-          const hash = await hashString(password);
-          const config = `// Configuration file for RL Player
-// This file contains user-specific configuration that should not be committed to Git
-// Copy config.example.js to config.js and customize your values
+          let envConfig = `# RL Player Environment Configuration
+# This file contains your actual configuration - never commit to Git
 
-const CONFIG = {
-  // Your password hash
-  PASSWORD_HASH: "${hash}",
+# =============================================================================
+# SECURITY SETTINGS
+# =============================================================================
 
-  // App Configuration
-  APP_CONFIG: {
-    // PWA Settings
-    scope: "/",
-    background_color: "${themeColor}",
-    theme_color: "${themeColor}",
-    
-    // Radio Station Settings
-    station_name: "${stationName}",
-    stream_url: "${streamUrl}",
-    app_url: "${appUrl}",
-    
-    // Audio Settings
-    default_volume: ${defaultVolume},
-    dim_volume_sleep_timer: 50,
-  },
-};`;
+`;
+
+          if (passwordEnabled) {
+            const hash = await hashString(password);
+            envConfig += `# Enable password protection
+VITE_ENABLE_PASSWORD_PROTECTION=true
+# Your password hash
+VITE_PASSWORD_HASH=${hash}
+
+`;
+          } else {
+            envConfig += `# Password protection disabled
+VITE_ENABLE_PASSWORD_PROTECTION=false
+
+`;
+          }
+
+          envConfig += `# =============================================================================
+# RADIO STATION CONFIGURATION  
+# =============================================================================
+
+# Basic station information
+VITE_STATION_NAME=${stationName}
+VITE_STREAM_URL=${streamUrl}
+VITE_APP_URL=${appUrl}
+
+# =============================================================================
+# APPEARANCE SETTINGS
+# =============================================================================
+
+# Colors (hex format)
+VITE_THEME_COLOR=${themeColor}
+VITE_BACKGROUND_COLOR=${themeColor}
+
+# PWA Settings
+VITE_SCOPE=/
+
+# =============================================================================
+# AUDIO SETTINGS
+# =============================================================================
+
+# Volume settings (0-100)
+VITE_DEFAULT_VOLUME=${defaultVolume}
+VITE_DIM_VOLUME_SLEEP_TIMER=50
+
+# =============================================================================
+# DEVELOPMENT SETTINGS (Optional)
+# =============================================================================
+
+# Set to true for additional console logging
+VITE_DEBUG_MODE=false
+
+# API endpoints
+VITE_PLAYLIST_ENDPOINT=playlist.json
+`;`;
 
           resultDiv.innerHTML = `
-                    <h4>Your Complete Configuration:</h4>
-                    <div class="hash-output" style="white-space: pre-wrap; font-size: 12px;">${config}</div>
+                    <h4>Your Complete Environment Configuration:</h4>
+                    <div class="hash-output" style="white-space: pre-wrap; font-size: 12px;">${envConfig}</div>
                     <p><strong>Instructions:</strong></p>
                     <ol style="text-align: left;">
                         <li>Copy the entire configuration above</li>
-                        <li>Save it as <code>config.js</code> in your project root</li>
+                        <li>Save it as <code>.env</code> in your project root</li>
                         <li>Never commit this file to Git (it's already in .gitignore)</li>
                         <li>Test your player to make sure everything works</li>
+                        <li>${passwordEnabled ? 'Your app will require password authentication' : 'Your app will be accessible without password'}</li>
                     </ol>
                     <p style="color: #4CAF50;"><strong>✅ Your player is now configured with personalized settings!</strong></p>
                 `;

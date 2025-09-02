@@ -304,8 +304,8 @@ async function setStreamingUrl(url) {
 }
 
 function setVolume(volume) {
-  // console.log("setVolume gets value:", volume);
-  // console.log("isPhone:", isPhone);
+  // debugLog.log("setVolume gets value:", volume);
+  // debugLog.log("isPhone:", isPhone);
   if (!audio) {
     debugLog.warn("Audio object not yet initialized, skipping setVolume");
     return;
@@ -323,12 +323,12 @@ function setVolume(volume) {
   } else {
     audio.volume = intToDecimal(volume);
   }
-  // console.log("setVolume sets value:", audio.volume);
+  // debugLog.log("setVolume sets value:", audio.volume);
 }
 
 function changeVolumeLocalStorage(volume) {
   if (typeof Storage !== "undefined" && !isPhone) {
-    // console.log("Storing volume in localStorage:", volume);
+    // debugLog.log("Storing volume in localStorage:", volume);
     localStorage.setItem("volume", volume);
   }
 }
@@ -600,7 +600,7 @@ async function loadAppVars() {
 function checkPassword() {
   // Check if the password has already been accepted
   if (localStorage.getItem("passwordAccepted") === correctPasswordHash) {
-    // console.log("Password already accepted.");
+    // debugLog.log("Password already accepted.");
     // Continue with the rest of your application logic here
     initializePlayer();
   } else {
@@ -664,11 +664,11 @@ function checkPassword() {
       sha256(password).then((hash) => {
         correctPasswordHashPromise.then((correctHash) => {
           if (hash === correctHash) {
-            // console.log("Password accepted.");
+            // debugLog.log("Password accepted.");
             localStorage.setItem("passwordAccepted", correctPasswordHash);
             initializePlayer();
           } else {
-            // console.warn("Incorrect password.");
+            // debugLog.warn("Incorrect password.");
             document.body.innerHTML =
               "<strong>Access Denied</strong><p>Incorrect password.</p>";
           }
@@ -805,7 +805,7 @@ async function getStreamingData() {
         .replace(/&/g, "&");
 
       if (safeCurrentSong !== musicActual) {
-        // console.log("Updating current song:", safeCurrentSong);
+        // debugLog.log("Updating current song:", safeCurrentSong);
         // Clear any existing polling interval when a new song is detected (including first song)
         if (fetchIntervalId) {
           clearInterval(fetchIntervalId);
@@ -978,13 +978,13 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
   if (window.countdownInterval) {
     clearInterval(window.countdownInterval);
     window.countdownInterval = null;
-    // console.log("Previous countdown cleared.");
+    // debugLog.log("Previous countdown cleared.");
   }
 
   function startCountdown(duration, startTime, nextTrackStarttime) {
-    // console.log("Starting countdown with duration:", duration || "undefined");
-    // console.log("Song started at:", startTime || "undefined");
-    // console.log("Next track starts at:", nextTrackStarttime || "undefined");
+    // debugLog.log("Starting countdown with duration:", duration || "undefined");
+    // debugLog.log("Song started at:", startTime || "undefined");
+    // debugLog.log("Next track starts at:", nextTrackStarttime || "undefined");
 
     let totalSeconds = 0;
 
@@ -1315,15 +1315,15 @@ async function fetchStreamingData(apiUrl) {
         if (fetchUrl.includes("allorigins.win")) {
           const proxyResponse = JSON.parse(text);
           actualText = proxyResponse.contents;
-          console.log("Extracted content from allorigins.win proxy");
+          debugLog("Extracted content from allorigins.win proxy");
         } else if (fetchUrl.includes("corsproxy.io")) {
           // corsproxy.io returns the content directly
           actualText = text;
-          console.log("Using content from corsproxy.io proxy");
+          debugLog("Using content from corsproxy.io proxy");
         } else if (fetchUrl.includes("cors-anywhere")) {
           // cors-anywhere returns the content directly
           actualText = text;
-          console.log("Using content from cors-anywhere proxy");
+          debugLog("Using content from cors-anywhere proxy");
         } else {
           // Fallback: try to parse as proxy response, otherwise use raw
           try {
@@ -1332,10 +1332,10 @@ async function fetchStreamingData(apiUrl) {
           } catch {
             actualText = text;
           }
-          console.log("Extracted content from generic CORS proxy");
+          debugLog("Extracted content from generic CORS proxy");
         }
       } catch (error) {
-        console.warn("Failed to parse CORS proxy response, using raw text");
+        debugLog.warn("Failed to parse CORS proxy response, using raw text");
         actualText = text;
       }
     } else {
@@ -1343,12 +1343,12 @@ async function fetchStreamingData(apiUrl) {
       actualText = text;
     }
 
-    console.log("Raw response length:", actualText.length);
-    console.log(
+    debugLog("Raw response length:", actualText.length);
+    debugLog(
       "Raw response (first 100 chars):",
       actualText.substring(0, 100)
     );
-    console.log(
+    debugLog(
       "Raw response (last 100 chars):",
       actualText.substring(actualText.length - 100)
     );
@@ -1356,14 +1356,14 @@ async function fetchStreamingData(apiUrl) {
     // Check if the JSON appears to be truncated
     const trimmedText = actualText.trim();
     if (!trimmedText.endsWith("}") && !trimmedText.endsWith("]")) {
-      console.warn("JSON appears to be truncated - does not end with } or ]");
-      console.log("Last 50 characters:", actualText.slice(-50));
+      debugLog.warn("JSON appears to be truncated - does not end with } or ]");
+      debugLog("Last 50 characters:", actualText.slice(-50));
       throw new Error("JSON file appears to be truncated or corrupted");
     }
 
     // Try to parse the JSON
     const data = JSON.parse(actualText);
-    console.log("Successfully fetched and parsed streaming data");
+    debugLog("Successfully fetched and parsed streaming data");
     return data;
   } catch (error) {
     console.error("fetchStreamingData error:", error);
@@ -1384,7 +1384,7 @@ async function fetchStreamingData(apiUrl) {
     ) {
       // Show user notification about playlist fetch failure
       showPlaylistErrorNotification(actualUrl || apiUrl, error);
-      console.warn(
+      debugLog.warn(
         "External playlist fetch failed - user has been notified. Not using local fallback to avoid stale data."
       );
     } else {
@@ -1443,7 +1443,7 @@ async function setupAudioPlayer() {
 
   document.getElementById("volume").oninput = function () {
     changeVolumeLocalStorage(this.value);
-    // console.log("Volume slider changed to:", this.value);
+    // debugLog.log("Volume slider changed to:", this.value);
     audio.volume = intToDecimal(this.value);
   };
 
@@ -1451,9 +1451,9 @@ async function setupAudioPlayer() {
   const playerButton = document.getElementById("playerButton");
   if (playerButton) {
     playerButton.addEventListener("click", togglePlay);
-    console.log("Player button click listener attached");
+    debugLog("Player button click listener attached");
   } else {
-    console.warn("Player button not found - click functionality will not work");
+    debugLog.warn("Player button not found - click functionality will not work");
   }
 }
 
@@ -1468,7 +1468,7 @@ function setupAudioEventListeners() {
   function resetButtonState() {
     const playerButton = document.getElementById("playerButton");
     if (playerButton && playerButton.classList.contains("fa-circle-pause")) {
-      console.log("Stream stopped - resetting button state");
+      debugLog("Stream stopped - resetting button state");
       playerButton.classList.remove("fa-circle-pause");
       playerButton.classList.add("fa-circle-play");
     }
@@ -1481,7 +1481,7 @@ function setupAudioEventListeners() {
       if (playerButton && playerButton.classList.contains("fa-circle-pause")) {
         // Should be playing, check if it actually is
         if (audio.paused || audio.ended || audio.readyState < 2) {
-          console.warn("Health check failed - stream appears stopped");
+          debugLog.warn("Health check failed - stream appears stopped");
           resetButtonState();
           // Try a quick recovery
           audio.load();
@@ -1502,7 +1502,7 @@ function setupAudioEventListeners() {
   }
 
   function handleStreamError(eventType = "unknown") {
-    console.warn(`Stream ${eventType} detected`);
+    debugLog.warn(`Stream ${eventType} detected`);
 
     // Clear any existing timeouts to prevent loops
     if (retryTimer) {
@@ -1519,18 +1519,18 @@ function setupAudioEventListeners() {
     if (retryCount < 3) {
       // Reduced from 6 to 3 retries
       retryCount++;
-      console.warn(
+      debugLog.warn(
         `Stream error detected. Retrying in 10 seconds... (${retryCount}/3)`
       );
 
       // Shorter retry delay and simpler recovery
       retryTimer = setTimeout(() => {
-        console.log("Attempting stream recovery...");
+        debugLog.log("Attempting stream recovery...");
         // Simple recovery - just try to play again without load()
         const playPromise = audio.play();
         if (playPromise !== undefined) {
           playPromise.catch((error) => {
-            console.warn("Recovery failed, will try again:", error);
+            debugLog.warn("Recovery failed, will try again:", error);
           });
         }
         retryTimer = null;
@@ -1544,7 +1544,7 @@ function setupAudioEventListeners() {
 
   // More intelligent event listeners - only handle real errors
   audio.addEventListener("error", (e) => {
-    console.warn("Audio error event:", e);
+    debugLog.warn("Audio error event:", e);
     handleStreamError("error");
   });
 
@@ -1553,7 +1553,7 @@ function setupAudioEventListeners() {
     setTimeout(() => {
       if (audio.readyState < 2) {
         // Only if still not loaded after delay
-        console.warn("Stream stalled - no data received");
+        debugLog.warn("Stream stalled - no data received");
         handleStreamError("stalled");
       }
     }, 10000); // Wait 10 seconds before treating as error
@@ -1564,7 +1564,7 @@ function setupAudioEventListeners() {
   audio.addEventListener("suspend", () => {
     suspendCount++;
     if (suspendCount > 3) {
-      console.warn("Multiple suspend events detected");
+      debugLog.warn("Multiple suspend events detected");
       handleStreamError("suspend");
       suspendCount = 0;
     }
@@ -1572,11 +1572,11 @@ function setupAudioEventListeners() {
 
   // Abort and emptied are normal during stream loading - don't treat as errors
   audio.addEventListener("abort", () => {
-    console.log("Audio abort event (normal during loading)");
+    debugLog.log("Audio abort event (normal during loading)");
   });
 
   audio.addEventListener("emptied", () => {
-    console.log("Audio emptied event (normal during loading)");
+    debugLog.log("Audio emptied event (normal during loading)");
   });
 
   // Monitor for unexpected pauses that might indicate buffering issues
@@ -1592,19 +1592,19 @@ function setupAudioEventListeners() {
           playerButton.classList.contains("fa-circle-pause") &&
           audio.paused
         ) {
-          console.warn("Unexpected pause detected - stream may have stopped");
+          debugLog.warn("Unexpected pause detected - stream may have stopped");
           resetButtonState();
         }
       }, 100);
     } else {
-      console.log("User-initiated pause detected - not treating as error");
+      debugLog.log("User-initiated pause detected - not treating as error");
       userInitiatedPause = false; // Reset the flag
     }
   });
 
   // Detect when stream actually starts playing successfully
   audio.addEventListener("playing", () => {
-    console.log("Stream playing successfully");
+    debugLog.log("Stream playing successfully");
     retryCount = 0;
     suspendCount = 0; // Reset suspend counter when playing successfully
     if (retryTimer) {
@@ -1620,20 +1620,20 @@ function setupAudioEventListeners() {
 
   // Monitor buffering state with shorter timeout for faster recovery
   audio.addEventListener("waiting", () => {
-    console.log("Stream buffering...");
+    debugLog.log("Stream buffering...");
     // Only set timeout if not already buffering
     if (bufferingTimeout) clearTimeout(bufferingTimeout);
     bufferingTimeout = setTimeout(() => {
       // Only attempt recovery if still buffering and not paused by user
       if (audio.readyState < 3 && !audio.paused) {
-        console.warn("Buffering timeout - stream may be having issues");
+        debugLog.warn("Buffering timeout - stream may be having issues");
         handleStreamError("buffering timeout");
       }
     }, 15000); // Increased to 15 seconds to avoid false positives
   });
 
   audio.addEventListener("canplaythrough", () => {
-    console.log("Stream ready to play through");
+    debugLog.log("Stream ready to play through");
     if (bufferingTimeout) {
       clearTimeout(bufferingTimeout);
       bufferingTimeout = null;
@@ -1653,9 +1653,9 @@ function setupAudioEventListeners() {
 function togglePlay() {
   const playerButton = document.getElementById("playerButton");
   const isPlaying = playerButton.classList.contains("fa-circle-pause");
-  // console.log("Toggle play state:", isPlaying);
+  // debugLog.log("Toggle play state:", isPlaying);
   if (isPlaying) {
-    // console.log("Pausing audio");
+    // debugLog.log("Pausing audio");
     playerButton.classList.remove("fa-circle-pause");
     playerButton.classList.add("fa-circle-play");
     playerButton.style.textShadow = "0 0 5px black";
@@ -1671,10 +1671,10 @@ function togglePlay() {
       removeSleepTimerElement();
     } else {
       cancelSleepTimer();
-      console.log("Sleep timer canceled on pause.");
+      debugLog.log("Sleep timer canceled on pause.");
     }
   } else {
-    // console.log("Playing audio");
+    // debugLog.log("Playing audio");
     playerButton.classList.remove("fa-circle-play");
     playerButton.classList.add("fa-circle-pause");
     playerButton.style.textShadow = "0 0 5px black";
@@ -1701,7 +1701,7 @@ function togglePlay() {
     const playPromise = audio.play();
     if (playPromise !== undefined) {
       playPromise.catch((error) => {
-        console.warn("Audio play failed:", error);
+        debugLog.warn("Audio play failed:", error);
         // Reset button state if play fails
         playerButton.classList.remove("fa-circle-pause");
         playerButton.classList.add("fa-circle-play");
@@ -1795,7 +1795,7 @@ timerButton.addEventListener("click", function () {
   cancelBtn.onclick = () => {
     cancelSleepTimer();
     document.body.removeChild(modal);
-    console.log("Sleep timer canceled from modal.");
+    debugLog.log("Sleep timer canceled from modal.");
   };
   box.appendChild(document.createElement("br"));
   box.appendChild(cancelBtn);
@@ -1880,7 +1880,7 @@ timerButton.addEventListener("click", function () {
     } else {
       setVolume(dimVolumeSleeptimer);
     }
-    console.log(
+    debugLog.log(
       "Sleep timer started, audio started. Volume set to " +
         dimVolumeSleeptimer +
         "%"
@@ -1903,7 +1903,7 @@ timerButton.addEventListener("click", function () {
       if (audio && !audio.paused) {
         togglePlay();
         setVolume(100);
-        console.log("Sleep timer ended, audio paused. Volume set to 100%");
+        debugLog.log("Sleep timer ended, audio paused. Volume set to 100%");
       }
       sleepTimerId = null;
       timerCircleContainer.style.display = "none";
@@ -1967,18 +1967,18 @@ function cancelSleepTimer() {
     removeSleepTimerElement();
     if (audio && !audio.paused) {
       setVolume(100);
-      console.log("Sleep timer canceled, volume restored to 100%");
+      debugLog.log("Sleep timer canceled, volume restored to 100%");
     }
   } else {
     removeSleepTimerElement();
-    console.log("No sleep timer is set.");
+    debugLog.log("No sleep timer is set.");
   }
 }
 
 function removeSleepTimerElement() {
   const timerCircleElement = document.getElementById("timerCircleContainer");
   if (timerCircleElement) {
-    console.log("Found sleep timer element, and set display none");
+    debugLog.log("Found sleep timer element, and set display none");
     timerCircleElement.style.display = "none";
     timerCircleElement.innerHTML = "";
   }
