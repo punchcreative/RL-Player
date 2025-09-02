@@ -3,7 +3,7 @@
   "manifest_version": 3,
   "name": "RL Player",
   "description": "Player for icecast stream with support for playlist data from Radiologik",
-  "version": "1.4.8",
+  "version": "1.4.9",
   "lang": "en-US",
   "author": "PNCH",
   "scope": "/",

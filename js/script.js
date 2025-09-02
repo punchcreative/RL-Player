@@ -31,26 +31,27 @@ let correctPasswordHash = "default-hash-please-configure";
 let correctPasswordHashPromise;
 
 // Debug logging wrapper - respects DEBUG_MODE setting
-const debugLog = {
-  log: (...args) => {
-    if (CONFIG?.DEBUG_MODE === true) {
-      console.log(...args);
-    }
-  },
-  warn: (...args) => {
-    if (CONFIG?.DEBUG_MODE === true) {
-      console.warn(...args);
-    }
-  },
-  error: (...args) => {
-    // Always show errors, regardless of debug mode
-    console.error(...args);
-  },
-  info: (...args) => {
-    if (CONFIG?.DEBUG_MODE === true) {
-      console.info(...args);
-    }
-  },
+function debugLog(...args) {
+  if (typeof CONFIG !== "undefined" && CONFIG?.DEBUG_MODE === true) {
+    console.log(...args);
+  }
+}
+
+debugLog.warn = (...args) => {
+  if (typeof CONFIG !== "undefined" && CONFIG?.DEBUG_MODE === true) {
+    console.warn(...args);
+  }
+};
+
+debugLog.error = (...args) => {
+  // Always show errors, regardless of debug mode
+  console.error(...args);
+};
+
+debugLog.info = (...args) => {
+  if (typeof CONFIG !== "undefined" && CONFIG?.DEBUG_MODE === true) {
+    console.info(...args);
+  }
 };
 
 function showLoader() {
