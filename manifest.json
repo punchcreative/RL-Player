@@ -3,7 +3,7 @@
   "manifest_version": 3,
   "name": "RL Player",
   "description": "Player for icecast stream with support for playlist data from Radiologik",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "lang": "en-US",
   "author": "PNCH",
   "scope": "/",
@@ -18,7 +18,7 @@
     "app_url": "https://your-domain.com/"
   },
   "api_endpoints": {
-    "playlist": "https://eajt.nl/kvpn/cors-playlist.php"
+    "playlist": "https://eajt.nl/kvpn/playlist.json"
   },
   "display": "standalone",
   "orientation": "portrait-primary",
