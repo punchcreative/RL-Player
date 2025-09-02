@@ -8,6 +8,7 @@ const cacheAssets = [
   "",
   "index.html",
   "offline.html",
+  "setup.html",
   "css/style.css",
   "css/bootstrap.min.css",
   "css/fontawesome.min.css",
@@ -17,12 +18,9 @@ const cacheAssets = [
   "css/animate.css",
   "js/script.js",
   "js/bootstrap.min.js",
+  "js/env-loader.js",
   "img/cover.png",
-  "img/background.png",
   "img/app-icon.png",
-  "img/icon-dark-koptelefoon.png",
-  "img/icon-wit-koptelefoon.png",
-  "img/icon-wit.png",
   "manifest.json",
   "webfonts/fa-light-300.woff2",
   "webfonts/fa-solid-900.woff2",
@@ -166,10 +164,15 @@ self.addEventListener("install", (event) => {
       // Only cache critical assets that we know exist
       const criticalAssets = [
         "index.html",
+        "offline.html",
         "css/style.css",
         "css/bootstrap.min.css",
+        "css/fontawesome.min.css",
         "js/script.js",
         "js/bootstrap.min.js",
+        "js/env-loader.js",
+        "img/app-icon.png",
+        "img/cover.png",
         "manifest.json",
       ];
 

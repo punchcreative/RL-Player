@@ -18,7 +18,7 @@
     "app_url": "https://your-domain.com/"
   },
   "api_endpoints": {
-    "playlist": "https://eajt.nl/kvpn/playlist.json"
+    "playlist": "https://eajt.nl/kvpn/cors-playlist.php"
   },
   "display": "standalone",
   "orientation": "portrait-primary",

@@ -119,6 +119,56 @@ function hideLoader() {
   if (player) player.style.display = "";
 }
 
+// Show notification when playlist fetch fails
+function showPlaylistErrorNotification(url, error) {
+  // Remove any existing notification
+  const existingNotification = document.getElementById(
+    "playlistErrorNotification"
+  );
+  if (existingNotification) {
+    existingNotification.remove();
+  }
+
+  // Create notification element
+  const notification = document.createElement("div");
+  notification.id = "playlistErrorNotification";
+  notification.style.position = "fixed";
+  notification.style.top = "100px";
+  notification.style.right = "100px";
+  notification.style.background = "#ff4444";
+  notification.style.color = "white";
+  notification.style.padding = "12px 16px";
+  notification.style.borderRadius = "6px";
+  notification.style.zIndex = "10000";
+  notification.style.maxWidth = "300px";
+  notification.style.fontSize = "14px";
+
+  const isLocalhost =
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1";
+  const message = isLocalhost
+    ? "⚠️ Cannot fetch live playlist data during localhost development. The displayed track information may be outdated."
+    : "⚠️ Failed to fetch current playlist data. Track information may be outdated until connection is restored.";
+
+  notification.innerHTML = `
+    <div style="font-weight: bold; margin-bottom: 4px;">Playlist Fetch Failed</div>
+    <div style="font-size: 12px; opacity: 0.9;">${message}</div>
+    <div style="font-size: 11px; margin-top: 6px; opacity: 0.7;">Click to dismiss</div>
+  `;
+
+  // Auto-dismiss after 8 seconds or on click
+  notification.style.cursor = "pointer";
+  notification.onclick = () => notification.remove();
+
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.remove();
+    }
+  }, 8000);
+
+  document.body.appendChild(notification);
+}
+
 // Call the loadAppVars function when the page loads (first thing to happen)
 window.addEventListener("load", () => {
   // Register service worker first, then load app vars
@@ -1021,7 +1071,15 @@ async function fetchStreamingData(apiUrl) {
     let usingProxy = false;
 
     // If we're on localhost and trying to fetch external data, use CORS proxy
-    if (isLocalhost && isExternalUrl && !apiUrl.includes("localhost")) {
+    // BUT skip proxy if fetching from the same domain we'll deploy to
+    const isSameDomainAsProduction = apiUrl.includes("eajt.nl");
+
+    if (
+      isLocalhost &&
+      isExternalUrl &&
+      !apiUrl.includes("localhost") &&
+      !isSameDomainAsProduction
+    ) {
       console.log("Using CORS proxy for localhost development");
 
       // Try multiple CORS proxy services for better reliability
@@ -1045,6 +1103,10 @@ async function fetchStreamingData(apiUrl) {
           }
         }
       }
+    } else if (isLocalhost && isExternalUrl && isSameDomainAsProduction) {
+      console.log(
+        "Localhost detected: Skipping CORS proxy for production domain, will fall back to local file if this fails"
+      );
     }
 
     const response = await fetch(fetchUrl, {
@@ -1132,14 +1194,14 @@ async function fetchStreamingData(apiUrl) {
       apiUrl.startsWith("http://") || apiUrl.startsWith("https://");
 
     if (isLocalhost && isExternalUrl && !apiUrl.includes("localhost")) {
+      // Show user notification about playlist fetch failure
+      showPlaylistErrorNotification(apiUrl, error);
       console.warn(
-        "External fetch failed, trying local playlist.json fallback"
+        "External playlist fetch failed - user has been notified. Not using local fallback to avoid stale data."
       );
-      try {
-        return await fetchStreamingData("playlist.json");
-      } catch (fallbackError) {
-        console.error("Local fallback also failed:", fallbackError);
-      }
+    } else {
+      // Show notification for production failures too
+      showPlaylistErrorNotification(apiUrl, error);
     }
 
     if (error instanceof SyntaxError) {
@@ -1191,6 +1253,15 @@ async function setupAudioPlayer() {
     // console.log("Volume slider changed to:", this.value);
     audio.volume = intToDecimal(this.value);
   };
+
+  // Set up player button click listener
+  const playerButton = document.getElementById("playerButton");
+  if (playerButton) {
+    playerButton.addEventListener("click", togglePlay);
+    console.log("Player button click listener attached");
+  } else {
+    console.warn("Player button not found - click functionality will not work");
+  }
 }
 
 function setupAudioEventListeners() {
@@ -1703,7 +1774,7 @@ function cancelSleepTimer() {
     removeSleepTimerElement();
     if (audio && !audio.paused) {
       setVolume(100);
-      console.log("Sleep timer ended, audio paused. Volume set to 100%");
+      console.log("Sleep timer canceled, volume restored to 100%");
     }
   } else {
     removeSleepTimerElement();

@@ -108,8 +108,36 @@ If you don't use the CONFIG.APP_CONFIG, the player will fall back to `manifest.j
 1. Clone or download this repository
 2. Follow the configuration setup above (use setup.html for easiest setup)
 3. Configure your radio settings in config.js
-4. Replace `img/cover.png` with your radio logo
+4. Customize your graphics (see Graphics Customization below)
 5. Upload to your web server
+
+### 4. Graphics Customization
+
+You can customize the visual appearance of your radio player by replacing the default graphics:
+
+#### Required Images:
+
+- **`img/app-icon.png`** - App icon used for:
+
+  - PWA home screen icon
+  - Browser tab favicon
+  - App launcher icon on mobile devices
+  - **Recommended size:** 512x512px (PNG format)
+
+- **`img/cover.png`** - Station logo/cover image used for:
+  - Main player display background
+  - Media session artwork (lock screen, notifications)
+  - Default album art when no track-specific art is available
+  - **Recommended size:** 200x200px or larger (PNG/JPG format)
+
+#### How to Customize:
+
+1. **Replace the files** with your own graphics using the same filenames
+2. **Keep the same file paths** (`img/app-icon.png` and `img/cover.png`)
+3. **Maintain square aspect ratio** for best results across all platforms
+4. **Use high resolution** images for crisp display on all devices
+
+**Tip:** The app-icon.png should work well at small sizes since it will be used as a favicon and app icon.
 
 ## Configuration Features
 

@@ -144,11 +144,18 @@ body {
 
 .play-pause #playerButton {
   font-size: 3.5em;
+  font-size: 2.5rem;
   color: white;
 }
 .play-pause #timerButton {
   font-size: 1em;
+  font-size: 1.5rem;
   color: white;
+  line-height: 1;
+  cursor: pointer;
+}
+.play-pause .timer-display {
+  line-height: 1;
 }
 .play-pause #timerDisplay {
   font-size: 0.8em;
