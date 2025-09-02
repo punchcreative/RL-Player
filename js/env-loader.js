@@ -91,6 +91,12 @@ class EnvLoader {
         "default-hash-please-configure"
       ),
 
+      // Security Settings
+      ENABLE_PASSWORD_PROTECTION: this.getBool(
+        "VITE_ENABLE_PASSWORD_PROTECTION",
+        false
+      ),
+
       APP_CONFIG: {
         // PWA Settings
         scope: this.get("VITE_SCOPE", "/"),
@@ -118,12 +124,12 @@ class EnvLoader {
 
   // Check if all required variables are set
   validateConfig() {
-    const required = [
-      "VITE_PASSWORD_HASH",
-      "VITE_STATION_NAME",
-      "VITE_STREAM_URL",
-      "VITE_APP_URL",
-    ];
+    const required = ["VITE_STATION_NAME", "VITE_STREAM_URL", "VITE_APP_URL"];
+
+    // Only require password hash if protection is enabled
+    if (this.getBool("VITE_ENABLE_PASSWORD_PROTECTION", false)) {
+      required.push("VITE_PASSWORD_HASH");
+    }
 
     const missing = required.filter(
       (key) => !this.get(key) || this.get(key).includes("your-")

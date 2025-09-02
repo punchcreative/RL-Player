@@ -10,8 +10,9 @@ Based on Jailsons radioplayer, but simplified in layout
 - Songs coming up
 - Responsive design
 - Progressive Web App (PWA)
-- Password protection for secure access
+- Optional password protection for secure access
 - Service worker for offline functionality
+- **Radiologik DJ integration** with ready-to-use template (`playlist.json.template`)
 
 ## Quick Setup
 
@@ -150,7 +151,8 @@ You can customize the visual appearance of your radio player by replacing the de
 
 ## Security Features
 
-- **Password Protection**: Secure access with SHA-256 hashed passwords
+- **Optional Password Protection**: Enable/disable secure access with `VITE_ENABLE_PASSWORD_PROTECTION`
+- **SHA-256 Password Hashing**: Secure password storage when protection is enabled
 - **Config File Separation**: All sensitive data kept outside repository
 - **No Hardcoded Secrets**: Zero sensitive information in source code
 - **Git Security**: config.js automatically ignored by Git
@@ -164,10 +166,57 @@ You can customize the visual appearance of your radio player by replacing the de
 - Enhanced audio controls with proper state management
 - Responsive design
 - Progressive Web App (PWA)
-- Password protection for secure access
+- Optional password protection for secure access
 - Service worker for offline functionality
 
 ## Support for Most Hosting Types
+
+## Radiologik DJ Integration
+
+This player includes a ready-to-use template for **Radiologik DJ** users. Radiologik can automatically generate playlist data that this player consumes to display current songs, history, and upcoming tracks.
+
+### Setup Instructions for Radiologik Users
+
+1. **Locate the template file**: `playlist.json.template` in this repository
+
+2. **Copy to Radiologik Templates folder**:
+
+   ```
+   /Music/Radiologik/Web/Templates/playlist.json.template
+   ```
+
+3. **Configure Radiologik for web publishing**:
+
+   - Open Radiologik DJ
+   - Go to **Preferences** → **Web** (or consult Radiologik help documentation)
+   - Enable web publishing features
+   - Configure the template to generate `playlist.json` output
+   - Set the web server directory where the JSON file should be published
+
+4. **Template Features**:
+   - **Current Song**: Shows currently playing track with artist, title, duration, and start time
+   - **History**: Displays last 3 played songs with full metadata
+   - **Next Tracks**: Shows upcoming 5 songs in queue
+   - **Accurate Timing**: Includes start times for precise countdown and smart polling
+
+### Template Variables Used
+
+The template uses Radiologik's built-in variables:
+
+- `<rl-artist>`, `<rl-title>`, `<rl-duration>` - Current track info
+- `<rl-artist-01>`, `<rl-title-01>` - Previous tracks (01, 02, 03...)
+- `<rl-artist+01>`, `<rl-title+01>` - Next tracks (+01, +02, +03...)
+- `<rl-starttime>`, `<rl-starttime+01>` - Track start times for accurate timing
+
+### Benefits of Radiologik Integration
+
+- **Real-time Updates**: Automatic playlist synchronization as songs change
+- **Professional Features**: Accurate timing, track history, and upcoming songs preview
+- **Zero Manual Work**: Completely automated once configured
+- **Smart Polling**: Player adjusts refresh rate based on current song duration
+- **Accurate Countdowns**: Uses actual start times rather than estimates
+
+For detailed configuration instructions, please refer to the **Radiologik DJ Help Documentation** on web publishing and template configuration.
 
 ## Technical Improvements
 
@@ -176,3 +225,23 @@ You can customize the visual appearance of your radio player by replacing the de
 - **Recovery Logic**: Intelligent retry system with progressive timeouts (10s delays, max 3 attempts)
 - **Sleep Timer**: Built-in audio dimming and auto-pause functionality
 - **State Management**: Improved play/pause button handling and user action detection
+
+## Quick Reference
+
+### For Radiologik DJ Users
+
+- Copy `playlist.json.template` → `/Music/Radiologik/Web/Templates/`
+- Configure web publishing in Radiologik preferences
+- Consult Radiologik help docs for detailed setup instructions
+
+### For Manual Setup
+
+- Run `./setup-env.sh` for guided configuration
+- Or use `setup.html` for interactive browser setup
+- Or manually edit `.env` file with your settings
+
+### Files to Customize
+
+- **Graphics**: Replace `img/app-icon.png` and `img/cover.png`
+- **Configuration**: Use `.env` file or `config.js` (secure)
+- **Playlist Source**: Configure `VITE_PLAYLIST_ENDPOINT` in `.env`

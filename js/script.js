@@ -30,6 +30,29 @@ let URL_STREAMING;
 let correctPasswordHash = "default-hash-please-configure";
 let correctPasswordHashPromise;
 
+// Debug logging wrapper - respects DEBUG_MODE setting
+const debugLog = {
+  log: (...args) => {
+    if (CONFIG?.DEBUG_MODE === true) {
+      console.log(...args);
+    }
+  },
+  warn: (...args) => {
+    if (CONFIG?.DEBUG_MODE === true) {
+      console.warn(...args);
+    }
+  },
+  error: (...args) => {
+    // Always show errors, regardless of debug mode
+    console.error(...args);
+  },
+  info: (...args) => {
+    if (CONFIG?.DEBUG_MODE === true) {
+      console.info(...args);
+    }
+  },
+};
+
 function showLoader() {
   var nameToSplit = RADIO_NAME || "LOADING";
   // Hide the player while loading
@@ -119,6 +142,61 @@ function hideLoader() {
   if (player) player.style.display = "";
 }
 
+// Show notification when playlist has JSON format errors
+function showPlaylistFormatErrorNotification(url, error) {
+  // Remove any existing notification
+  const existingNotification = document.getElementById(
+    "playlistFormatErrorNotification"
+  );
+  if (existingNotification) {
+    existingNotification.remove();
+  }
+
+  // Create notification element
+  const notification = document.createElement("div");
+  notification.id = "playlistFormatErrorNotification";
+  notification.style.position = "fixed";
+  notification.style.top = "20px";
+  notification.style.right = "20px";
+  notification.style.background = "#ff6b35";
+  notification.style.color = "white";
+  notification.style.padding = "16px 20px";
+  notification.style.borderRadius = "8px";
+  notification.style.zIndex = "10000";
+  notification.style.maxWidth = "400px";
+  notification.style.fontSize = "14px";
+  notification.style.boxShadow = "0 4px 12px rgba(0,0,0,0.3)";
+  notification.style.border = "2px solid #ff4444";
+
+  notification.innerHTML = `
+    <div style="font-weight: bold; margin-bottom: 8px; font-size: 16px;">🚨 Playlist Format Error</div>
+    <div style="font-size: 13px; margin-bottom: 8px; line-height: 1.4;">
+      The playlist.json file contains invalid JSON format and cannot be parsed.
+    </div>
+    <div style="font-size: 12px; margin-bottom: 8px; line-height: 1.3;">
+      <strong>Auto-retry:</strong> Will automatically retry fetching in a few seconds.
+    </div>
+    <div style="font-size: 12px; margin-bottom: 8px; line-height: 1.3;">
+      <strong>Recommended:</strong> Check the online playlist.json file or verify the RadioLogik template format.
+    </div>
+    <div style="font-size: 11px; margin-top: 10px; text-align: center; border-top: 1px solid rgba(255,255,255,0.5); padding-top: 8px;">
+      Click to dismiss • Auto-dismiss in 12 seconds
+    </div>
+  `;
+
+  // Auto-dismiss after 12 seconds or on click
+  notification.style.cursor = "pointer";
+  notification.onclick = () => notification.remove();
+
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.remove();
+    }
+  }, 12000);
+
+  document.body.appendChild(notification);
+}
+
 // Show notification when playlist fetch fails
 function showPlaylistErrorNotification(url, error) {
   // Remove any existing notification
@@ -134,7 +212,7 @@ function showPlaylistErrorNotification(url, error) {
   notification.id = "playlistErrorNotification";
   notification.style.position = "fixed";
   notification.style.top = "100px";
-  notification.style.right = "100px";
+  notification.style.right = "20px";
   notification.style.background = "#ff4444";
   notification.style.color = "white";
   notification.style.padding = "12px 16px";
@@ -142,6 +220,7 @@ function showPlaylistErrorNotification(url, error) {
   notification.style.zIndex = "10000";
   notification.style.maxWidth = "300px";
   notification.style.fontSize = "14px";
+  notification.style.boxShadow = "0 4px 12px rgba(0,0,0,0.3)";
 
   const isLocalhost =
     window.location.hostname === "localhost" ||
@@ -152,8 +231,8 @@ function showPlaylistErrorNotification(url, error) {
 
   notification.innerHTML = `
     <div style="font-weight: bold; margin-bottom: 4px;">Playlist Fetch Failed</div>
-    <div style="font-size: 12px; opacity: 0.9;">${message}</div>
-    <div style="font-size: 11px; margin-top: 6px; opacity: 0.7;">Click to dismiss</div>
+    <div style="font-size: 12px;">${message}</div>
+    <div style="font-size: 11px; margin-top: 6px;">Click to dismiss</div>
   `;
 
   // Auto-dismiss after 8 seconds or on click
@@ -186,9 +265,9 @@ async function registerServiceWorker() {
       const registration = await navigator.serviceWorker.register(
         "service-worker.js"
       );
-      console.log("Service Worker registered successfully:", registration);
+      debugLog("Service Worker registered successfully:", registration);
     } catch (err) {
-      console.log("Service Worker registration failed:", err);
+      debugLog("Service Worker registration failed:", err);
     }
   }
 }
@@ -216,7 +295,7 @@ async function setStreamingUrl(url) {
       URL_STREAMING = url;
       return;
     }
-    console.warn(`Stream URL ${url} returned status: ${response.status}`);
+    debugLog.warn(`Stream URL ${url} returned status: ${response.status}`);
   } catch (error) {
     // Ignore error, will alert below
   }
@@ -227,14 +306,14 @@ function setVolume(volume) {
   // console.log("setVolume gets value:", volume);
   // console.log("isPhone:", isPhone);
   if (!audio) {
-    console.warn("Audio object not yet initialized, skipping setVolume");
+    debugLog.warn("Audio object not yet initialized, skipping setVolume");
     return;
   }
 
   if (typeof Storage !== "undefined" && !isPhone) {
     const volumeLocalStorage =
       parseInt(localStorage.getItem("volume"), 10) || 100;
-    console.log("Volume from localStorage or default:", volumeLocalStorage);
+    debugLog("Volume from localStorage or default:", volumeLocalStorage);
     const volumeElement = document.getElementById("volume");
     if (volumeElement) {
       volumeElement.value = volumeLocalStorage;
@@ -254,7 +333,7 @@ function changeVolumeLocalStorage(volume) {
 }
 
 function initializePlayer() {
-  console.log("Initializing player...");
+  debugLog("Initializing player...");
 
   changeTitlePage();
   setCopyright(); // This calls setupAudioPlayer
@@ -262,37 +341,34 @@ function initializePlayer() {
   // DON'T show the player yet - wait for first successful playlist fetch
   // The player will be shown when hideLoader() is called after first data load
 
-  console.log("Player initialization complete, waiting for playlist data...");
+  debugLog("Player initialization complete, waiting for playlist data...");
 
   // Wait for service worker to be ready before starting data fetching
   waitForServiceWorkerThenStart();
 }
 
 async function waitForServiceWorkerThenStart() {
-  console.log("Waiting for service worker to be ready...");
+  debugLog("Waiting for service worker to be ready...");
 
   if ("serviceWorker" in navigator) {
     try {
       // Wait for service worker to be ready
       const registration = await navigator.serviceWorker.ready;
-      console.log("Service worker is ready:", registration);
+      debugLog("Service worker is ready:", registration);
 
       // Small delay to ensure everything is properly initialized
       await new Promise((resolve) => setTimeout(resolve, 100));
     } catch (error) {
-      console.log("Service worker not available or failed:", error);
+      debugLog("Service worker not available or failed:", error);
       // Continue anyway after a short delay
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
   } else {
-    console.log("Service worker not supported, continuing without it");
+    debugLog("Service worker not supported, continuing without it");
   }
 
   // Start fetching streaming data
-  console.log(
-    "Starting to fetch streaming data with playlistData:",
-    playlistData
-  );
+  debugLog("Starting to fetch streaming data with playlistData:", playlistData);
 
   // Use longer interval for localhost to be gentle on CORS proxies
   const isLocalhost =
@@ -300,7 +376,7 @@ async function waitForServiceWorkerThenStart() {
     window.location.hostname === "127.0.0.1";
   const interval = isLocalhost ? 5000 : 1000; // 5 seconds for localhost, 1 second for production
 
-  console.log(`Using polling interval: ${interval}ms`);
+  debugLog(`Using polling interval: ${interval}ms`);
   getStreamingData();
   fetchIntervalId = setInterval(getStreamingData, interval);
 }
@@ -322,7 +398,7 @@ function loadConfigJS() {
 }
 
 async function loadAppVars() {
-  console.log("🔧 Loading app configuration...");
+  debugLog("🔧 Loading app configuration...");
 
   // Try to load environment variables first
   let envLoaded = false;
@@ -332,24 +408,25 @@ async function loadAppVars() {
     if (envLoaded) {
       // Override CONFIG with environment variables
       window.CONFIG = window.envLoader.createConfig();
-      console.log("✅ Using .env configuration");
+      debugLog("✅ Using .env configuration");
 
       // Validate environment configuration
       window.envLoader.validateConfig();
     } else {
-      console.log("📋 .env not found, trying config.js fallback...");
+      debugLog("📋 .env not found, trying config.js fallback...");
 
       // Try to load config.js dynamically
       try {
         await loadConfigJS();
-        console.log("✅ Using config.js fallback");
+        debugLog("✅ Using config.js fallback");
       } catch (error) {
-        console.error("❌ Neither .env nor config.js found!");
-        console.error("📋 Please run: ./setup-env.sh or create config.js");
+        debugLog.error("❌ Neither .env nor config.js found!");
+        debugLog.error("📋 Please run: ./setup-env.sh or create config.js");
 
         // Create a minimal CONFIG to prevent crashes
         window.CONFIG = {
           PASSWORD_HASH: "default-hash-please-configure",
+          ENABLE_PASSWORD_PROTECTION: false,
           APP_CONFIG: {
             scope: "/",
             background_color: "#031521",
@@ -375,10 +452,10 @@ async function loadAppVars() {
     correctPasswordHash === "default-hash-please-configure" ||
     correctPasswordHash === "your-password-hash-here"
   ) {
-    console.warn(
+    debugLog.warn(
       "⚠️  Using default password hash! Please configure your own password."
     );
-    console.warn('📋 Generate hash with: await hashString("your-password")');
+    debugLog.warn('📋 Generate hash with: await hashString("your-password")');
   }
 
   // Validate APP_CONFIG for personalized settings
@@ -388,23 +465,21 @@ async function loadAppVars() {
       CONFIG.APP_CONFIG.stream_url === "https://your-stream-url.com" ||
       CONFIG.APP_CONFIG.app_url === "https://your-domain.com/app/"
     ) {
-      console.warn(
+      debugLog.warn(
         "⚠️  Using default APP_CONFIG values! Please customize your radio settings."
       );
-      console.warn(
+      debugLog.warn(
         "📋 Edit config.js to set your station name, stream URL, and app URL."
       );
     } else {
-      console.log(
-        "✅ Custom APP_CONFIG detected - using personalized settings."
-      );
+      debugLog("✅ Custom APP_CONFIG detected - using personalized settings.");
     }
   } else {
-    console.info("ℹ️  No APP_CONFIG found - using manifest.json defaults.");
+    debugLog("ℹ️  No APP_CONFIG found - using manifest.json defaults.");
   }
 
   // Now load manifest for app metadata
-  console.log("📄 Loading manifest.json...");
+  debugLog("📄 Loading manifest.json...");
   fetch("manifest.json")
     .then((response) => {
       if (!response.ok) {
@@ -415,7 +490,7 @@ async function loadAppVars() {
       return response.json();
     })
     .then((manifest) => {
-      console.log("Manifest loaded successfully:", manifest);
+      debugLog("Manifest loaded successfully:", manifest);
 
       // Assign manifest values to global variables
       APP_VERSION = manifest.version;
@@ -425,7 +500,7 @@ async function loadAppVars() {
 
       // Override with CONFIG values if available, otherwise use manifest defaults
       if (CONFIG?.APP_CONFIG) {
-        console.log("Overriding manifest values with CONFIG.APP_CONFIG...");
+        debugLog("Overriding manifest values with CONFIG.APP_CONFIG...");
         RADIO_NAME =
           CONFIG.APP_CONFIG.station_name ||
           manifest.custom_radio_config.station_name;
@@ -444,7 +519,7 @@ async function loadAppVars() {
           CONFIG.APP_CONFIG.dim_volume_sleep_timer ||
           manifest.custom_radio_config.dim_volume_sleep_timer;
       } else {
-        console.log("Using manifest values (CONFIG.APP_CONFIG not found)...");
+        debugLog("Using manifest values (CONFIG.APP_CONFIG not found)...");
         RADIO_NAME = manifest.custom_radio_config.station_name;
         STREAM_URL = manifest.custom_radio_config.stream_url;
         DEFAULT_VOLUME = manifest.custom_radio_config.default_volume;
@@ -458,27 +533,27 @@ async function loadAppVars() {
 
       // Set playlistData after PLAYLIST is loaded from manifest
       playlistData = PLAYLIST || "playlist.json";
-      console.log("playlistData set to:", playlistData);
+      debugLog("playlistData set to:", playlistData);
 
       // Log all key variables to console for debugging
-      console.log("APP_VERSION:", APP_VERSION);
-      console.log("APP_NAME:", APP_NAME);
-      console.log("APP_DESCRIPTION:", APP_DESCRIPTION);
-      console.log("APP_AUTHOR:", APP_AUTHOR);
-      console.log("RADIO_NAME:", RADIO_NAME);
-      console.log("STREAM_URL:", STREAM_URL);
-      console.log("DEFAULT_VOLUME:", DEFAULT_VOLUME);
-      console.log("THEME_COLOR:", THEME_COLOR);
-      console.log("PLAYLIST:", PLAYLIST);
-      console.log("METADATA:", METADATA);
-      console.log("APP_URL:", APP_URL);
-      console.log("DIM_VOLUME_SLEEP_TIMER:", DIM_VOLUME_SLEEP_TIMER);
+      debugLog("APP_VERSION:", APP_VERSION);
+      debugLog("APP_NAME:", APP_NAME);
+      debugLog("APP_DESCRIPTION:", APP_DESCRIPTION);
+      debugLog("APP_AUTHOR:", APP_AUTHOR);
+      debugLog("RADIO_NAME:", RADIO_NAME);
+      debugLog("STREAM_URL:", STREAM_URL);
+      debugLog("DEFAULT_VOLUME:", DEFAULT_VOLUME);
+      debugLog("THEME_COLOR:", THEME_COLOR);
+      debugLog("PLAYLIST:", PLAYLIST);
+      debugLog("METADATA:", METADATA);
+      debugLog("APP_URL:", APP_URL);
+      debugLog("DIM_VOLUME_SLEEP_TIMER:", DIM_VOLUME_SLEEP_TIMER);
 
       // Set up streaming URL after loading from manifest
       if (typeof STREAM_URL === "string" && STREAM_URL.trim() !== "") {
         setStreamingUrl(STREAM_URL);
       } else {
-        console.warn(
+        debugLog.warn(
           "STREAM_URL is undefined or empty. Skipping setStreamingUrl."
         );
       }
@@ -505,11 +580,17 @@ async function loadAppVars() {
         }
       }
 
-      // After loading app variables, proceed with password check
-      checkPassword();
+      // After loading app variables, check if password protection is enabled
+      if (CONFIG?.ENABLE_PASSWORD_PROTECTION === true) {
+        checkPassword();
+      } else {
+        // Skip password check, go directly to player initialization
+        debugLog("🔓 Password protection disabled, starting player...");
+        initializePlayer();
+      }
     })
     .catch((error) => {
-      console.error("Error loading manifest:", error);
+      debugLog.error("Error loading manifest:", error);
       alert(
         "Failed to load application configuration. Please check your network connection and try again."
       );
@@ -674,18 +755,28 @@ function refreshCurrentSong(
 // Remove the Page class and use functions directly
 let musicActual = null;
 let isFirstLoad = true; // Flag to track first successful load
+let jsonErrorRetryCount = 0; // Counter for JSON format error retries
+const MAX_JSON_ERROR_RETRIES = 3; // Maximum retries for JSON format errors
 
 async function getStreamingData() {
   try {
-    console.log("Fetching streaming data from:", playlistData);
+    debugLog("Fetching streaming data from:", playlistData);
     let data = await fetchStreamingData(playlistData);
 
-    console.log("Received data:", data);
+    debugLog("Received data:", data);
 
     if (data) {
+      // Reset JSON error retry counter on successful data fetch
+      if (jsonErrorRetryCount > 0) {
+        debugLog(
+          "Playlist fetched successfully - resetting JSON error retry counter"
+        );
+        jsonErrorRetryCount = 0;
+      }
+
       // Hide loader on first successful data fetch
       if (isFirstLoad) {
-        console.log("First playlist data loaded successfully - hiding loader");
+        debugLog("First playlist data loaded successfully - hiding loader");
         hideLoader();
         isFirstLoad = false;
       }
@@ -718,7 +809,7 @@ async function getStreamingData() {
         if (fetchIntervalId) {
           clearInterval(fetchIntervalId);
           fetchIntervalId = null;
-          console.log(
+          debugLog(
             "Cleared polling interval - new song detected, switching to smart polling"
           );
         }
@@ -739,7 +830,7 @@ async function getStreamingData() {
         // Display what is coming up next
         const toplayContainer = document.getElementById("toplaySong");
         if (!toplayContainer) {
-          console.error("toplaySong element not found in DOM");
+          debugLog.error("toplaySong element not found in DOM");
           return;
         }
         toplayContainer.innerHTML = "";
@@ -751,7 +842,7 @@ async function getStreamingData() {
             }))
           : [];
 
-        console.log("Toplay array:", toplayArray);
+        debugLog("Toplay array:", toplayArray);
 
         const maxToplayToDisplay = nrToplay;
         const limitedToplay = toplayArray
@@ -760,7 +851,7 @@ async function getStreamingData() {
             )
           : [];
 
-        console.log("Limited toplay:", limitedToplay);
+        debugLog("Limited toplay:", limitedToplay);
 
         for (let i = 0; i < limitedToplay.length; i++) {
           const songInfo = limitedToplay[i];
@@ -788,7 +879,7 @@ async function getStreamingData() {
         // Display the last played songs
         const historicContainer = document.getElementById("historicSong");
         if (!historicContainer) {
-          console.error("historicSong element not found in DOM");
+          debugLog.error("historicSong element not found in DOM");
           return;
         }
         historicContainer.innerHTML = "";
@@ -800,7 +891,7 @@ async function getStreamingData() {
             }))
           : [];
 
-        console.log("History array:", historyArray);
+        debugLog("History array:", historyArray);
 
         const maxHistoryToDisplay = nrHistory;
         const limitedHistory = historyArray
@@ -809,7 +900,7 @@ async function getStreamingData() {
             )
           : [];
 
-        console.log("Limited history:", limitedHistory);
+        debugLog("Limited history:", limitedHistory);
 
         for (let i = 0; i < limitedHistory.length; i++) {
           const songInfo = limitedHistory[i];
@@ -838,9 +929,39 @@ async function getStreamingData() {
       }
     }
   } catch (error) {
-    console.error("Error in getStreamingData:", error);
-    console.log("playlistData value:", playlistData);
-    console.log("Playlist endpoint:", PLAYLIST);
+    debugLog.error("Error in getStreamingData:", error);
+    debugLog("playlistData value:", playlistData);
+    debugLog("Playlist endpoint:", PLAYLIST);
+
+    // If this is a JSON format error, schedule a retry with limit
+    if (
+      (error.message && error.message.includes("JSON")) ||
+      error.name === "SyntaxError"
+    ) {
+      if (jsonErrorRetryCount < MAX_JSON_ERROR_RETRIES) {
+        jsonErrorRetryCount++;
+        debugLog(
+          `JSON format error detected - retry ${jsonErrorRetryCount}/${MAX_JSON_ERROR_RETRIES} in 15 seconds`
+        );
+        setTimeout(() => {
+          debugLog(
+            `Retrying playlist fetch after JSON format error (attempt ${jsonErrorRetryCount}/${MAX_JSON_ERROR_RETRIES})...`
+          );
+          getStreamingData();
+        }, 15000);
+      } else {
+        debugLog.error(
+          "Maximum JSON error retries reached. Please check the playlist.json format."
+        );
+        // Reset counter for future potential fixes
+        setTimeout(() => {
+          jsonErrorRetryCount = 0;
+          debugLog(
+            "Reset JSON error retry counter - will try again if new errors occur"
+          );
+        }, 300000); // Reset after 5 minutes
+      }
+    }
   }
 }
 
@@ -909,16 +1030,16 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
         // Ensure elapsed time is not negative or greater than total duration
         elapsedSeconds = Math.max(0, Math.min(elapsedSeconds, totalSeconds));
 
-        console.log(`Song started at: ${startTime} (${isoStartTime})`);
-        console.log(
+        debugLog(`Song started at: ${startTime} (${isoStartTime})`);
+        debugLog(
           `Song has been playing for ${elapsedSeconds} seconds out of ${totalSeconds} total`
         );
       } catch (error) {
-        console.warn(
+        debugLog.warn(
           "Invalid startTime format, using current time as start:",
           error
         );
-        console.warn(
+        debugLog.warn(
           "Expected format: YYYY-MM-DD HH:MM:SS, received:",
           startTime
         );
@@ -948,19 +1069,19 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
         // Only use next track timing if it's reasonable (positive and not too far in future)
         if (remainingSeconds > 0 && remainingSeconds < totalSeconds + 30) {
           useNextTrackTiming = true;
-          console.log(
+          debugLog(
             `Using next track start time: ${nextTrackStarttime} (${isoNextStartTime})`
           );
-          console.log(
+          debugLog(
             `Accurate remaining time: ${remainingSeconds} seconds until next track`
           );
         } else {
-          console.warn(
+          debugLog.warn(
             `Next track timing seems unreasonable: ${remainingSeconds}s, falling back to duration calculation`
           );
         }
       } catch (error) {
-        console.warn(
+        debugLog.warn(
           "Invalid nextTrackStarttime format, falling back to duration calculation:",
           error
         );
@@ -970,7 +1091,7 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
     // Fallback to duration-based calculation if next track timing not available or unreasonable
     if (!useNextTrackTiming) {
       remainingSeconds = totalSeconds - elapsedSeconds;
-      console.log(
+      debugLog(
         `Using duration-based calculation: ${remainingSeconds} seconds remaining`
       );
     }
@@ -989,7 +1110,7 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
         pollBeforeEnd = 10; // Poll 10 seconds before for longer tracks
       }
       pollDelay = Math.max(1000, (remainingSeconds - pollBeforeEnd) * 1000);
-      console.log(
+      debugLog(
         `Using precise next-track timing: polling in ${Math.floor(
           pollDelay / 1000
         )}s`
@@ -1004,7 +1125,7 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
         pollBeforeEnd = 30; // 30 seconds for long tracks
       }
       pollDelay = Math.max(1000, (remainingSeconds - pollBeforeEnd) * 1000);
-      console.log(
+      debugLog(
         `Using duration-based timing: polling in ${Math.floor(
           pollDelay / 1000
         )}s`
@@ -1016,7 +1137,7 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
       if (fetchIntervalId) {
         clearInterval(fetchIntervalId);
         fetchIntervalId = null;
-        console.log("Cleared continuous polling - switching to smart polling");
+        debugLog("Cleared continuous polling - switching to smart polling");
       }
 
       // Use longer interval for localhost to be gentle on CORS proxies
@@ -1026,7 +1147,7 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
       const interval = isLocalhost ? 5000 : 1000; // 5 seconds for localhost, 1 second for production
 
       fetchIntervalId = setInterval(getStreamingData, interval);
-      console.log(
+      debugLog(
         "Smart polling: Started interval getStreamingData for next song detection."
       );
     }, pollDelay);
@@ -1058,35 +1179,95 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
 
 async function fetchStreamingData(apiUrl) {
   try {
-    console.log("Attempting to fetch from URL:", apiUrl);
+    debugLog("Attempting to fetch from URL:", apiUrl);
 
-    // Detect if we're running on localhost and the URL is external
+    // Detect if we're running on localhost
     const isLocalhost =
       window.location.hostname === "localhost" ||
       window.location.hostname === "127.0.0.1";
-    const isExternalUrl =
-      apiUrl.startsWith("http://") || apiUrl.startsWith("https://");
 
-    let fetchUrl = apiUrl;
+    let actualUrl = apiUrl;
+
+    // If we're on localhost and have a relative URL, convert to production URL
+    if (isLocalhost && !apiUrl.startsWith("http")) {
+      // Convert relative URL to production URL for CORS proxy
+      const productionBaseUrl =
+        CONFIG?.APP_CONFIG?.app_url || "https://eajt.nl/kvpn/";
+      actualUrl = new URL(apiUrl, productionBaseUrl).href;
+      debugLog(
+        `Localhost detected: Converting relative URL "${apiUrl}" to production URL: ${actualUrl}`
+      );
+    }
+
+    const isExternalUrl =
+      actualUrl.startsWith("http://") || actualUrl.startsWith("https://");
+
+    let fetchUrl = actualUrl;
     let usingProxy = false;
 
     // If we're on localhost and trying to fetch external data, use CORS proxy
-    // BUT skip proxy if fetching from the same domain we'll deploy to
-    const isSameDomainAsProduction = apiUrl.includes("eajt.nl");
+    if (isLocalhost && isExternalUrl && !actualUrl.includes("localhost")) {
+      debugLog("Using CORS proxy for localhost development");
 
-    if (
-      isLocalhost &&
-      isExternalUrl &&
-      !apiUrl.includes("localhost") &&
-      !isSameDomainAsProduction
-    ) {
-      console.log("Using CORS proxy for localhost development");
+      // For eajt.nl, try the CORS-enabled PHP script first
+      if (
+        actualUrl.includes("eajt.nl") &&
+        actualUrl.includes("playlist.json")
+      ) {
+        const corsProxyUrl = actualUrl.replace(
+          "playlist.json",
+          "cors-playlist.php"
+        );
+        debugLog("Trying CORS-enabled playlist proxy:", corsProxyUrl);
 
-      // Try multiple CORS proxy services for better reliability
+        try {
+          fetchUrl = corsProxyUrl;
+          const response = await fetch(fetchUrl, {
+            method: "GET",
+            headers: {
+              "Cache-Control": "no-cache",
+            },
+          });
+
+          if (response.ok) {
+            debugLog("Successfully using cors-playlist.php");
+            const text = await response.text();
+            debugLog("CORS proxy response length:", text.length);
+            debugLog("Raw response (first 100 chars):", text.substring(0, 100));
+
+            // Check if the JSON appears to be truncated
+            const trimmedText = text.trim();
+            if (!trimmedText.endsWith("}") && !trimmedText.endsWith("]")) {
+              debugLog.warn(
+                "JSON appears to be truncated - does not end with } or ]"
+              );
+              throw new Error("JSON file appears to be truncated or corrupted");
+            }
+
+            const data = JSON.parse(text);
+            debugLog(
+              "Successfully fetched and parsed streaming data via CORS proxy"
+            );
+            return data;
+          } else {
+            debugLog.warn(
+              "cors-playlist.php failed, falling back to generic CORS proxy"
+            );
+            throw new Error(`CORS proxy failed: ${response.status}`);
+          }
+        } catch (corsError) {
+          debugLog.warn(
+            "CORS proxy failed, trying generic proxies:",
+            corsError.message
+          );
+        }
+      }
+
+      // Try multiple generic CORS proxy services for better reliability
       const corsProxies = [
-        `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`,
-        `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`,
-        `https://cors-anywhere.herokuapp.com/${apiUrl}`,
+        `https://api.allorigins.win/get?url=${encodeURIComponent(actualUrl)}`,
+        `https://corsproxy.io/?${encodeURIComponent(actualUrl)}`,
+        `https://cors-anywhere.herokuapp.com/${actualUrl}`,
       ];
 
       // Try each proxy until one works
@@ -1094,21 +1275,18 @@ async function fetchStreamingData(apiUrl) {
         try {
           fetchUrl = corsProxies[i];
           usingProxy = true;
-          console.log(`Trying CORS proxy ${i + 1}:`, fetchUrl);
+          debugLog(`Trying CORS proxy ${i + 1}:`, fetchUrl);
           break;
         } catch (error) {
-          console.warn(`CORS proxy ${i + 1} failed, trying next...`);
+          debugLog.warn(`CORS proxy ${i + 1} failed, trying next...`);
           if (i === corsProxies.length - 1) {
             throw error;
           }
         }
       }
-    } else if (isLocalhost && isExternalUrl && isSameDomainAsProduction) {
-      console.log(
-        "Localhost detected: Skipping CORS proxy for production domain, will fall back to local file if this fails"
-      );
     }
 
+    // Fetch the data (either direct or via generic CORS proxy)
     const response = await fetch(fetchUrl, {
       method: "GET",
       headers: {
@@ -1122,13 +1300,13 @@ async function fetchStreamingData(apiUrl) {
       );
     }
 
-    console.log("Response status:", response.status);
-    console.log("Response content-type:", response.headers.get("content-type"));
+    debugLog("Response status:", response.status);
+    debugLog("Response content-type:", response.headers.get("content-type"));
 
     // Get the raw text first to inspect it
     const text = await response.text();
 
-    // If we used CORS proxy, extract the actual content
+    // If we used generic CORS proxy, extract the actual content
     let actualText = text;
     if (usingProxy) {
       try {
@@ -1159,7 +1337,11 @@ async function fetchStreamingData(apiUrl) {
         console.warn("Failed to parse CORS proxy response, using raw text");
         actualText = text;
       }
+    } else {
+      // Direct fetch or CORS-enabled PHP script
+      actualText = text;
     }
+
     console.log("Raw response length:", actualText.length);
     console.log(
       "Raw response (first 100 chars):",
@@ -1184,24 +1366,29 @@ async function fetchStreamingData(apiUrl) {
     return data;
   } catch (error) {
     console.error("fetchStreamingData error:", error);
-    console.error("Failed URL:", apiUrl);
+    console.error("Failed URL:", actualUrl || apiUrl);
 
     // If we're on localhost and external fetch failed, try local fallback
     const isLocalhost =
       window.location.hostname === "localhost" ||
       window.location.hostname === "127.0.0.1";
     const isExternalUrl =
-      apiUrl.startsWith("http://") || apiUrl.startsWith("https://");
+      (actualUrl || apiUrl).startsWith("http://") ||
+      (actualUrl || apiUrl).startsWith("https://");
 
-    if (isLocalhost && isExternalUrl && !apiUrl.includes("localhost")) {
+    if (
+      isLocalhost &&
+      isExternalUrl &&
+      !(actualUrl || apiUrl).includes("localhost")
+    ) {
       // Show user notification about playlist fetch failure
-      showPlaylistErrorNotification(apiUrl, error);
+      showPlaylistErrorNotification(actualUrl || apiUrl, error);
       console.warn(
         "External playlist fetch failed - user has been notified. Not using local fallback to avoid stale data."
       );
     } else {
       // Show notification for production failures too
-      showPlaylistErrorNotification(apiUrl, error);
+      showPlaylistErrorNotification(actualUrl || apiUrl, error);
     }
 
     if (error instanceof SyntaxError) {
@@ -1211,6 +1398,11 @@ async function fetchStreamingData(apiUrl) {
       console.error(
         "This could happen if the file is being uploaded while the app is trying to read it"
       );
+
+      // Show user-friendly notification for JSON format errors
+      showPlaylistFormatErrorNotification(actualUrl || apiUrl, error);
+
+      return null;
     }
 
     return null;
