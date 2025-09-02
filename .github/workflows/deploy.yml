@@ -3,9 +3,9 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
@@ -26,15 +26,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
-        
+
       - name: Create deployment package
         run: |
           # Create a clean build directory
           mkdir -p build
-          
+
           # Copy all necessary files
           cp index.html build/
           cp offline.html build/
@@ -46,97 +46,97 @@ jobs:
           cp -r img build/
           cp -r webfonts build/
           cp -r albumart build/
-          
+
           # Copy setup and documentation
           cp setup.html build/
           cp README.md build/
-          
+
           # Create example .env file for users
           cat > build/.env.example << 'EOF'
           # RL Player Environment Configuration
           # Copy this file to .env and configure your settings
-          
+
           # =============================================================================
           # SECURITY SETTINGS
           # =============================================================================
-          
+
           # Enable password protection (true/false)
           VITE_ENABLE_PASSWORD_PROTECTION=false
-          
+
           # Your password hash (generate using setup.html)
           # VITE_PASSWORD_HASH=your-generated-hash-here
-          
+
           # =============================================================================
           # RADIO STATION CONFIGURATION  
           # =============================================================================
-          
+
           # Basic station information
           VITE_STATION_NAME=Your Radio Station
           VITE_STREAM_URL=https://your-stream-url.com
           VITE_APP_URL=https://your-domain.com/
-          
+
           # =============================================================================
           # APPEARANCE SETTINGS
           # =============================================================================
-          
+
           # Colors (hex format)
           VITE_THEME_COLOR=#031521
           VITE_BACKGROUND_COLOR=#031521
-          
+
           # PWA Settings
           VITE_SCOPE=/
-          
+
           # =============================================================================
           # AUDIO SETTINGS
           # =============================================================================
-          
+
           # Volume settings (0-100)
           VITE_DEFAULT_VOLUME=100
           VITE_DIM_VOLUME_SLEEP_TIMER=50
-          
+
           # =============================================================================
           # DEVELOPMENT SETTINGS (Optional)
           # =============================================================================
-          
+
           # Set to true for additional console logging
           VITE_DEBUG_MODE=false
-          
+
           # API endpoints
           VITE_PLAYLIST_ENDPOINT=playlist.json
           EOF
-          
+
           # Create deployment instructions
           cat > build/DEPLOYMENT.md << 'EOF'
           # 🚀 RL Player Deployment Instructions
-          
+
           ## Quick Start
-          
+
           1. **Configure your app**: Open `setup.html` in your browser
           2. **Generate configuration**: Follow the setup wizard to create your `.env` file
           3. **Test locally**: Serve the files using any web server
           4. **Deploy**: Upload all files to your hosting provider
-          
+
           ## Environment Configuration
-          
+
           - Copy `.env.example` to `.env`
           - Use `setup.html` to generate your configuration
           - Never commit your `.env` file to Git (contains sensitive data)
-          
+
           ## Features
-          
+
           - ✅ Optional password protection
           - ✅ Clean console output (production-ready)
           - ✅ Debug logging (for development)
           - ✅ PWA support
           - ✅ Responsive design
           - ✅ Modern environment-based configuration
-          
+
           ## Support
-          
+
           Version: v1.4.9  
           Author: PNCH  
           EOF
-          
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

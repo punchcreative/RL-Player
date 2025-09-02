@@ -7,22 +7,26 @@
 ## 📋 **Deployment Options**
 
 ### **Option 1: GitHub Pages (Recommended)**
+
 **Best for**: Free static hosting with automatic deployments
 
 1. **Setup Repository**:
+
    ```bash
    # Push your code to GitHub
    git push origin main  # or master
    ```
 
 2. **Enable GitHub Pages**:
+
    - Go to your repository on GitHub
    - Settings → Pages
-   - Source: "Deploy from a branch" 
+   - Source: "Deploy from a branch"
    - Branch: `main` or `master`
    - Folder: `/ (root)`
 
 3. **Automatic Deployment**:
+
    - GitHub Actions workflow will build and deploy automatically
    - Your app will be available at: `https://username.github.io/repository-name`
 
@@ -34,9 +38,11 @@
 ---
 
 ### **Option 2: Netlify (Alternative)**
+
 **Best for**: Easy deployment with form handling and serverless functions
 
 1. **Deploy to Netlify**:
+
    - Connect your GitHub repository to Netlify
    - Build settings: None needed (static site)
    - Deploy directory: `./` (root)
@@ -48,6 +54,7 @@
 ---
 
 ### **Option 3: Vercel (Alternative)**
+
 **Best for**: Fast global CDN with easy GitHub integration
 
 1. **Deploy to Vercel**:
@@ -58,16 +65,18 @@
 ---
 
 ### **Option 4: Self-Hosted**
+
 **Best for**: Full control over hosting environment
 
 1. **Static File Server**:
+
    ```bash
    # Simple Python server (for testing)
    python3 -m http.server 3000
-   
+
    # Or Node.js
    npx serve .
-   
+
    # Or Apache/Nginx for production
    ```
 
@@ -81,8 +90,9 @@
 ## 🔧 **Pre-Deployment Checklist**
 
 ### **Required Files**:
+
 - ✅ `index.html` - Main application
-- ✅ `setup.html` - Configuration wizard  
+- ✅ `setup.html` - Configuration wizard
 - ✅ `manifest.json` - PWA manifest
 - ✅ `service-worker.js` - Offline functionality
 - ✅ `js/script.js` - Main application logic
@@ -91,12 +101,14 @@
 - ✅ All asset folders (`img/`, `webfonts/`, etc.)
 
 ### **Configuration Files**:
+
 - ✅ `.env.example` - Template for users
 - ✅ `.gitignore` - Excludes sensitive files
 - ✅ `README.md` - Documentation
 - ✅ `TEST-SETUP-PROCESS.md` - Testing guide
 
 ### **Security Checklist**:
+
 - ✅ `.env` file excluded from Git (never commit)
 - ✅ Password protection configurable (on/off)
 - ✅ Debug logging disabled in production
@@ -107,6 +119,7 @@
 ## 🎯 **GitHub Pages Setup (Step-by-Step)**
 
 ### **Step 1: Prepare Repository**
+
 ```bash
 # Ensure you're on the main branch
 git checkout main  # or master
@@ -116,6 +129,7 @@ git push origin main
 ```
 
 ### **Step 2: Enable GitHub Pages**
+
 1. Go to your GitHub repository
 2. Click **Settings** tab
 3. Scroll to **Pages** section
@@ -125,11 +139,13 @@ git push origin main
 7. Click **Save**
 
 ### **Step 3: Wait for Deployment**
+
 - GitHub will build and deploy automatically
 - Check **Actions** tab for deployment progress
 - Usually takes 1-2 minutes
 
 ### **Step 4: Configure Your App**
+
 1. Visit: `https://YOUR_USERNAME.github.io/YOUR_REPO_NAME/setup.html`
 2. Choose password protection option
 3. Fill in your radio station details
@@ -137,6 +153,7 @@ git push origin main
 5. Save as `.env` in your local project (for development)
 
 ### **Step 5: Test Deployment**
+
 1. Visit: `https://YOUR_USERNAME.github.io/YOUR_REPO_NAME/`
 2. Verify app loads correctly
 3. Test password protection (if enabled)
@@ -147,16 +164,19 @@ git push origin main
 ## 🔒 **Security Considerations**
 
 ### **Password Protection**:
+
 - **Enabled**: Users must enter password to access app
 - **Disabled**: App accessible to everyone
 - **Hash-based**: Passwords are securely hashed (SHA-256)
 
 ### **Environment Variables**:
+
 - Use `.env` file for sensitive configuration
 - Never commit `.env` to Git
 - Use setup.html to generate configuration safely
 
 ### **Production Settings**:
+
 ```properties
 # Recommended production settings
 VITE_DEBUG_MODE=false           # Clean console output
@@ -168,6 +188,7 @@ VITE_ENABLE_PASSWORD_PROTECTION=true  # If security needed
 ## 📱 **PWA Features**
 
 Your app will work as a **Progressive Web App**:
+
 - ✅ **Installable** on mobile devices
 - ✅ **Offline capable** (basic caching)
 - ✅ **App-like experience** on phones/tablets
@@ -180,21 +201,25 @@ Your app will work as a **Progressive Web App**:
 ### **Common Issues**:
 
 **App won't load:**
+
 - Check browser console for errors
 - Verify all files uploaded correctly
 - Test with setup.html first
 
 **Password not working:**
+
 - Regenerate hash using setup.html
 - Check VITE_ENABLE_PASSWORD_PROTECTION setting
 - Verify .env file format
 
 **Console errors:**
+
 - Enable debug mode: `VITE_DEBUG_MODE=true`
 - Check environment configuration
 - Verify stream URL is accessible
 
 **GitHub Pages not updating:**
+
 - Check Actions tab for build errors
 - Ensure main branch has latest code
 - Wait 5-10 minutes for propagation
@@ -214,8 +239,9 @@ Your app will work as a **Progressive Web App**:
 ## 🎉 **You're Ready to Deploy!**
 
 Your RL Player v1.4.9 is production-ready with:
+
 - ✅ Clean, professional codebase
-- ✅ Configurable security options  
+- ✅ Configurable security options
 - ✅ Modern environment-based configuration
 - ✅ Comprehensive documentation
 - ✅ Multiple deployment options
