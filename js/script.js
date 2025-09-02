@@ -1344,10 +1344,7 @@ async function fetchStreamingData(apiUrl) {
     }
 
     debugLog("Raw response length:", actualText.length);
-    debugLog(
-      "Raw response (first 100 chars):",
-      actualText.substring(0, 100)
-    );
+    debugLog("Raw response (first 100 chars):", actualText.substring(0, 100));
     debugLog(
       "Raw response (last 100 chars):",
       actualText.substring(actualText.length - 100)
@@ -1453,7 +1450,9 @@ async function setupAudioPlayer() {
     playerButton.addEventListener("click", togglePlay);
     debugLog("Player button click listener attached");
   } else {
-    debugLog.warn("Player button not found - click functionality will not work");
+    debugLog.warn(
+      "Player button not found - click functionality will not work"
+    );
   }
 }
 
