@@ -54,6 +54,12 @@ debugLog.info = (...args) => {
   }
 };
 
+debugLog.log = (...args) => {
+  if (typeof CONFIG !== "undefined" && CONFIG?.DEBUG_MODE === true) {
+    console.log(...args);
+  }
+};
+
 function showLoader() {
   var nameToSplit = RADIO_NAME || "LOADING";
   // Hide the player while loading
