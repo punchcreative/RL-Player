@@ -1,4 +1,4 @@
-const activeCacheVersion = 1146;
+const activeCacheVersion = 1147;
 const activeCacheName = `rlplayer-${activeCacheVersion}`;
 
 console.log(`Service Worker: Using cache version ${activeCacheVersion}`);
