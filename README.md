@@ -6,7 +6,7 @@ This player includes a ready-to-use template for **Radiologik DJ** users. Radiol
 
 ## Features
 
-- Current song display with smart polling based on track duration (working on buffer time adjustment)
+- Current song display with smart polling based on track duration
 - History of played songs (3)
 - Songs coming up (5 next tracks preview)
 - Sleep timer (15/30/45/60 minute auto-pause)
@@ -210,7 +210,7 @@ For detailed configuration instructions, please refer to the **Radiologik DJ Hel
 
 ## Technical Improvements
 
-- **Smart Polling**: Automatically adjusts data refresh rate based on current song duration (buffer time, working on that)
+- **Smart Polling**: Automatically adjusts data refresh rate based on current song duration (buffer time correction variable)
 - **Stream Reliability**: Enhanced error detection that distinguishes between real errors and normal loading events
 - **Recovery Logic**: Intelligent retry system with progressive timeouts (10s delays, max 3 attempts)
 - **Sleep Timer**: Built-in audio dimming and auto-pause functionality
