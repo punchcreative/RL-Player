@@ -1,18 +1,23 @@
 # HTML5 Icecast/Shoutcast Full Page Radiologik Player with PWA Support
 
-Based on Jailsons radioplayer, but simplified in layout
-(https://github.com/jailsonsb2/RadioPlayer-All-Streams/blob/main/js/script.js)
+This player includes a ready-to-use template for **Radiologik DJ** users. Radiologik can automatically generate playlist data that this player consumes to display current songs, history, and upcoming tracks.
+
+- **Radiologik DJ integration** with ready-to-use template (`playlist.json.template`)
 
 ## Features
 
-- Current song display
-- History of played songs
-- Songs coming up
-- Responsive design
+- Current song display with smart polling based on track duration (working on buffer time adjustment)
+- History of played songs (3)
+- Songs coming up (5 next tracks preview)
+- Sleep timer (15/30/45/60 minute auto-pause)
+- Intelligent stream error recovery and retry logic
+- Enhanced audio controls with proper state management
+- Responsive and clean design
 - Progressive Web App (PWA)
-- Optional password protection for secure access
-- Service worker for offline functionality
-- **Radiologik DJ integration** with ready-to-use template (`playlist.json.template`)
+- Optional password protection for private streams
+- Service worker for caching
+
+## Support for Most Hosting Types
 
 ## Quick Setup
 
@@ -158,23 +163,6 @@ You can customize the visual appearance of your radio player by replacing the de
 - **Git Security**: config.js automatically ignored by Git
 - **Validation**: Built-in checks for proper configuration
 
-- Current song display with smart polling based on track duration
-- History of played songs
-- Songs coming up (next tracks preview)
-- Sleep timer (15/30/45/60 minute auto-pause)
-- Intelligent stream error recovery and retry logic
-- Enhanced audio controls with proper state management
-- Responsive design
-- Progressive Web App (PWA)
-- Optional password protection for secure access
-- Service worker for offline functionality
-
-## Support for Most Hosting Types
-
-## Radiologik DJ Integration
-
-This player includes a ready-to-use template for **Radiologik DJ** users. Radiologik can automatically generate playlist data that this player consumes to display current songs, history, and upcoming tracks.
-
 ### Setup Instructions for Radiologik Users
 
 1. **Locate the template file**: `playlist.json.template` in this repository
@@ -184,6 +172,8 @@ This player includes a ready-to-use template for **Radiologik DJ** users. Radiol
    ```
    /Music/Radiologik/Web/Templates/playlist.json.template
    ```
+
+   remove .template from the filename!
 
 3. **Configure Radiologik for web publishing**:
 
@@ -220,7 +210,7 @@ For detailed configuration instructions, please refer to the **Radiologik DJ Hel
 
 ## Technical Improvements
 
-- **Smart Polling**: Automatically adjusts data refresh rate based on current song duration
+- **Smart Polling**: Automatically adjusts data refresh rate based on current song duration (buffer time, working on that)
 - **Stream Reliability**: Enhanced error detection that distinguishes between real errors and normal loading events
 - **Recovery Logic**: Intelligent retry system with progressive timeouts (10s delays, max 3 attempts)
 - **Sleep Timer**: Built-in audio dimming and auto-pause functionality
@@ -231,6 +221,7 @@ For detailed configuration instructions, please refer to the **Radiologik DJ Hel
 ### For Radiologik DJ Users
 
 - Copy `playlist.json.template` → `/Music/Radiologik/Web/Templates/`
+- Rename the file by removing .template from it
 - Configure web publishing in Radiologik preferences
 - Consult Radiologik help docs for detailed setup instructions
 
