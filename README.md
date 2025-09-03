@@ -14,7 +14,7 @@ This player includes a ready-to-use template for **Radiologik DJ** users. Radiol
 - Enhanced audio controls with proper state management
 - Responsive and clean design
 - Progressive Web App (PWA)
-- Optional password protection for private streams
+- Optional password protection for private streams (only asked once and saved in local storage)
 - Service worker for caching
 
 ## Support for Most Hosting Types
@@ -156,7 +156,7 @@ You can customize the visual appearance of your radio player by replacing the de
 
 ## Security Features
 
-- **Optional Password Protection**: Enable/disable secure access with `VITE_ENABLE_PASSWORD_PROTECTION`
+- **Optional Password Protection**: Enable/disable secure access with `VITE_ENABLE_PASSWORD_PROTECTION`, (only asked once and saved in local storage)
 - **SHA-256 Password Hashing**: Secure password storage when protection is enabled
 - **Config File Separation**: All sensitive data kept outside repository
 - **No Hardcoded Secrets**: Zero sensitive information in source code
