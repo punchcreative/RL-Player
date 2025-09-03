@@ -71,6 +71,9 @@ config.js
 # VS Code Settings
 .vscode/
 
+# GitHub Actions (not applicable for Bitbucket repositories)
+.github/
+
 # Setup Scripts (keep essential ones: setup-env.sh, setup.html, test-env.sh)
 setup-bitbucket-api.sh
 
