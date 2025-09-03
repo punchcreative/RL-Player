@@ -22,10 +22,9 @@ const cacheAssets = [
   "img/cover.png",
   "img/app-icon.png",
   "manifest.json",
-  "webfonts/fa-light-300.woff2",
-  "webfonts/fa-solid-900.woff2",
-  "webfonts/fa-regular-400.woff2",
-  "webfonts/fa-thin-100.woff2",
+  "assets/icons/circle-play.svg",
+  "assets/icons/circle-pause.svg",
+  "assets/icons/timer.svg",
 ];
 
 // Service workers can't directly listen for FTP uploads or external file changes.

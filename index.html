@@ -5,10 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>RL Player</title>
     <link rel="icon" type="image/png" href="img/app-icon.png" />
-    <link rel="stylesheet" href="css/fontawesome.min.css" />
-    <link rel="stylesheet" href="css/solid.min.css" />
-    <link rel="stylesheet" href="css/regular.min.css" />
-    <link rel="stylesheet" href="css/thin.min.css" />
+    <!-- FontAwesome CSS removed - using SVG icons instead -->
     <link rel="stylesheet" type="text/css" href="css/animate.css" />
     <link rel="stylesheet" href="css/style.css" />
     <link rel="manifest" href="manifest.json" />
@@ -71,15 +68,19 @@
                     <div class="col-12 play-pause text-center mb-3 d-flex flex-column align-items-center">
                       <!-- Player & Timer Controls -->
                       <div class="mb-1 mb-lg-3">
-                        <span
+                        <img
                           id="playerButton"
-                          class="fa-solid fa-circle-play mb-3"
-                        ></span>
+                          src="assets/icons/circle-play.svg"
+                          alt="Play"
+                          class="player-icon mb-3"
+                        />
                         <div class="d-flex align-items-center justify-content-center">
-                          <span
+                          <img
                             id="timerButton"
-                            class="fa-thin fa-solid fa-timer"
-                          ></span>
+                            src="assets/icons/timer.svg"
+                            alt="Timer"
+                            class="timer-icon"
+                          />
                           <span
                             id="timerDisplay"
                             class="timer-display"

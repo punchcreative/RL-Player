@@ -54,6 +54,27 @@ debugLog.info = (...args) => {
   }
 };
 
+// SVG Icon helper functions
+function setPlayerIcon(isPlaying) {
+  const playerButton = document.getElementById("playerButton");
+  if (playerButton) {
+    playerButton.src = isPlaying 
+      ? "assets/icons/circle-pause.svg" 
+      : "assets/icons/circle-play.svg";
+    playerButton.alt = isPlaying ? "Pause" : "Play";
+  }
+}
+
+function isPlayerIconPaused() {
+  const playerButton = document.getElementById("playerButton");
+  return playerButton && playerButton.src.includes("circle-pause.svg");
+}
+
+function isPlayerIconPlaying() {
+  const playerButton = document.getElementById("playerButton");
+  return playerButton && playerButton.src.includes("circle-play.svg");
+}
+
 debugLog.log = (...args) => {
   if (typeof CONFIG !== "undefined" && CONFIG?.DEBUG_MODE === true) {
     console.log(...args);
@@ -740,8 +761,7 @@ function refreshCurrentSong(
         });
         navigator.mediaSession.setActionHandler("stop", () => {
           if (isPlaying) {
-            playerButton.classList.remove("fa-circle-pause");
-            playerButton.classList.add("fa-circle-play");
+            setPlayerIcon(false); // Set to play icon
             playerButton.style.textShadow = "0 0 5px black";
 
             audio.pause();
@@ -1533,10 +1553,9 @@ function setupAudioEventListeners() {
 
   function resetButtonState() {
     const playerButton = document.getElementById("playerButton");
-    if (playerButton && playerButton.classList.contains("fa-circle-pause")) {
+    if (playerButton && isPlayerIconPaused()) {
       debugLog("Stream stopped - resetting button state");
-      playerButton.classList.remove("fa-circle-pause");
-      playerButton.classList.add("fa-circle-play");
+      setPlayerIcon(false); // Set to play icon
     }
   }
 
@@ -1544,7 +1563,7 @@ function setupAudioEventListeners() {
     if (healthCheckInterval) clearInterval(healthCheckInterval);
     healthCheckInterval = setInterval(() => {
       const playerButton = document.getElementById("playerButton");
-      if (playerButton && playerButton.classList.contains("fa-circle-pause")) {
+      if (playerButton && isPlayerIconPaused()) {
         // Should be playing, check if it actually is
         if (audio.paused || audio.ended || audio.readyState < 2) {
           debugLog.warn("Health check failed - stream appears stopped");
@@ -1655,7 +1674,7 @@ function setupAudioEventListeners() {
         const playerButton = document.getElementById("playerButton");
         if (
           playerButton &&
-          playerButton.classList.contains("fa-circle-pause") &&
+          isPlayerIconPaused() &&
           audio.paused
         ) {
           debugLog.warn("Unexpected pause detected - stream may have stopped");
@@ -1718,12 +1737,11 @@ function setupAudioEventListeners() {
 
 function togglePlay() {
   const playerButton = document.getElementById("playerButton");
-  const isPlaying = playerButton.classList.contains("fa-circle-pause");
+  const isPlaying = isPlayerIconPaused();
   // debugLog.log("Toggle play state:", isPlaying);
   if (isPlaying) {
     // debugLog.log("Pausing audio");
-    playerButton.classList.remove("fa-circle-pause");
-    playerButton.classList.add("fa-circle-play");
+    setPlayerIcon(false); // Set to play icon
     playerButton.style.textShadow = "0 0 5px black";
 
     if (audio) {
@@ -1741,8 +1759,7 @@ function togglePlay() {
     }
   } else {
     // debugLog.log("Playing audio");
-    playerButton.classList.remove("fa-circle-play");
-    playerButton.classList.add("fa-circle-pause");
+    setPlayerIcon(true); // Set to pause icon
     playerButton.style.textShadow = "0 0 5px black";
 
     // Reuse existing audio object if available, otherwise create new one
@@ -1769,8 +1786,7 @@ function togglePlay() {
       playPromise.catch((error) => {
         debugLog.warn("Audio play failed:", error);
         // Reset button state if play fails
-        playerButton.classList.remove("fa-circle-pause");
-        playerButton.classList.add("fa-circle-play");
+        setPlayerIcon(false); // Set to play icon
       });
     }
   }
