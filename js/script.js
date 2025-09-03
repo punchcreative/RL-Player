@@ -58,8 +58,8 @@ debugLog.info = (...args) => {
 function setPlayerIcon(isPlaying) {
   const playerButton = document.getElementById("playerButton");
   if (playerButton) {
-    playerButton.src = isPlaying 
-      ? "assets/icons/circle-pause.svg" 
+    playerButton.src = isPlaying
+      ? "assets/icons/circle-pause.svg"
       : "assets/icons/circle-play.svg";
     playerButton.alt = isPlaying ? "Pause" : "Play";
   }
@@ -464,6 +464,7 @@ async function loadAppVars() {
             app_url: "https://example.com",
             default_volume: 100,
             dim_volume_sleep_timer: 50,
+            countdown_buffer_seconds: 8,
           },
         };
       }
@@ -1013,6 +1014,12 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
   const currentDurationElem = document.getElementById("currentDurationDisplay");
   let countdownInterval;
 
+  // Buffer time configuration - extends countdown to match actual song change timing
+  // This compensates for the delay between when the countdown reaches 0:00 and the actual song change
+  // User can configure this in .env with VITE_COUNTDOWN_BUFFER_SECONDS or in config.js
+  const COUNTDOWN_BUFFER_SECONDS =
+    CONFIG?.APP_CONFIG?.countdown_buffer_seconds || 8;
+
   if (!currentDurationElem) {
     // console.error("Current duration element not found.");
     return;
@@ -1053,6 +1060,13 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
     } else {
       totalSeconds = parseInt(duration, 10);
     }
+
+    // Add buffer time to extend countdown and match actual song change timing
+    // This prevents the countdown from reaching 0:00 too early
+    totalSeconds += COUNTDOWN_BUFFER_SECONDS;
+    debugLog(
+      `Added ${COUNTDOWN_BUFFER_SECONDS}s buffer to duration. Total: ${totalSeconds}s`
+    );
 
     // Calculate elapsed time based on start time
     let elapsedSeconds = 0;
@@ -1204,6 +1218,17 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
       const min = Math.floor(remaining / 60);
       const sec = remaining % 60;
 
+      // Show visual indicator when very close to song change (within buffer time)
+      if (remaining > 0 && remaining <= COUNTDOWN_BUFFER_SECONDS) {
+        // We're in the buffer zone - song change is imminent
+        currentDurationElem.style.opacity = "0.8";
+        currentDurationElem.style.color = "#ffd700"; // Golden color to indicate imminent change
+      } else {
+        // Reset styling for normal countdown
+        currentDurationElem.style.opacity = "1";
+        currentDurationElem.style.color = ""; // Reset to default
+      }
+
       // When countdown reaches 0:00, show loading indicator and trigger aggressive polling
       if (remaining === 0 && !awaitingNextSong) {
         debugLog(
@@ -1214,6 +1239,7 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
         // Show "Loading next song..." in the duration display
         currentDurationElem.textContent = "Next song...";
         currentDurationElem.style.opacity = "0.7";
+        currentDurationElem.style.color = ""; // Reset color
         currentDurationElem.style.animation = "pulse 1.5s ease-in-out infinite";
 
         // Clear existing interval and start rapid polling for new song detection
@@ -1672,11 +1698,7 @@ function setupAudioEventListeners() {
     if (!userInitiatedPause) {
       setTimeout(() => {
         const playerButton = document.getElementById("playerButton");
-        if (
-          playerButton &&
-          isPlayerIconPaused() &&
-          audio.paused
-        ) {
+        if (playerButton && isPlayerIconPaused() && audio.paused) {
           debugLog.warn("Unexpected pause detected - stream may have stopped");
           resetButtonState();
         }
@@ -1885,75 +1907,55 @@ timerButton.addEventListener("click", function () {
   modal.appendChild(box);
   document.body.appendChild(modal);
 
-  // Add a circular countdown animation for the sleep timer
-  // Create SVG circle if not already present
-  let timerCircleContainer = document.getElementById("timerCircleContainer");
-  if (!timerCircleContainer) {
-    timerCircleContainer = document.createElement("div");
-    timerCircleContainer.id = "timerCircleContainer";
-    timerCircleContainer.style.display = "flex";
-    timerCircleContainer.style.alignItems = "center";
-    timerCircleContainer.style.justifyContent = "center";
-    timerCircleContainer.style.gap = "0.5rem";
-    timerCountdownDisplay.parentNode.insertBefore(
-      timerCircleContainer,
-      timerCountdownDisplay.nextSibling
-    );
-  }
-  // Only add the SVG if not already present
-  if (!timerCircleContainer.querySelector("#timerCircleProgress")) {
-    timerCircleContainer.innerHTML = `
-      <svg width="32" height="32" viewBox="0 0 32 32" style="transform: rotate(-90deg);">
-        <circle cx="15" cy="15" r="12" stroke="#ffffffff" stroke-width="1" fill="none" opacity="0.4"/>
-        <circle id="timerCircleProgress" cx="15" cy="15" r="11" stroke="#26599dff" stroke-width="2" fill="none"
-          stroke-dasharray="75.4" stroke-dashoffset="0" style="transition: stroke-dashoffset 1s linear;"/>
-      </svg>
-    `;
-  }
-
-  // Helper to set initial offset based on selected sleep time
-  function setInitialCircleOffset(selected) {
-    const circle = timerCircleContainer.querySelector("#timerCircleProgress");
-    const circumference = 2 * Math.PI * 11; // r=11
-    let offset = 0;
-    if (selected === 15) {
-      offset = circumference * 0.75; // 25% visible
-    } else if (selected === 30) {
-      offset = circumference * 0.5; // 50% visible
-    } else if (selected === 45) {
-      offset = circumference * 0.25; // 75% visible
-    } else {
-      offset = 0; // 100% visible
-    }
-    circle.setAttribute("stroke-dasharray", circumference);
-    circle.setAttribute("stroke-dashoffset", offset);
-    circle.setAttribute("stroke", "#26599dff");
-  }
-
-  // Show the circle only if a timer is running or being set
-  timerCircleContainer.style.display = "flex";
-  timerCircleContainer.style.alignItems = "center";
-  timerCircleContainer.style.justifyContent = "center";
-
-  // When a button is clicked, set initial offset
-  validTimes.forEach((min) => {
-    // Find button by checking textContent instead of using invalid :contains() selector
-    const buttons = box.querySelectorAll("button");
-    const btn = Array.from(buttons).find(
-      (button) => button.textContent === `${min} min`
-    );
-    if (btn) {
-      btn.onmouseover = () => setInitialCircleOffset(min);
-      btn.onfocus = () => setInitialCircleOffset(min);
-    }
-  });
-
-  // Set initial offset for default (first) button
-  setInitialCircleOffset(validTimes[0]);
-
   function setSleepTimer(selected) {
     if (sleepTimerId) clearTimeout(sleepTimerId);
     if (sleepTimerCountdownId) clearInterval(sleepTimerCountdownId);
+
+    // Create timer circle container when sleep timer is actually set
+    let timerCircleContainer = document.getElementById("timerCircleContainer");
+    if (!timerCircleContainer) {
+      timerCircleContainer = document.createElement("div");
+      timerCircleContainer.id = "timerCircleContainer";
+      timerCircleContainer.style.display = "flex";
+      timerCircleContainer.style.alignItems = "center";
+      timerCircleContainer.style.justifyContent = "center";
+      timerCircleContainer.style.gap = "0.5rem";
+      timerCountdownDisplay.parentNode.insertBefore(
+        timerCircleContainer,
+        timerCountdownDisplay.nextSibling
+      );
+    }
+    // Only add the SVG if not already present
+    if (!timerCircleContainer.querySelector("#timerCircleProgress")) {
+      timerCircleContainer.innerHTML = `
+        <svg width="32" height="32" viewBox="0 0 32 32" style="transform: rotate(-90deg);">
+          <circle cx="15" cy="15" r="12" stroke="#ffffffff" stroke-width="1" fill="none" opacity="1"/>
+          <circle id="timerCircleProgress" cx="15" cy="15" r="11" stroke="#26599dff" stroke-width="2" fill="none"
+            stroke-dasharray="75.4" stroke-dashoffset="0" style="transition: stroke-dashoffset 1s linear;"/>
+        </svg>
+      `;
+    }
+
+    // Helper to set initial offset based on selected sleep time
+    function setInitialCircleOffset(selected) {
+      const circle = timerCircleContainer.querySelector("#timerCircleProgress");
+      const circumference = 2 * Math.PI * 11; // r=11
+      let offset = 0;
+      if (selected === 15) {
+        offset = circumference * 0.75; // 25% visible
+      } else if (selected === 30) {
+        offset = circumference * 0.5; // 50% visible
+      } else if (selected === 45) {
+        offset = circumference * 0.25; // 75% visible
+      } else if (selected === 60) {
+        offset = 0; // 100% visible
+      }
+      circle.style.strokeDashoffset = offset;
+    }
+
+    // Set initial offset for selected time
+    setInitialCircleOffset(selected);
+
     sleepTimerEndTime = Date.now() + selected * 60 * 1000;
     // If not playing, start playing and toggle play/pause
     if (audio && audio.paused) {

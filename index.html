@@ -10,15 +10,21 @@
     <link rel="stylesheet" href="css/style.css" />
     <link rel="manifest" href="manifest.json" />
 
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="msapplication-starturl" content="./">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#031521">
-    <meta name="apple-mobile-web-app-title" content="RL Player">
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="msapplication-starturl" content="./" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="theme-color" content="#031521" />
+    <meta name="apple-mobile-web-app-title" content="RL Player" />
     <meta name="description" content="RL Player - RadioLogik Player" />
-    <meta name="keywords" content="RadioLogik, RL Player, Radio, Player, Streamingaudio, online radio, private stream" />
+    <meta
+      name="keywords"
+      content="RadioLogik, RL Player, Radio, Player, Streamingaudio, online radio, private stream"
+    />
     <meta name="author" content="Erik Kroon" />
     <meta name="copyright" content="Punch Creative" />
     <meta name="robots" content="noindex, nofollow" />
@@ -28,7 +34,16 @@
       <div id="bgCover"></div>
       <div class="bg-mask"></div>
     </div>
-    <div id="page-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh;">
+    <div
+      id="page-container"
+      style="
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+      "
+    >
       <section id="player">
         <div class="container">
           <div class="row web-player d-flex justify-content-center">
@@ -57,15 +72,14 @@
                         >
                           playlist data
                         </p>
-                        <p
-                          id="currentDurationDisplay" 
-                          class="current-duration"
-                        >
+                        <p id="currentDurationDisplay" class="current-duration">
                           00:00
                         </p>
                       </div>
                     </div>
-                    <div class="col-12 play-pause text-center mb-3 d-flex flex-column align-items-center">
+                    <div
+                      class="col-12 play-pause text-center mb-3 d-flex flex-column align-items-center"
+                    >
                       <!-- Player & Timer Controls -->
                       <div class="mb-1 mb-lg-3">
                         <img
@@ -74,25 +88,33 @@
                           alt="Play"
                           class="player-icon mb-3"
                         />
-                        <div class="d-flex align-items-center justify-content-center">
+                        <div
+                          class="d-flex align-items-center justify-content-center"
+                        >
                           <img
                             id="timerButton"
                             src="assets/icons/timer.svg"
                             alt="Timer"
                             class="timer-icon"
                           />
-                          <span
-                            id="timerDisplay"
-                            class="timer-display"
-                          ></span>
+                          <span id="timerDisplay" class="timer-display"></span>
                         </div>
                       </div>
 
                       <!-- Volume Controls -->
-                      <div class="volume-control-elements d-none d-lg-block w-100">
+                      <div
+                        class="volume-control-elements d-none d-lg-block w-100"
+                      >
                         <div class="row volume-control justify-content-center">
                           <div class="volume-slide col-6 col-md-4">
-                            <input type="range" id="volume" step="1" min="0" max="100" class="slider" />
+                            <input
+                              type="range"
+                              id="volume"
+                              step="1"
+                              min="0"
+                              max="100"
+                              class="slider"
+                            />
                           </div>
                         </div>
                       </div>

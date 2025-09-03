@@ -143,32 +143,40 @@ body {
 }
 
 .play-pause #playerButton {
-  font-size: 3.5em;
   font-size: 2.5rem;
   color: white;
 }
 .play-pause #timerButton {
-  font-size: 1em;
-  font-size: 1.5rem;
+  padding-top: 0.1em;
   color: white;
   line-height: 1;
   cursor: pointer;
 }
 .play-pause .timer-display {
   line-height: 1;
+  vertical-align: middle;
 }
 .play-pause #timerDisplay {
   font-size: 0.8em;
   color: rgba(255, 255, 255, 0.636);
+  vertical-align: middle;
 }
 /* SVG Icon styles replacing FontAwesome */
-.player-icon,
-.timer-icon {
+.player-icon {
   width: 48px;
   height: 48px;
   filter: brightness(0) invert(1); /* Makes SVG white */
   cursor: pointer;
   transition: opacity 0.3s ease;
+}
+
+.timer-icon {
+  width: 25px;
+  /* height: 32px; */
+  filter: brightness(0) invert(1); /* Makes SVG white */
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+  vertical-align: middle;
 }
 
 .player-icon:hover,

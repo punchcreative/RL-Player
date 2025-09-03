@@ -114,6 +114,12 @@ class EnvLoader {
           "VITE_DIM_VOLUME_SLEEP_TIMER",
           50
         ),
+
+        // Timing Settings
+        countdown_buffer_seconds: this.getNumber(
+          "VITE_COUNTDOWN_BUFFER_SECONDS",
+          8
+        ),
       },
 
       // Development settings
