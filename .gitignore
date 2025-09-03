@@ -77,3 +77,9 @@ config.js
 # Setup Scripts (keep essential ones: setup-env.sh, setup.html, test-env.sh)
 setup-bitbucket-api.sh
 
+# Personal Development Scripts
+publish-dev.sh
+release-version.sh
+update-master.sh
+start-server.sh
+
