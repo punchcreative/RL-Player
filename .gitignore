@@ -56,7 +56,8 @@ config.js
 .env.local
 .env.development
 .env.production
-.env.*
+.env.test-no-password
+.env.backup
 *.env
 
 # Development and Documentation Files (keep only README.md)
