@@ -3,7 +3,7 @@
   "manifest_version": 3,
   "name": "RL Player",
   "description": "Player for icecast stream with support for playlist data from Radiologik",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "lang": "en-US",
   "author": "PNCH",
   "scope": "/",
@@ -11,11 +11,11 @@
   "theme_color": "#031521",
   "custom_radio_config": {
     "station_name": "KVPN",
-    "stream_url": "https://your-stream-url.com",
+    "stream_url": "https://k-one.pvpjamz.com",
     "default_volume": 100,
     "dim_volume_sleep_timer": 50,
     "theme_color": "#031521",
-    "app_url": "https://your-domain.com/"
+    "app_url": "https://eajt.nl/kvpn/"
   },
   "api_endpoints": {
     "playlist": "https://eajt.nl/kvpn/playlist.json"

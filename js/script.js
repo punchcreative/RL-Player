@@ -742,13 +742,16 @@ function refreshCurrentSong(
       currentDuration.classList.add("fade-in");
 
       if ("mediaSession" in navigator) {
+        // Create a unique cache-busting string, like a timestamp
+        const cacheBuster = Date.now();
+        const artworkUrl = `${APP_URL}albumart/art-00.jpg?cb=${cacheBuster}`;
         navigator.mediaSession.metadata = new MediaMetadata({
           title: song,
           artist: artist,
           album: RADIO_NAME,
           artwork: [
             {
-              src: APP_URL + "albumart/art-00.jpg",
+              src: artworkUrl,
               sizes: "200x200",
               type: "image/jpg",
             },

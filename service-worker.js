@@ -1,4 +1,4 @@
-const activeCacheVersion = 1520;
+const activeCacheVersion = 1530;
 const activeCacheName = `rlplayer-${activeCacheVersion}`;
 
 console.log(`Service Worker: Using cache version ${activeCacheVersion}`);
@@ -35,17 +35,49 @@ const cacheAssets = [
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // Only handle requests to the same origin (localhost)
-  // Let external API calls (like https://eajt.nl/kvpn/playlist.json) pass through
   if (url.origin !== self.location.origin) {
     console.log(
       "Service Worker: Ignoring external request:",
       event.request.url
     );
-    return; // Let the browser handle external requests normally
+    return;
   }
 
-  // Special handling for local playlist.json - always fetch fresh
+  // Handle album artwork specifically: use a Network-First strategy
+  if (
+    url.pathname === "/albumart/art-00.jpg" ||
+    url.pathname.endsWith("/albumart/art-00.jpg") ||
+    event.request.url.includes("art-00.jpg")
+  ) {
+    console.log(
+      "Service Worker: Handling album art request with Network-First strategy:",
+      event.request.url
+    );
+    event.respondWith(
+      (async () => {
+        try {
+          const networkResponse = await fetch(event.request);
+          if (networkResponse.ok) {
+            // Update the cache with the new image
+            const cache = await caches.open(activeCacheName);
+            await cache.put(event.request, networkResponse.clone());
+          }
+          return networkResponse;
+        } catch (error) {
+          console.error(
+            "Service Worker: Failed to fetch album art from network, falling back to cache:",
+            error
+          );
+          // Fall back to the cached version if network fails
+          const cachedResponse = await caches.match(event.request);
+          return cachedResponse || Response.error();
+        }
+      })()
+    );
+    return;
+  }
+
+  // Existing special handling for local playlist.json - always fetch fresh
   if (
     url.pathname === "/playlist.json" ||
     url.pathname.endsWith("/playlist.json") ||
@@ -58,23 +90,17 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       (async () => {
         try {
-          // Always fetch from network to get the latest playlist.json after FTP upload
-          console.log(
-            "Service Worker: Fetching fresh local playlist.json from network"
-          );
           const networkResponse = await fetch(event.request, {
             cache: "no-cache",
             headers: {
               "Cache-Control": "no-cache, no-store, must-revalidate",
             },
           });
-
           if (!networkResponse.ok) {
             throw new Error(
               `Network response not ok: ${networkResponse.status}`
             );
           }
-
           console.log("Service Worker: Successfully fetched playlist.json");
           return networkResponse;
         } catch (error) {
@@ -82,7 +108,6 @@ self.addEventListener("fetch", (event) => {
             "Service Worker: Failed to fetch playlist.json from network:",
             error
           );
-          // Don't use cache for playlist.json to avoid stale data
           return Response.error();
         }
       })()
@@ -90,17 +115,14 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Cache-first strategy for static assets
+  // Default Cache-First strategy for other static assets
   if (
     event.request.destination === "style" ||
-    event.request.destination === "script" ||
     event.request.destination === "image" ||
     event.request.destination === "font" ||
     event.request.url.includes(".css") ||
-    event.request.url.includes(".js") ||
     event.request.url.includes(".png") ||
-    event.request.url.includes(".jpg") ||
-    event.request.url.includes(".woff")
+    event.request.url.includes(".jpg")
   ) {
     event.respondWith(
       caches.open(activeCacheName).then(async (cache) => {
@@ -123,9 +145,11 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Network-first strategy for navigation requests and HTML
+  // Network-first strategy for navigation and HTML (already in your code)
   if (
     event.request.mode === "navigate" ||
+    event.request.destination === "script" ||
+    event.request.url.includes(".js") ||
     event.request.destination === "document"
   ) {
     event.respondWith(
