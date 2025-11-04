@@ -4,130 +4,158 @@
 @import url("https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,700;1,6..12,700&display=swap");
 @import url("bootstrap.min.css");
 
-.nunito-sans-light {
-  font-family: "Nunito Sans", sans-serif;
-  font-optical-sizing: auto;
+.root,
+:root {
+  /* Theme variables */
+  --bg-dark: #031521;
+  --bg-light: #f4faff;
+  --text-light: #ffffff;
+  --text-dark: #031521;
+  --muted-dark: rgba(255, 255, 255, 0.636);
+  --muted-light: rgba(0, 0, 0, 0.636);
+  --mask-dark: rgba(0, 0, 0, 0);
+  --mask-light: rgba(255, 255, 255, 0);
+  --muted-foreground-light: #e4e4e4;
+  --accent: #00e1e7;
+  /* Additional UI tokens */
+}
+
+.player-icon:hover,
+.timer-icon:hover {
+  opacity: 0.8;
+}
+
+.close {
+  color: var(--text-light);
+}
+body.lightmode .close {
+  color: var(--text-dark);
+}
+.slider {
+  -webkit-appearance: none; /* Remove default styling */
+  appearance: none;
+  width: 100%; /* Full width */
+  height: 3px; /* Height of the track */
+  background: var(--track-dark); /* Track color */
+  border-radius: 5px; /* Rounded corners */
+  outline: none; /* Remove outline */
+  opacity: 0.7; /* Transparency */
+  transition: opacity 0.2s; /* Transition effect */
+}
+
+.slider:hover {
+  opacity: 1; /* Full opacity on hover */
+}
+
+/* Slider Thumb */
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none; /* Remove default styling */
+  appearance: none; /* Remove default styling */
+  width: 10px; /* Width of the thumb */
+  height: 10px; /* Height of the thumb */
+  background: var(--thumb-light); /* Thumb color */
+  cursor: pointer; /* Pointer cursor on hover */
+  border-radius: 50%; /* Round thumb */
+}
+
+.slider::-moz-range-thumb {
+  width: 10px; /* Width of the thumb */
+  height: 10px; /* Height of the thumb */
+  background: var(--thumb-light); /* Thumb color */
+  cursor: pointer; /* Pointer cursor on hover */
+  border-radius: 50%; /* Round thumb */
+}
+
+body.lightmode .slider::-moz-range-thumb {
+  background: var(--thumb-dark); /* Thumb color in light mode */
+}
+
+.slider::-moz-range-track {
+  background: rgba(107, 107, 107, 0.3);
+  accent-color: rgba(0, 0, 0, 0.6);
+  height: 0.05rem;
+  outline: none;
+  border-radius: 3px;
+  border: none;
+}
+
+.modal-content {
+  background-color: var(--modal-bg-dark);
+  color: var(--text-light) !important;
+  border-radius: 20px;
+}
+
+footer {
+  position: absolute;
+  bottom: 0;
+  height: 2rem; /* Footer height */
+  text-align: center;
+  width: auto;
+}
+.copyright {
+  font-size: 0.5em;
+  color: var(--muted-dark);
+  /* margin-top: 0.3em; */
+}
+
+.modal-content .btn {
+  border-radius: 20px;
+  background-color: var(--accent);
+}
+
+.playlist-part.current-title,
+.playlist-part.historic-title {
+  border-top: 1px solid var(--text-light);
+  border-bottom: 1px solid var(--text-light);
+}
+.playlist-part.toplay-title {
+  border-bottom: 1px solid var(--text-light);
+}
+
+.historic,
+.toplay {
+  color: var(--muted-foreground-light);
+  font-size: 0.75em;
   font-weight: 200;
-  font-style: normal;
-  font-variation-settings: "wdth" 100, "YTLC" 500;
+  margin: 0.1em 0;
+  /* text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5); */
 }
 
-.nunito-sans-bold {
-  font-family: "Nunito Sans", sans-serif;
-  font-optical-sizing: auto;
-  font-weight: 700;
-  font-style: normal;
-  font-variation-settings: "wdth" 100, "YTLC" 500;
-}
-
-html,
-body {
-  height: 100%;
-  font-family: "Nunito Sans", sans-serif;
-  font-optical-sizing: auto;
+.historic .music-info,
+.toplay .music-info {
+  color: var(--text-light);
   font-weight: 200;
-  font-style: normal;
-  margin: 0;
-  line-height: inherit;
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
-  box-sizing: border-box;
+  /* text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5); */
 }
 
-body {
-  display: flex;
-  flex-flow: row;
-  justify-content: center;
-  overflow-x: hidden;
-  background-color: rgb(3, 21, 33);
-}
-/* When the body has .lightmode apply the light theme */
-body.lightmode {
-  background-color: rgb(244, 250, 255);
-}
-/* Smooth color/background transitions when switching modes */
-body,
-.web-player,
-#bgCover,
-.bg-mask {
-  transition: background-color 0.25s ease, color 0.25s ease, filter 0.25s ease;
-}
-#page-container {
-  position: relative;
-  min-height: 100vh;
-}
-
-.vertical-center {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-}
-
-#player {
-  padding-bottom: 2.5rem; /* Footer height */
-}
-.cover-site {
-  min-width: 100%;
-  min-height: 100%;
-  position: fixed;
-}
-
-#bgCover {
-  height: 100%;
+.historic .music-info .song,
+.toplay .music-info .song {
+  margin-bottom: 0.2rem;
+  text-align: center;
   width: 100%;
-  position: absolute;
-  background-image: url("../img/cover.png");
-  background-color: #031521;
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-  background-attachment: fixed;
-  transition: all 0.5s linear;
-  /* transform: scale(2.2); */
-
-  z-index: 1;
-}
-body.lightmode #bgCover {
-  background-color: rgb(255, 255, 255) !important;
+  font-weight: 200;
+  color: var(--text-light);
+  /* text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5); */
 }
 
-.bg-mask {
-  min-width: 100%;
-  min-height: 100%;
-  position: absolute;
-  background-color: rgba(0, 0, 0, 0.8);
-  z-index: 2;
-}
-body.lightmode .bg-mask {
-  background-color: rgba(0, 0, 0, 0.4);
+body.lightmode .historic,
+body.lightmode .toplay {
+  color: var(--muted-light) !important;
 }
 
-.web-player {
-  height: 100%;
-  color: #fff;
-  padding: 5px;
-  position: relative;
-  z-index: 3;
-  margin-top: 25px;
+body.lightmode .historic .music-info,
+body.lightmode .toplay .music-info {
+  color: var(--text-dark) !important;
 }
 
-.web-player {
-  height: 100%;
-  color: #fff;
-  padding: 5px;
-  position: relative;
-  z-index: 3;
-  margin-top: 25px;
+body.lightmode .historic .music-info .song,
+body.lightmode .toplay .music-info .song {
+  color: var(--text-dark);
 }
 
 /* text color for elements when lightmode is active on body */
 body.lightmode .web-player {
-  color: rgb(3, 21, 33);
+  color: var(--text-dark);
 }
 
 #currentCoverArt {
@@ -175,19 +203,19 @@ body.lightmode .web-player {
 
 .play-pause #playerButton {
   font-size: 2.5rem;
-  color: white;
+  color: var(--text-light);
 }
 body.lightmode .play-pause #playerButton {
-  color: rgb(3, 21, 33) !important;
+  color: var(--text-dark) !important;
 }
 .play-pause #timerButton {
   padding-top: 0.1em;
-  color: white;
+  color: var(--text-light);
   line-height: 1;
   cursor: pointer;
 }
 body.lightmode .play-pause #timerButton {
-  color: rgb(3, 21, 33) !;
+  color: var(--text-dark) !;
 }
 .play-pause .timer-display {
   line-height: 1;
@@ -195,16 +223,16 @@ body.lightmode .play-pause #timerButton {
 }
 .play-pause #timerDisplay {
   font-size: 0.8em;
-  color: rgba(255, 255, 255, 0.636);
+  color: var(--muted-dark);
   vertical-align: middle;
 }
 .play-pause #timerDisplay {
   font-size: 0.8em;
-  color: rgba(255, 255, 255, 0.636);
+  color: var(--muted-dark);
   vertical-align: middle;
 }
 body.lightmode .play-pause #timerDisplay {
-  color: rgba(0, 0, 0, 0.636);
+  color: var(--muted-light);
 }
 /* SVG Icon styles replacing FontAwesome */
 .player-icon {
@@ -257,20 +285,20 @@ body.lightmode .timer-icon {
 }
 
 .close {
-  color: white;
+  color: var(--text-light);
 }
 body.lightmode .close {
-  color: rgb(3, 21, 33);
+  color: var(--text-dark);
 }
 .slider {
   -webkit-appearance: none; /* Remove default styling */
-  appearance: none; /* Remove default styling */
+  color: var(--text-light);
   width: 100%; /* Full width */
   height: 3px; /* Height of the track */
-  background: #3b3b3b; /* Track color */
+  color: var(--text-dark);
   border-radius: 5px; /* Rounded corners */
   outline: none; /* Remove outline */
-  opacity: 0.7; /* Transparency */
+  background: var(--track-dark); /* Track color */
   transition: opacity 0.2s; /* Transition effect */
 }
 
@@ -281,33 +309,26 @@ body.lightmode .close {
 /* Slider Thumb */
 .slider::-webkit-slider-thumb {
   -webkit-appearance: none; /* Remove default styling */
-  appearance: none; /* Remove default styling */
+  background: var(--thumb-light); /* Thumb color */
   width: 10px; /* Width of the thumb */
   height: 10px; /* Height of the thumb */
-  background: #ffffff; /* Thumb color */
+  background: var(--thumb-light); /* Thumb color */
   cursor: pointer; /* Pointer cursor on hover */
   border-radius: 50%; /* Round thumb */
 }
+background: var(--thumb-light); /* Thumb color */
+.slider::-moz-range-thumb {
+  width: 10px; /* Width of the thumb */
+  height: 10px; /* Height of the thumb */
+  background: var(--thumb-light); /* Thumb color */
 
-.slider::-moz-range-thumb {
-  width: 10px; /* Width of the thumb */
-  height: 10px; /* Height of the thumb */
-  background: #ffffff; /* Thumb color */
-  cursor: pointer; /* Pointer cursor on hover */
-  border-radius: 50%; /* Round thumb */
-}
-.slider::-moz-range-thumb {
-  width: 10px; /* Width of the thumb */
-  height: 10px; /* Height of the thumb */
-  background: #ffffff; /* Thumb color */
-  cursor: pointer; /* Pointer cursor on hover */
   border-radius: 50%; /* Round thumb */
 }
 body.lightmode .slider::-moz-range-thumb {
-  background: rgb(3, 21, 33); /* Thumb color in light mode */
+  background: var(--thumb-dark); /* Thumb color in light mode */
 }
 .slider::-moz-range-track {
-  background: rgba(107, 107, 107, 0.3);
+  background-color: rgba(107, 107, 107, 0.3);
   accent-color: rgba(0, 0, 0, 0.6);
   height: 0.05rem;
   outline: none;
@@ -316,8 +337,8 @@ body.lightmode .slider::-moz-range-thumb {
 }
 
 .modal-content {
-  background-color: rgba(0, 0, 0, 0.8);
-  color: #fff !important;
+  background-color: var(--modal-bg-dark);
+  color: var(--text-light) !important;
   border-radius: 20px;
 }
 
@@ -330,30 +351,27 @@ footer {
 }
 .copyright {
   font-size: 0.5em;
-  color: #ffffff83;
+  color: var(--muted-dark);
   /* margin-top: 0.3em; */
 }
+
 .modal-content .btn {
   border-radius: 20px;
-  background-color: #00e1e7;
-}
-
-.info-current-song {
-  margin-top: 1em;
+  background-color: var(--accent);
 }
 
 .playlist-part.current-title,
 .playlist-part.historic-title {
-  border-top: 1px solid #fff;
-  border-bottom: 1px solid #fff;
+  border-top: 1px solid var(--text-light);
+  border-bottom: 1px solid var(--text-light);
 }
 .playlist-part.toplay-title {
-  border-bottom: 1px solid #fff;
+  border-bottom: 1px solid var(--text-light);
 }
 
 .historic,
 .toplay {
-  color: #e4e4e4;
+  color: var(--muted-foreground-light);
   font-size: 0.75em;
   font-weight: 200;
   margin: 0.1em 0;
@@ -361,7 +379,7 @@ footer {
 }
 .historic,
 .toplay {
-  color: #e4e4e4;
+  color: var(--muted-foreground-light);
   font-size: 0.75em;
   font-weight: 200;
   margin: 0.1em 0;
@@ -369,7 +387,7 @@ footer {
 }
 body.lightmode .historic,
 body.lightmode .toplay {
-  color: rgba(3, 21, 33, 0.636) !important;
+  color: var(--muted-light) !important;
 }
 .historic {
   opacity: 0.5;
@@ -383,20 +401,20 @@ body.lightmode .toplay {
 
 .historic .music-info,
 .toplay .music-info {
-  color: white;
+  color: var(--text-light);
   font-weight: 200;
   /* text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5); */
 }
 
 .historic .music-info,
 .toplay .music-info {
-  color: white;
+  color: var(--text-light);
   font-weight: 200;
   /* text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5); */
 }
 body.lightmode .historic .music-info,
 body.lightmode .toplay .music-info {
-  color: rgb(3, 21, 33) !important;
+  color: var(--text-dark) !important;
 }
 
 .historic .music-info .song,
@@ -406,7 +424,7 @@ body.lightmode .toplay .music-info {
   width: 100%;
   font-weight: 200;
   /* font-size: 0.8em; */
-  color: white;
+  color: var(--text-light);
   /* text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5); */
 }
 
@@ -417,12 +435,12 @@ body.lightmode .toplay .music-info {
   width: 100%;
   font-weight: 200;
   /* font-size: 0.8em; */
-  color: white;
+  color: var(--text-light);
   /* text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5); */
 }
 body.lightmode .historic .music-info .song,
 body.lightmode .toplay .music-info .song {
-  color: rgb(3, 21, 33);
+  color: var(--text-dark);
 }
 
 #toplaySong .text-size-0 {
@@ -472,10 +490,10 @@ body.lightmode .toplay .music-info .song {
   }
   .play-pause #playerButton {
     font-size: 4em;
-    color: white;
+    color: var(--text-light);
   }
   body.lightmode .play-pause #playerButton {
-    color: rgb(3, 21, 33);
+    color: var(--text-dark);
   }
 }
 
@@ -520,10 +538,10 @@ body.lightmode .toplay .music-info .song {
 
   .play-pause #playerButton {
     font-size: 3em;
-    color: white;
+    color: var(--text-light);
   }
   body.lightmode .play-pause #playerButton {
-    color: rgb(3, 21, 33);
+    color: var(--text-dark);
   }
 }
 
