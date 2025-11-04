@@ -47,6 +47,13 @@ body {
 body.lightmode {
   background-color: rgb(244, 250, 255);
 }
+/* Smooth color/background transitions when switching modes */
+body,
+.web-player,
+#bgCover,
+.bg-mask {
+  transition: background-color 0.25s ease, color 0.25s ease, filter 0.25s ease;
+}
 #page-container {
   position: relative;
   min-height: 100vh;

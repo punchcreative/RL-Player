@@ -2146,6 +2146,9 @@ function mute() {
       const pref = localStorage.getItem("rl_lightmode");
       if (pref === "1") {
         document.body.classList.add("lightmode");
+        // set dark bulb icon because lightmode is active
+        night.src = "assets/icons/lightbulb-dark.svg";
+        night.alt = "Light mode on";
       }
     } catch (e) {
       // ignore storage errors
@@ -2156,8 +2159,13 @@ function mute() {
       try {
         if (isOn) {
           localStorage.setItem("rl_lightmode", "1");
+          // swap icon to dark bulb when light mode is on
+          night.src = "assets/icons/lightbulb-dark.svg";
+          night.alt = "Light mode on";
         } else {
           localStorage.removeItem("rl_lightmode");
+          night.src = "assets/icons/lightbulb-light.svg";
+          night.alt = "Light mode off";
         }
       } catch (e) {
         // ignore storage errors
