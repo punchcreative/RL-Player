@@ -1694,29 +1694,52 @@ function setupAudioEventListeners() {
   });
 
   // Monitor for unexpected pauses that might indicate buffering issues
-  audio.addEventListener("pause", () => {
-    stopHealthCheck(); // Stop health checking when paused
+  // audio.addEventListener("pause", () => {
+  //   stopHealthCheck(); // Stop health checking when paused
 
-    // Only handle unexpected pauses (not user-initiated)
-    if (!userInitiatedPause) {
-      setTimeout(() => {
-        const playerButton = document.getElementById("playerButton");
-        if (playerButton && isPlayerIconPaused() && audio.paused) {
-          debugLog.warn("Unexpected pause detected - stream may have stopped");
-          resetButtonState();
-        }
-      }, 100);
-    } else {
-      debugLog.log("User-initiated pause detected - not treating as error");
-      userInitiatedPause = false; // Reset the flag
+  //   // Only handle unexpected pauses (not user-initiated)
+  //   if (!userInitiatedPause) {
+  //     setTimeout(() => {
+  //       const playerButton = document.getElementById("playerButton");
+  //       if (playerButton && isPlayerIconPaused() && audio.paused) {
+  //         debugLog.warn("Unexpected pause detected - stream may have stopped");
+  //         resetButtonState();
+  //       }
+  //     }, 100);
+  //   } else {
+  //     debugLog.log("User-initiated pause detected - not treating as error");
+  //     userInitiatedPause = false; // Reset the flag
+  //   }
+  // });
+
+  // NEW 250912: Add a listener for the 'pause' event
+  audio.addEventListener("pause", () => {
+    debugLog.log("Audio 'pause' event triggered. Setting button to play icon.");
+    // This will set the button to the play icon when the audio pauses,
+    // whether by a user click or by the browser/OS.
+    setPlayerIcon(false);
+    // add the text shadow back here
+    const playerButton = document.getElementById("playerButton");
+    if (playerButton) {
+      playerButton.style.textShadow = "0 0 5px black";
     }
+    stopHealthCheck();
+    // Do not reset the userInitiatedPause flag here.
+    // The `togglePlay` function already handles that.
   });
 
-  // Detect when stream actually starts playing successfully
-  audio.addEventListener("playing", () => {
-    debugLog.log("Stream playing successfully");
+  audio.addEventListener("play", () => {
+    debugLog.log("Audio 'play' event triggered. Setting button to pause icon.");
+    // This will set the button to the pause icon when the audio starts playing,
+    // whether by a user click or by the browser automatically resuming it.
+    setPlayerIcon(true);
+    // You might also want to remove the text shadow here
+    const playerButton = document.getElementById("playerButton");
+    if (playerButton) {
+      playerButton.style.textShadow = "none";
+    }
     retryCount = 0;
-    suspendCount = 0; // Reset suspend counter when playing successfully
+    suspendCount = 0;
     if (retryTimer) {
       clearTimeout(retryTimer);
       retryTimer = null;
@@ -1758,6 +1781,22 @@ function setupAudioEventListeners() {
       audio.muted = false;
     }
   };
+
+  // The 'playing' event is triggered when playback has begun, while 'play' is triggered when the request to play is initiated. 'play' is a more reliable event to use for updating the button state.
+  audio.addEventListener("playing", () => {
+    debugLog.log("Stream playing successfully");
+    retryCount = 0;
+    suspendCount = 0; // Reset suspend counter when playing successfully
+    if (retryTimer) {
+      clearTimeout(retryTimer);
+      retryTimer = null;
+    }
+    if (bufferingTimeout) {
+      clearTimeout(bufferingTimeout);
+      bufferingTimeout = null;
+    }
+    startHealthCheck(); // Start monitoring stream health
+  });
 }
 
 function togglePlay() {
@@ -2093,3 +2132,50 @@ function mute() {
     audio.muted = false;
   }
 }
+
+// Nightshift / lightmode toggle
+// Clicking the #nightshift image will toggle the class 'lightmode' on the <body>
+// The choice is persisted in localStorage under key 'rl_lightmode'
+(function () {
+  function initNightshift() {
+    const night = document.getElementById("nightshift");
+    if (!night) return;
+
+    // Initialize from localStorage
+    try {
+      const pref = localStorage.getItem("rl_lightmode");
+      if (pref === "1") {
+        document.body.classList.add("lightmode");
+        // set dark bulb icon because lightmode is active
+        night.src = "assets/icons/lightbulb-dark.svg";
+        night.alt = "Light mode on";
+      }
+    } catch (e) {
+      // ignore storage errors
+    }
+
+    night.addEventListener("click", function () {
+      const isOn = document.body.classList.toggle("lightmode");
+      try {
+        if (isOn) {
+          localStorage.setItem("rl_lightmode", "1");
+          // swap icon to dark bulb when light mode is on
+          night.src = "assets/icons/lightbulb-dark.svg";
+          night.alt = "Light mode on";
+        } else {
+          localStorage.removeItem("rl_lightmode");
+          night.src = "assets/icons/lightbulb-light.svg";
+          night.alt = "Light mode off";
+        }
+      } catch (e) {
+        // ignore storage errors
+      }
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initNightshift);
+  } else {
+    initNightshift();
+  }
+})();
