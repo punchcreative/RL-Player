@@ -9,6 +9,12 @@
   --track-light: rgba(107, 107, 107, 0.3);
   --thumb-light: #ffffff;
   --thumb-dark: rgb(3, 21, 33);
+  /* Modal and mask tokens */
+  --modal-bg: rgba(0, 0, 0, 0.8);
+  --modal-text: #ffffff;
+  --bg-mask-dark: rgba(0, 0, 0, 0.8);
+  --bg-mask-light: rgba(0, 0, 0, 0.4);
+  --text-dark: rgb(3, 21, 33);
 }
 
 .nunito-sans-light {
@@ -107,16 +113,16 @@ body.lightmode #bgCover {
   min-width: 100%;
   min-height: 100%;
   position: absolute;
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: var(--bg-mask-dark);
   z-index: 2;
 }
 body.lightmode .bg-mask {
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: var(--bg-mask-light);
 }
 
 .web-player {
   height: 100%;
-  color: #fff;
+  color: var(--modal-text);
   padding: 5px;
   position: relative;
   z-index: 3;
@@ -182,14 +188,14 @@ body.lightmode .web-player {
 
 .play-pause #playerButton {
   font-size: 2.5rem;
-  color: white;
+  color: var(--modal-text);
 }
 body.lightmode .play-pause #playerButton {
-  color: rgb(3, 21, 33) !important;
+  color: var(--text-dark) !important;
 }
 .play-pause #timerButton {
   padding-top: 0.1em;
-  color: white;
+  color: var(--modal-text);
   line-height: 1;
   cursor: pointer;
 }
@@ -264,10 +270,10 @@ body.lightmode .timer-icon {
 }
 
 .close {
-  color: white;
+  color: var(--modal-text);
 }
 body.lightmode .close {
-  color: rgb(3, 21, 33);
+  color: var(--text-dark);
 }
 .slider {
   -webkit-appearance: none; /* Remove default styling */
@@ -323,8 +329,8 @@ body.lightmode .slider::-moz-range-thumb {
 }
 
 .modal-content {
-  background-color: rgba(0, 0, 0, 0.8);
-  color: #fff !important;
+  background-color: var(--modal-bg);
+  color: var(--modal-text) !important;
   border-radius: 20px;
 }
 
@@ -390,20 +396,20 @@ body.lightmode .toplay {
 
 .historic .music-info,
 .toplay .music-info {
-  color: white;
+  color: var(--modal-text);
   font-weight: 200;
   /* text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5); */
 }
 
 .historic .music-info,
 .toplay .music-info {
-  color: white;
+  color: var(--modal-text);
   font-weight: 200;
   /* text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5); */
 }
 body.lightmode .historic .music-info,
 body.lightmode .toplay .music-info {
-  color: rgb(3, 21, 33) !important;
+  color: var(--text-dark) !important;
 }
 
 .historic .music-info .song,
@@ -413,7 +419,7 @@ body.lightmode .toplay .music-info {
   width: 100%;
   font-weight: 200;
   /* font-size: 0.8em; */
-  color: white;
+  color: var(--modal-text);
   /* text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5); */
 }
 
@@ -429,7 +435,7 @@ body.lightmode .toplay .music-info {
 }
 body.lightmode .historic .music-info .song,
 body.lightmode .toplay .music-info .song {
-  color: rgb(3, 21, 33);
+  color: var(--text-dark);
 }
 
 #toplaySong .text-size-0 {
@@ -479,10 +485,10 @@ body.lightmode .toplay .music-info .song {
   }
   .play-pause #playerButton {
     font-size: 4em;
-    color: white;
+    color: var(--modal-text);
   }
   body.lightmode .play-pause #playerButton {
-    color: rgb(3, 21, 33);
+    color: var(--text-dark);
   }
 }
 
@@ -527,10 +533,10 @@ body.lightmode .toplay .music-info .song {
 
   .play-pause #playerButton {
     font-size: 3em;
-    color: white;
+    color: var(--modal-text);
   }
   body.lightmode .play-pause #playerButton {
-    color: rgb(3, 21, 33);
+    color: var(--text-dark);
   }
 }
 
