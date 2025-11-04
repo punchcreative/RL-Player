@@ -93,7 +93,7 @@ body,
   z-index: 1;
 }
 body.lightmode #bgCover {
-  background-color: rgb(244, 250, 255);
+  background-color: rgb(255, 255, 255) !important;
 }
 
 .bg-mask {
@@ -177,18 +177,8 @@ body.lightmode .web-player {
   font-size: 2.5rem;
   color: white;
 }
-.play-pause #playerButton {
-  font-size: 2.5rem;
-  color: white;
-}
 body.lightmode .play-pause #playerButton {
-  color: rgb(3, 21, 33);
-}
-.play-pause #timerButton {
-  padding-top: 0.1em;
-  color: white;
-  line-height: 1;
-  cursor: pointer;
+  color: rgb(3, 21, 33) !important;
 }
 .play-pause #timerButton {
   padding-top: 0.1em;
@@ -197,7 +187,7 @@ body.lightmode .play-pause #playerButton {
   cursor: pointer;
 }
 body.lightmode .play-pause #timerButton {
-  color: rgb(3, 21, 33);
+  color: rgb(3, 21, 33) !;
 }
 .play-pause .timer-display {
   line-height: 1;
@@ -225,6 +215,11 @@ body.lightmode .play-pause #timerDisplay {
   transition: opacity 0.3s ease;
 }
 
+/* make SVG icons dark when body.lightmode is active */
+body.lightmode .player-icon {
+  filter: brightness(0) invert(0) !important; /* Makes SVG dark */
+}
+
 .nightshift-icon {
   width: 12px;
   filter: brightness(0) invert(1); /* Makes SVG white */
@@ -250,6 +245,10 @@ body.lightmode .nightshift-icon {
   cursor: pointer;
   transition: opacity 0.3s ease;
   vertical-align: middle;
+}
+
+body.lightmode .timer-icon {
+  filter: brightness(1) invert(0) !important; /* Makes SVG dark */
 }
 
 .player-icon:hover,
