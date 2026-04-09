@@ -797,6 +797,13 @@ async function getStreamingData() {
 
     debugLog("Received data:", data);
 
+    // Hide loader on first call, regardless of data availability
+    if (isFirstLoad) {
+      debugLog("First load attempt - hiding loader and starting player");
+      hideLoader();
+      isFirstLoad = false;
+    }
+
     if (data) {
       // Reset JSON error retry counter on successful data fetch
       if (jsonErrorRetryCount > 0) {
@@ -804,13 +811,6 @@ async function getStreamingData() {
           "Playlist fetched successfully - resetting JSON error retry counter"
         );
         jsonErrorRetryCount = 0;
-      }
-
-      // Hide loader on first successful data fetch
-      if (isFirstLoad) {
-        debugLog("First playlist data loaded successfully - hiding loader");
-        hideLoader();
-        isFirstLoad = false;
       }
       var currentSong = data.Current.Title;
       var charsToplayTitle = 25;
@@ -1352,15 +1352,6 @@ async function fetchStreamingData(apiUrl) {
             debugLog("CORS proxy response length:", text.length);
             debugLog("Raw response (first 100 chars):", text.substring(0, 100));
 
-            // Check if the JSON appears to be truncated
-            const trimmedText = text.trim();
-            if (!trimmedText.endsWith("}") && !trimmedText.endsWith("]")) {
-              debugLog.warn(
-                "JSON appears to be truncated - does not end with } or ]"
-              );
-              throw new Error("JSON file appears to be truncated or corrupted");
-            }
-
             const data = JSON.parse(text);
             debugLog(
               "Successfully fetched and parsed streaming data via CORS proxy"
@@ -1466,14 +1457,6 @@ async function fetchStreamingData(apiUrl) {
       actualText.substring(actualText.length - 100)
     );
 
-    // Check if the JSON appears to be truncated
-    const trimmedText = actualText.trim();
-    if (!trimmedText.endsWith("}") && !trimmedText.endsWith("]")) {
-      debugLog.warn("JSON appears to be truncated - does not end with } or ]");
-      debugLog("Last 50 characters:", actualText.slice(-50));
-      throw new Error("JSON file appears to be truncated or corrupted");
-    }
-
     // Try to parse the JSON
     const data = JSON.parse(actualText);
     debugLog("Successfully fetched and parsed streaming data");
@@ -1482,40 +1465,18 @@ async function fetchStreamingData(apiUrl) {
     console.error("fetchStreamingData error:", error);
     console.error("Failed URL:", actualUrl || apiUrl);
 
-    // If we're on localhost and external fetch failed, try local fallback
-    const isLocalhost =
-      window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1";
-    const isExternalUrl =
-      (actualUrl || apiUrl).startsWith("http://") ||
-      (actualUrl || apiUrl).startsWith("https://");
-
-    if (
-      isLocalhost &&
-      isExternalUrl &&
-      !(actualUrl || apiUrl).includes("localhost")
-    ) {
-      // Show user notification about playlist fetch failure
-      showPlaylistErrorNotification(actualUrl || apiUrl, error);
-      debugLog.warn(
-        "External playlist fetch failed - user has been notified. Not using local fallback to avoid stale data."
-      );
-    } else {
-      // Show notification for production failures too
-      showPlaylistErrorNotification(actualUrl || apiUrl, error);
-    }
+    // Log error but continue polling - playlist data will be fetched when available
+    debugLog.warn(
+      "Playlist fetch failed, will retry on next poll:",
+      error.message
+    );
 
     if (error instanceof SyntaxError) {
       console.error(
         "JSON parsing failed - the playlist.json file appears to be malformed or truncated"
       );
-      console.error(
-        "This could happen if the file is being uploaded while the app is trying to read it"
-      );
-
-      // Show user-friendly notification for JSON format errors
-      showPlaylistFormatErrorNotification(actualUrl || apiUrl, error);
-
+      // Don't show notifications, just log and continue polling
+      debugLog.warn("JSON format error - will continue polling for valid data");
       return null;
     }
 
