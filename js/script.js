@@ -448,7 +448,9 @@ async function loadAppVars() {
         debugLog("✅ Using config.js fallback");
       } catch (error) {
         debugLog.error("❌ Neither .env nor config.js found!");
-        debugLog.error("📋 Please run: ./setup-env.sh or create config.js");
+        debugLog.error(
+          "📋 Please copy .env.example to .env and configure your settings",
+        );
 
         // Create a minimal CONFIG to prevent crashes
         window.CONFIG = {
@@ -891,6 +893,18 @@ async function getStreamingData() {
 
         debugLog("Toplay array:", toplayArray);
 
+        // Hide/show toplay section based on whether there's data
+        const toplaySection = document.querySelector(".toplay");
+        if (toplaySection) {
+          if (toplayArray.length === 0) {
+            toplaySection.style.display = "none";
+            debugLog("Hiding toplay section - no upcoming songs");
+          } else {
+            toplaySection.style.display = "";
+            debugLog("Showing toplay section - upcoming songs available");
+          }
+        }
+
         const maxToplayToDisplay = nrToplay;
         const limitedToplay = toplayArray
           ? toplayArray.slice(
@@ -939,6 +953,18 @@ async function getStreamingData() {
           : [];
 
         debugLog("History array:", historyArray);
+
+        // Hide/show historic section based on whether there's data
+        const historicSection = document.querySelector(".historic");
+        if (historicSection) {
+          if (historyArray.length === 0) {
+            historicSection.style.display = "none";
+            debugLog("Hiding historic section - no past songs");
+          } else {
+            historicSection.style.display = "";
+            debugLog("Showing historic section - past songs available");
+          }
+        }
 
         const maxHistoryToDisplay = nrHistory;
         const limitedHistory = historyArray

@@ -1,4 +1,4 @@
-const activeCacheVersion = 1550;
+const activeCacheVersion = 1600;
 const activeCacheName = `rlplayer-${activeCacheVersion}`;
 
 console.log(`Service Worker: Using cache version ${activeCacheVersion}`);
@@ -8,7 +8,6 @@ const cacheAssets = [
   "",
   "index.html",
   "offline.html",
-  "setup.html",
   "css/style.css",
   "css/bootstrap.min.css",
   "css/fontawesome.min.css",
@@ -38,7 +37,7 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) {
     console.log(
       "Service Worker: Ignoring external request:",
-      event.request.url
+      event.request.url,
     );
     return;
   }
@@ -51,7 +50,7 @@ self.addEventListener("fetch", (event) => {
   ) {
     console.log(
       "Service Worker: Handling album art request with Network-First strategy:",
-      event.request.url
+      event.request.url,
     );
     event.respondWith(
       (async () => {
@@ -66,13 +65,13 @@ self.addEventListener("fetch", (event) => {
         } catch (error) {
           console.error(
             "Service Worker: Failed to fetch album art from network, falling back to cache:",
-            error
+            error,
           );
           // Fall back to the cached version if network fails
           const cachedResponse = await caches.match(event.request);
           return cachedResponse || Response.error();
         }
-      })()
+      })(),
     );
     return;
   }
@@ -85,7 +84,7 @@ self.addEventListener("fetch", (event) => {
   ) {
     console.log(
       "Service Worker: Handling local playlist.json request:",
-      event.request.url
+      event.request.url,
     );
     event.respondWith(
       (async () => {
@@ -98,7 +97,7 @@ self.addEventListener("fetch", (event) => {
           });
           if (!networkResponse.ok) {
             throw new Error(
-              `Network response not ok: ${networkResponse.status}`
+              `Network response not ok: ${networkResponse.status}`,
             );
           }
           console.log("Service Worker: Successfully fetched playlist.json");
@@ -106,11 +105,11 @@ self.addEventListener("fetch", (event) => {
         } catch (error) {
           console.error(
             "Service Worker: Failed to fetch playlist.json from network:",
-            error
+            error,
           );
           return Response.error();
         }
-      })()
+      })(),
     );
     return;
   }
@@ -140,7 +139,7 @@ self.addEventListener("fetch", (event) => {
         } catch {
           return Response.error();
         }
-      })
+      }),
     );
     return;
   }
@@ -168,7 +167,7 @@ self.addEventListener("fetch", (event) => {
             Response.error()
           );
         }
-      })
+      }),
     );
   }
 });
@@ -208,7 +207,7 @@ self.addEventListener("install", (event) => {
         console.warn("Service Worker: Some assets failed to cache:", error);
         // Don't fail installation if some assets can't be cached
       }
-    })
+    }),
   );
 
   // Don't force immediate activation - let it happen naturally
@@ -233,12 +232,12 @@ self.addEventListener("activate", (event) => {
               console.log(`Service Worker: Removing old cache: ${key}`);
               return caches.delete(key);
             }
-          })
+          }),
         );
       })
       .then(() => {
         console.log("Service Worker: Activation complete, taking control");
         return self.clients.claim();
-      })
+      }),
   );
 });

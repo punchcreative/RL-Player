@@ -75,7 +75,7 @@ config.js
 # GitHub Actions (not applicable for Bitbucket repositories)
 .github/
 
-# Setup Scripts (keep essential ones: setup-env.sh, setup.html, test-env.sh)
+# Setup Scripts (keep essential ones: test-env.sh)
 setup-bitbucket-api.sh
 
 # Personal Development Scripts

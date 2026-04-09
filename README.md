@@ -21,82 +21,53 @@ This player includes a ready-to-use template for **Radiologik DJ** users. Radiol
 
 ## Quick Setup
 
-### 1. **RECOMMENDED: Environment Variables (.env) - Secure & Easy**
+### 1. Configure Environment Variables
 
-Environment variables provide the perfect balance of security and simplicity:
-
-```bash
-# Run the environment setup script
-./setup-env.sh
-```
-
-**Benefits:**
-
-- ✅ **Secure**: Passwords stored outside of code
-- ✅ **Git Safe**: .env automatically ignored
-- ✅ **User Friendly**: Simple key=value format
-- ✅ **Industry Standard**: Used by most web applications
-
-### 2. **ALTERNATIVE: Interactive Setup Utility**
-
-For a visual setup experience:
-
-```bash
-# Open setup.html in your browser
-open setup.html
-```
-
-### 3. **Configuration Guide**
-
-After choosing your setup method:
-
-- ✅ Check configuration status
-- 🔐 Generate secure password hash
-- 📻 Configure your radio station settings
-- 📁 Get your complete config.js file
-- ✅ Test your player
-
-### Alternative: Manual Setup
-
-If you prefer manual configuration:
-
-1. **Copy the config template:**
+1. **Copy the environment template:**
 
    ```bash
-   cp config.example.js config.js
+   cp .env.example .env
    ```
 
-2. **Generate your password hash:**
+2. **Edit `.env` with your settings:**
+   - Open `.env` in your text editor
+   - Update the values according to your radio station requirements
+   - See the comments in the file for guidance on each setting
 
-   - Open browser Developer Tools (F12) → Console
-   - Run: `await hashString("your-password-here")`
+### 2. Password Protection (Optional)
+
+If you want to password-protect your radio player:
+
+1. **Set password protection to enabled:**
+
+   ```
+   VITE_ENABLE_PASSWORD_PROTECTION=true
+   ```
+
+2. **Generate a password hash:**
+
+   **Option A: Using Node.js (recommended):**
+
+   ```bash
+   node -e "console.log(require('crypto').createHash('sha256').update('your-password-here').digest('hex'))"
+   ```
+
+   **Option B: Using an online tool:**
+   - Search for "SHA-256 hash generator" in your browser
+   - Enter your desired password
    - Copy the resulting hash
 
-3. **Edit config.js with your settings:**
-
-   ```javascript
-   const CONFIG = {
-     PASSWORD_HASH: "your-generated-hash-here",
-
-     APP_CONFIG: {
-       // PWA Settings
-       scope: "/your-app-path/",
-       background_color: "#your-color",
-       theme_color: "#your-color",
-
-       // Radio Station Settings
-       station_name: "Your Radio Name",
-       stream_url: "https://your-stream-url.com",
-       app_url: "https://your-domain.com/app/",
-
-       // Audio Settings
-       default_volume: 100,
-       dim_volume_sleep_timer: 50,
-     },
-   };
+3. **Update your `.env` file:**
+   ```
+   VITE_PASSWORD_HASH=your-generated-hash-here
    ```
 
-4. **Never commit config.js to Git** - it's already in .gitignore for security
+### 3. Upload and Test
+
+1. Upload all files to your web server
+2. Open your app URL in a browser
+3. Test the player functionality
+4. If password protection is enabled, you'll be prompted for the password on first access
 
 ### 2. Legacy Configuration (Optional)
 
@@ -124,7 +95,6 @@ You can customize the visual appearance of your radio player by replacing the de
 #### Required Images:
 
 - **`img/app-icon.png`** - App icon used for:
-
   - PWA home screen icon
   - Browser tab favicon
   - App launcher icon on mobile devices
@@ -176,7 +146,6 @@ You can customize the visual appearance of your radio player by replacing the de
    remove .template from the filename!
 
 3. **Configure Radiologik for web publishing**:
-
    - Open Radiologik DJ
    - Go to **Preferences** → **Web** (or consult Radiologik help documentation)
    - Enable web publishing features
