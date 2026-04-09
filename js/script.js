@@ -137,8 +137,8 @@ function showLoader() {
         i === idx && direction === 1
           ? "1"
           : i === idx && direction === -1
-          ? "0"
-          : span.style.opacity;
+            ? "0"
+            : span.style.opacity;
     });
     if (direction === 1) {
       idx++;
@@ -174,7 +174,7 @@ function hideLoader() {
 function showPlaylistFormatErrorNotification(url, error) {
   // Remove any existing notification
   const existingNotification = document.getElementById(
-    "playlistFormatErrorNotification"
+    "playlistFormatErrorNotification",
   );
   if (existingNotification) {
     existingNotification.remove();
@@ -229,7 +229,7 @@ function showPlaylistFormatErrorNotification(url, error) {
 function showPlaylistErrorNotification(url, error) {
   // Remove any existing notification
   const existingNotification = document.getElementById(
-    "playlistErrorNotification"
+    "playlistErrorNotification",
   );
   if (existingNotification) {
     existingNotification.remove();
@@ -290,9 +290,8 @@ window.addEventListener("DOMContentLoaded", showLoader);
 async function registerServiceWorker() {
   if ("serviceWorker" in navigator) {
     try {
-      const registration = await navigator.serviceWorker.register(
-        "service-worker.js"
-      );
+      const registration =
+        await navigator.serviceWorker.register("service-worker.js");
       debugLog("Service Worker registered successfully:", registration);
     } catch (err) {
       debugLog("Service Worker registration failed:", err);
@@ -306,7 +305,7 @@ let playlistData = "playlist.json"; // Default fallback
 // Only use localStorage volume if not on mobile device
 // Only check for phones (not tablets) using user agent
 const isPhone = /iPhone|Android.*Mobile|Windows Phone|iPod/i.test(
-  navigator.userAgent
+  navigator.userAgent,
 );
 // set the initial volume to start at
 let initialVol = DEFAULT_VOLUME || 100;
@@ -482,7 +481,7 @@ async function loadAppVars() {
     correctPasswordHash === "your-password-hash-here"
   ) {
     debugLog.warn(
-      "⚠️  Using default password hash! Please configure your own password."
+      "⚠️  Using default password hash! Please configure your own password.",
     );
     debugLog.warn('📋 Generate hash with: await hashString("your-password")');
   }
@@ -495,10 +494,10 @@ async function loadAppVars() {
       CONFIG.APP_CONFIG.app_url === "https://your-domain.com/app/"
     ) {
       debugLog.warn(
-        "⚠️  Using default APP_CONFIG values! Please customize your radio settings."
+        "⚠️  Using default APP_CONFIG values! Please customize your radio settings.",
       );
       debugLog.warn(
-        "📋 Edit config.js to set your station name, stream URL, and app URL."
+        "📋 Edit config.js to set your station name, stream URL, and app URL.",
       );
     } else {
       debugLog("✅ Custom APP_CONFIG detected - using personalized settings.");
@@ -513,7 +512,7 @@ async function loadAppVars() {
     .then((response) => {
       if (!response.ok) {
         throw new Error(
-          `Failed to load manifest: ${response.status} ${response.statusText}`
+          `Failed to load manifest: ${response.status} ${response.statusText}`,
         );
       }
       return response.json();
@@ -583,7 +582,7 @@ async function loadAppVars() {
         setStreamingUrl(STREAM_URL);
       } else {
         debugLog.warn(
-          "STREAM_URL is undefined or empty. Skipping setStreamingUrl."
+          "STREAM_URL is undefined or empty. Skipping setStreamingUrl.",
         );
       }
 
@@ -591,7 +590,7 @@ async function loadAppVars() {
       const existingLoader = document.getElementById("radioLoader");
       if (existingLoader) {
         const lettersContainer = existingLoader.querySelector(
-          ".radio-loader-letters"
+          ".radio-loader-letters",
         );
         if (lettersContainer) {
           // Clear existing letters
@@ -621,7 +620,7 @@ async function loadAppVars() {
     .catch((error) => {
       debugLog.error("Error loading manifest:", error);
       alert(
-        "Failed to load application configuration. Please check your network connection and try again."
+        "Failed to load application configuration. Please check your network connection and try again.",
       );
     });
 }
@@ -715,7 +714,7 @@ function refreshCurrentSong(
   artist,
   duration,
   startTime,
-  nextTrackStarttime
+  nextTrackStarttime,
 ) {
   const currentSong = document.getElementById("currentSongDisplay");
   const currentArtist = document.getElementById("currentArtistDisplay");
@@ -808,7 +807,7 @@ async function getStreamingData() {
       // Reset JSON error retry counter on successful data fetch
       if (jsonErrorRetryCount > 0) {
         debugLog(
-          "Playlist fetched successfully - resetting JSON error retry counter"
+          "Playlist fetched successfully - resetting JSON error retry counter",
         );
         jsonErrorRetryCount = 0;
       }
@@ -845,7 +844,7 @@ async function getStreamingData() {
 
           // Reset duration display styling
           const currentDuration = document.getElementById(
-            "currentDurationDisplay"
+            "currentDurationDisplay",
           );
           if (currentDuration) {
             currentDuration.style.opacity = "1";
@@ -858,7 +857,7 @@ async function getStreamingData() {
           clearInterval(fetchIntervalId);
           fetchIntervalId = null;
           debugLog(
-            "Cleared polling interval - new song detected, switching to smart polling"
+            "Cleared polling interval - new song detected, switching to smart polling",
           );
         }
         musicActual = safeCurrentSong;
@@ -872,7 +871,7 @@ async function getStreamingData() {
           safeCurrentArtist,
           currentDurationVal,
           currentStartTime,
-          nextTrackStarttime
+          nextTrackStarttime,
         );
 
         // Display what is coming up next
@@ -895,7 +894,7 @@ async function getStreamingData() {
         const maxToplayToDisplay = nrToplay;
         const limitedToplay = toplayArray
           ? toplayArray.slice(
-              Math.max(0, toplayArray.length - maxToplayToDisplay)
+              Math.max(0, toplayArray.length - maxToplayToDisplay),
             )
           : [];
 
@@ -915,10 +914,10 @@ async function getStreamingData() {
           article.innerHTML = `
             <div class="music-info text-center">
               <p class="song ${textSize}">${
-            songInfo.Artist
-              ? `${songInfo.Artist} - ${songInfo.Title || ""}`
-              : `${songInfo.Title || ""}`
-          }</p>
+                songInfo.Artist
+                  ? `${songInfo.Artist} - ${songInfo.Title || ""}`
+                  : `${songInfo.Title || ""}`
+              }</p>
             </div>
           `;
           toplayContainer.appendChild(article);
@@ -944,7 +943,7 @@ async function getStreamingData() {
         const maxHistoryToDisplay = nrHistory;
         const limitedHistory = historyArray
           ? historyArray.slice(
-              Math.max(0, historyArray.length - maxHistoryToDisplay)
+              Math.max(0, historyArray.length - maxHistoryToDisplay),
             )
           : [];
 
@@ -964,10 +963,10 @@ async function getStreamingData() {
           article.innerHTML = `
                         <div class="music-info text-center">
                           <p class="song ${textSize}">${
-            songInfo.Artist
-              ? `${songInfo.Artist} - ${songInfo.Title || ""}`
-              : `${songInfo.Title || ""}`
-          }</p>
+                            songInfo.Artist
+                              ? `${songInfo.Artist} - ${songInfo.Title || ""}`
+                              : `${songInfo.Title || ""}`
+                          }</p>
                         </div>
                       `;
           historicContainer.appendChild(article);
@@ -989,23 +988,23 @@ async function getStreamingData() {
       if (jsonErrorRetryCount < MAX_JSON_ERROR_RETRIES) {
         jsonErrorRetryCount++;
         debugLog(
-          `JSON format error detected - retry ${jsonErrorRetryCount}/${MAX_JSON_ERROR_RETRIES} in 15 seconds`
+          `JSON format error detected - retry ${jsonErrorRetryCount}/${MAX_JSON_ERROR_RETRIES} in 15 seconds`,
         );
         setTimeout(() => {
           debugLog(
-            `Retrying playlist fetch after JSON format error (attempt ${jsonErrorRetryCount}/${MAX_JSON_ERROR_RETRIES})...`
+            `Retrying playlist fetch after JSON format error (attempt ${jsonErrorRetryCount}/${MAX_JSON_ERROR_RETRIES})...`,
           );
           getStreamingData();
         }, 15000);
       } else {
         debugLog.error(
-          "Maximum JSON error retries reached. Please check the playlist.json format."
+          "Maximum JSON error retries reached. Please check the playlist.json format.",
         );
         // Reset counter for future potential fixes
         setTimeout(() => {
           jsonErrorRetryCount = 0;
           debugLog(
-            "Reset JSON error retry counter - will try again if new errors occur"
+            "Reset JSON error retry counter - will try again if new errors occur",
           );
         }, 300000); // Reset after 5 minutes
       }
@@ -1068,7 +1067,7 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
     // This prevents the countdown from reaching 0:00 too early
     totalSeconds += COUNTDOWN_BUFFER_SECONDS;
     debugLog(
-      `Added ${COUNTDOWN_BUFFER_SECONDS}s buffer to duration. Total: ${totalSeconds}s`
+      `Added ${COUNTDOWN_BUFFER_SECONDS}s buffer to duration. Total: ${totalSeconds}s`,
     );
 
     // Calculate elapsed time based on start time
@@ -1093,16 +1092,16 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
 
         debugLog(`Song started at: ${startTime} (${isoStartTime})`);
         debugLog(
-          `Song has been playing for ${elapsedSeconds} seconds out of ${totalSeconds} total`
+          `Song has been playing for ${elapsedSeconds} seconds out of ${totalSeconds} total`,
         );
       } catch (error) {
         debugLog.warn(
           "Invalid startTime format, using current time as start:",
-          error
+          error,
         );
         debugLog.warn(
           "Expected format: YYYY-MM-DD HH:MM:SS, received:",
-          startTime
+          startTime,
         );
         elapsedSeconds = 0;
       }
@@ -1131,20 +1130,20 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
         if (remainingSeconds > 0 && remainingSeconds < totalSeconds + 30) {
           useNextTrackTiming = true;
           debugLog(
-            `Using next track start time: ${nextTrackStarttime} (${isoNextStartTime})`
+            `Using next track start time: ${nextTrackStarttime} (${isoNextStartTime})`,
           );
           debugLog(
-            `Accurate remaining time: ${remainingSeconds} seconds until next track`
+            `Accurate remaining time: ${remainingSeconds} seconds until next track`,
           );
         } else {
           debugLog.warn(
-            `Next track timing seems unreasonable: ${remainingSeconds}s, falling back to duration calculation`
+            `Next track timing seems unreasonable: ${remainingSeconds}s, falling back to duration calculation`,
           );
         }
       } catch (error) {
         debugLog.warn(
           "Invalid nextTrackStarttime format, falling back to duration calculation:",
-          error
+          error,
         );
       }
     }
@@ -1153,7 +1152,7 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
     if (!useNextTrackTiming) {
       remainingSeconds = totalSeconds - elapsedSeconds;
       debugLog(
-        `Using duration-based calculation: ${remainingSeconds} seconds remaining`
+        `Using duration-based calculation: ${remainingSeconds} seconds remaining`,
       );
     }
 
@@ -1173,8 +1172,8 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
       pollDelay = Math.max(1000, (remainingSeconds - pollBeforeEnd) * 1000);
       debugLog(
         `Using precise next-track timing: polling in ${Math.floor(
-          pollDelay / 1000
-        )}s`
+          pollDelay / 1000,
+        )}s`,
       );
     } else {
       // Fallback to duration-based logic
@@ -1188,8 +1187,8 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
       pollDelay = Math.max(1000, (remainingSeconds - pollBeforeEnd) * 1000);
       debugLog(
         `Using duration-based timing: polling in ${Math.floor(
-          pollDelay / 1000
-        )}s`
+          pollDelay / 1000,
+        )}s`,
       );
     }
 
@@ -1209,7 +1208,7 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
 
       fetchIntervalId = setInterval(getStreamingData, interval);
       debugLog(
-        "Smart polling: Started interval getStreamingData for next song detection."
+        "Smart polling: Started interval getStreamingData for next song detection.",
       );
     }, pollDelay);
 
@@ -1235,7 +1234,7 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
       // When countdown reaches 0:00, show loading indicator and trigger aggressive polling
       if (remaining === 0 && !awaitingNextSong) {
         debugLog(
-          "Countdown reached 0:00 - triggering immediate playlist refresh"
+          "Countdown reached 0:00 - triggering immediate playlist refresh",
         );
         awaitingNextSong = true;
 
@@ -1312,7 +1311,7 @@ async function fetchStreamingData(apiUrl) {
         CONFIG?.APP_CONFIG?.app_url || "https://eajt.nl/kvpn/";
       actualUrl = new URL(apiUrl, productionBaseUrl).href;
       debugLog(
-        `Localhost detected: Converting relative URL "${apiUrl}" to production URL: ${actualUrl}`
+        `Localhost detected: Converting relative URL "${apiUrl}" to production URL: ${actualUrl}`,
       );
     }
 
@@ -1333,7 +1332,7 @@ async function fetchStreamingData(apiUrl) {
       ) {
         const corsProxyUrl = actualUrl.replace(
           "playlist.json",
-          "cors-playlist.php"
+          "cors-playlist.php",
         );
         debugLog("Trying CORS-enabled playlist proxy:", corsProxyUrl);
 
@@ -1354,19 +1353,19 @@ async function fetchStreamingData(apiUrl) {
 
             const data = JSON.parse(text);
             debugLog(
-              "Successfully fetched and parsed streaming data via CORS proxy"
+              "Successfully fetched and parsed streaming data via CORS proxy",
             );
             return data;
           } else {
             debugLog.warn(
-              "cors-playlist.php failed, falling back to generic CORS proxy"
+              "cors-playlist.php failed, falling back to generic CORS proxy",
             );
             throw new Error(`CORS proxy failed: ${response.status}`);
           }
         } catch (corsError) {
           debugLog.warn(
             "CORS proxy failed, trying generic proxies:",
-            corsError.message
+            corsError.message,
           );
         }
       }
@@ -1404,7 +1403,7 @@ async function fetchStreamingData(apiUrl) {
 
     if (!response.ok) {
       throw new Error(
-        `Error fetching playlist: ${response.status} ${response.statusText}`
+        `Error fetching playlist: ${response.status} ${response.statusText}`,
       );
     }
 
@@ -1454,7 +1453,7 @@ async function fetchStreamingData(apiUrl) {
     debugLog("Raw response (first 100 chars):", actualText.substring(0, 100));
     debugLog(
       "Raw response (last 100 chars):",
-      actualText.substring(actualText.length - 100)
+      actualText.substring(actualText.length - 100),
     );
 
     // Try to parse the JSON
@@ -1468,12 +1467,12 @@ async function fetchStreamingData(apiUrl) {
     // Log error but continue polling - playlist data will be fetched when available
     debugLog.warn(
       "Playlist fetch failed, will retry on next poll:",
-      error.message
+      error.message,
     );
 
     if (error instanceof SyntaxError) {
       console.error(
-        "JSON parsing failed - the playlist.json file appears to be malformed or truncated"
+        "JSON parsing failed - the playlist.json file appears to be malformed or truncated",
       );
       // Don't show notifications, just log and continue polling
       debugLog.warn("JSON format error - will continue polling for valid data");
@@ -1528,7 +1527,7 @@ async function setupAudioPlayer() {
     debugLog("Player button click listener attached");
   } else {
     debugLog.warn(
-      "Player button not found - click functionality will not work"
+      "Player button not found - click functionality will not work",
     );
   }
 }
@@ -1595,7 +1594,7 @@ function setupAudioEventListeners() {
       // Reduced from 6 to 3 retries
       retryCount++;
       debugLog.warn(
-        `Stream error detected. Retrying in 10 seconds... (${retryCount}/3)`
+        `Stream error detected. Retrying in 10 seconds... (${retryCount}/3)`,
       );
 
       // Shorter retry delay and simpler recovery
@@ -1925,7 +1924,7 @@ timerButton.addEventListener("click", function () {
       timerCircleContainer.style.gap = "0.5rem";
       timerCountdownDisplay.parentNode.insertBefore(
         timerCircleContainer,
-        timerCountdownDisplay.nextSibling
+        timerCountdownDisplay.nextSibling,
       );
     }
     // Only add the SVG if not already present
@@ -1970,7 +1969,7 @@ timerButton.addEventListener("click", function () {
     debugLog.log(
       "Sleep timer started, audio started. Volume set to " +
         dimVolumeSleeptimer +
-        "%"
+        "%",
     );
     timerCountdownDisplay.classList.add("ml-2");
     timerCircleContainer.style.display = "flex";
@@ -1986,20 +1985,23 @@ timerButton.addEventListener("click", function () {
     // Set initial offset for selected time
     setInitialCircleOffset(selected);
 
-    sleepTimerId = setTimeout(() => {
-      if (audio && !audio.paused) {
-        togglePlay();
-        setVolume(100);
-        debugLog.log("Sleep timer ended, audio paused. Volume set to 100%");
-      }
-      sleepTimerId = null;
-      timerCircleContainer.style.display = "none";
-      if (sleepTimerCountdownId) {
-        clearInterval(sleepTimerCountdownId);
-        sleepTimerCountdownId = null;
-      }
-      sleepTimerEndTime = null;
-    }, selected * 60 * 1000);
+    sleepTimerId = setTimeout(
+      () => {
+        if (audio && !audio.paused) {
+          togglePlay();
+          setVolume(100);
+          debugLog.log("Sleep timer ended, audio paused. Volume set to 100%");
+        }
+        sleepTimerId = null;
+        timerCircleContainer.style.display = "none";
+        if (sleepTimerCountdownId) {
+          clearInterval(sleepTimerCountdownId);
+          sleepTimerCountdownId = null;
+        }
+        sleepTimerEndTime = null;
+      },
+      selected * 60 * 1000,
+    );
 
     function updateSleepTimerCircle() {
       if (!sleepTimerEndTime) return;
