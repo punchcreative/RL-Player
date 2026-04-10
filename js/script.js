@@ -277,10 +277,10 @@ function showPlaylistErrorNotification(url, error) {
 }
 
 // Call the loadAppVars function when the page loads (first thing to happen)
-window.addEventListener("load", () => {
+window.addEventListener("load", async () => {
   // Register service worker first, then load app vars
   registerServiceWorker();
-  loadAppVars();
+  await loadAppVars();
 });
 
 // Show loader on DOM ready, but it will use RADIO_NAME once loaded
@@ -559,10 +559,26 @@ async function loadAppVars() {
           manifest.custom_radio_config.dim_volume_sleep_timer;
       }
 
-      PLAYLIST = manifest.api_endpoints.playlist;
+      // Ensure APP_URL has a trailing slash for proper URL construction
+      if (APP_URL && !APP_URL.endsWith("/")) {
+        APP_URL = APP_URL + "/";
+        debugLog("Normalized APP_URL to ensure trailing slash:", APP_URL);
+      }
 
-      // Set playlistData after PLAYLIST is loaded from manifest
-      playlistData = PLAYLIST || "playlist.json";
+      // Use .env PLAYLIST_ENDPOINT if configured, otherwise fall back to manifest
+      PLAYLIST =
+        CONFIG?.PLAYLIST_ENDPOINT ||
+        manifest.api_endpoints.playlist ||
+        "playlist.json";
+
+      // Set playlistData after PLAYLIST is loaded
+      playlistData = PLAYLIST;
+      debugLog(
+        "Playlist endpoint source:",
+        CONFIG?.PLAYLIST_ENDPOINT
+          ? ".env (VITE_PLAYLIST_ENDPOINT)"
+          : "manifest.json",
+      );
       debugLog("playlistData set to:", playlistData);
 
       // Log all key variables to console for debugging
@@ -745,6 +761,7 @@ function refreshCurrentSong(
       if ("mediaSession" in navigator) {
         // Create a unique cache-busting string, like a timestamp
         const cacheBuster = Date.now();
+        // APP_URL is guaranteed to have trailing slash, so we don't need to add one
         const artworkUrl = `${APP_URL}albumart/art-00.jpg?cb=${cacheBuster}`;
         navigator.mediaSession.metadata = new MediaMetadata({
           title: song,
@@ -831,13 +848,19 @@ async function getStreamingData() {
 
       const safeCurrentSong = (currentSong || "")
         .replace(/'/g, "'")
-        .replace(/&/g, "&");
+        .replace(/&/g, "&")
+        .trim();
       const safeCurrentArtist = (currentArtistVal || "")
         .replace(/'/g, "'")
-        .replace(/&/g, "&");
+        .replace(/&/g, "&")
+        .trim();
 
-      if (safeCurrentSong !== musicActual) {
-        debugLog("New song detected:", safeCurrentSong);
+      // Clean up placeholder dashes created by template when no data available
+      const cleanArtist = safeCurrentArtist === "-" ? "" : safeCurrentArtist;
+      const cleanSong = safeCurrentSong === "-" ? "" : safeCurrentSong;
+
+      if (cleanSong !== musicActual) {
+        debugLog("New song detected:", cleanSong);
 
         // Reset the awaiting next song flag since we found the new song
         if (awaitingNextSong) {
@@ -862,15 +885,15 @@ async function getStreamingData() {
             "Cleared polling interval - new song detected, switching to smart polling",
           );
         }
-        musicActual = safeCurrentSong;
+        musicActual = cleanSong;
 
         // Get the next track's start time for accurate countdown
         const nextTrackStarttime =
           data.Next && data.Next.length > 0 ? data.Next[0].Starttime : null;
 
         refreshCurrentSong(
-          safeCurrentSong,
-          safeCurrentArtist,
+          cleanSong,
+          cleanArtist,
           currentDurationVal,
           currentStartTime,
           nextTrackStarttime,
@@ -919,19 +942,44 @@ async function getStreamingData() {
           const textSize = "text-size-" + i;
           const article = document.createElement("article");
           article.classList.add("col-12");
-          if (songInfo.Title.length > charsToplayTitle) {
-            var string = songInfo.Title;
-            var length = charsToplayTitle;
-            var trimmedString = string.substring(0, length) + "...";
-            songInfo.Title = trimmedString;
+
+          // Clean up empty or dash-only values
+          const cleanArtist = (songInfo.Artist || "").trim();
+          const cleanTitle = (songInfo.Title || "").trim();
+
+          // Skip if both artist and title are empty or just dashes
+          if (
+            (!cleanArtist || cleanArtist === "-") &&
+            (!cleanTitle || cleanTitle === "-")
+          ) {
+            debugLog("Skipping empty song entry in toplay");
+            continue;
           }
+
+          // Only use title and artist if they're not dashes
+          const validArtist =
+            cleanArtist && cleanArtist !== "-" ? cleanArtist : "";
+          const validTitle = cleanTitle && cleanTitle !== "-" ? cleanTitle : "";
+
+          // Skip if there's no valid content after cleaning
+          if (!validArtist && !validTitle) {
+            debugLog("Skipping song with only dashes in toplay");
+            continue;
+          }
+
+          let displayTitle = validTitle;
+          if (displayTitle.length > charsToplayTitle) {
+            displayTitle = displayTitle.substring(0, charsToplayTitle) + "...";
+          }
+
+          const songDisplay =
+            validArtist && validTitle
+              ? `${validArtist} - ${displayTitle}`
+              : validArtist || displayTitle;
+
           article.innerHTML = `
             <div class="music-info text-center">
-              <p class="song ${textSize}">${
-                songInfo.Artist
-                  ? `${songInfo.Artist} - ${songInfo.Title || ""}`
-                  : `${songInfo.Title || ""}`
-              }</p>
+              <p class="song ${textSize}">${songDisplay}</p>
             </div>
           `;
           toplayContainer.appendChild(article);
@@ -980,25 +1028,50 @@ async function getStreamingData() {
           const textSize = "text-size-" + i;
           const article = document.createElement("article");
           article.classList.add("col-12");
-          if (songInfo.Title.length > charsToplayTitle) {
-            var string = songInfo.Title;
-            var length = charsToplayTitle;
-            var trimmedString = string.substring(0, length) + "...";
-            songInfo.Title = trimmedString;
+
+          // Clean up empty or dash-only values
+          const cleanArtist = (songInfo.Artist || "").trim();
+          const cleanTitle = (songInfo.Title || "").trim();
+
+          // Skip if both artist and title are empty or just dashes
+          if (
+            (!cleanArtist || cleanArtist === "-") &&
+            (!cleanTitle || cleanTitle === "-")
+          ) {
+            debugLog("Skipping empty song entry in history");
+            continue;
           }
+
+          // Only use title and artist if they're not dashes
+          const validArtist =
+            cleanArtist && cleanArtist !== "-" ? cleanArtist : "";
+          const validTitle = cleanTitle && cleanTitle !== "-" ? cleanTitle : "";
+
+          // Skip if there's no valid content after cleaning
+          if (!validArtist && !validTitle) {
+            debugLog("Skipping song with only dashes in history");
+            continue;
+          }
+
+          let displayTitle = validTitle;
+          if (displayTitle.length > charsToplayTitle) {
+            displayTitle = displayTitle.substring(0, charsToplayTitle) + "...";
+          }
+
+          const songDisplay =
+            validArtist && validTitle
+              ? `${validArtist} - ${displayTitle}`
+              : validArtist || displayTitle;
+
           article.innerHTML = `
-                        <div class="music-info text-center">
-                          <p class="song ${textSize}">${
-                            songInfo.Artist
-                              ? `${songInfo.Artist} - ${songInfo.Title || ""}`
-                              : `${songInfo.Title || ""}`
-                          }</p>
-                        </div>
-                      `;
+            <div class="music-info text-center">
+              <p class="song ${textSize}">${songDisplay}</p>
+            </div>
+          `;
           historicContainer.appendChild(article);
         }
 
-        document.title = `${RADIO_NAME} | ${safeCurrentSong} - ${safeCurrentArtist}`;
+        document.title = `${RADIO_NAME} | ${cleanSong}${cleanArtist ? " - " + cleanArtist : ""}`;
       }
     }
   } catch (error) {
@@ -1320,6 +1393,7 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
 }
 
 async function fetchStreamingData(apiUrl) {
+  let actualUrl = apiUrl; // Declare outside try block to avoid reference errors
   try {
     debugLog("Attempting to fetch from URL:", apiUrl);
 
@@ -1328,13 +1402,23 @@ async function fetchStreamingData(apiUrl) {
       window.location.hostname === "localhost" ||
       window.location.hostname === "127.0.0.1";
 
-    let actualUrl = apiUrl;
-
     // If we're on localhost and have a relative URL, convert to production URL
     if (isLocalhost && !apiUrl.startsWith("http")) {
-      // Convert relative URL to production URL for CORS proxy
-      const productionBaseUrl =
-        CONFIG?.APP_CONFIG?.app_url || "https://eajt.nl/kvpn/";
+      // Check if app_url is configured
+      const productionBaseUrl = CONFIG?.APP_CONFIG?.app_url;
+
+      if (
+        !productionBaseUrl ||
+        productionBaseUrl === "https://your-domain.com/app/"
+      ) {
+        debugLog.error("❌ VITE_APP_URL is not configured in .env file");
+        showPlaylistErrorNotification(
+          "Configuration Error",
+          "VITE_APP_URL is not configured. Please set it in your .env file.",
+        );
+        throw new Error("Missing VITE_APP_URL configuration");
+      }
+
       actualUrl = new URL(apiUrl, productionBaseUrl).href;
       debugLog(
         `Localhost detected: Converting relative URL "${apiUrl}" to production URL: ${actualUrl}`,

@@ -69,9 +69,41 @@ If you want to password-protect your radio player:
 3. Test the player functionality
 4. If password protection is enabled, you'll be prompted for the password on first access
 
-### 2. Legacy Configuration (Optional)
+### 3. Playlist Configuration
 
-If you don't use the CONFIG.APP_CONFIG, the player will fall back to `manifest.json` values:
+The player can load playlist data in two ways:
+
+**Option A: Via `.env` file (Recommended)**
+
+Add to your `.env`:
+
+```
+VITE_PLAYLIST_ENDPOINT=https://your-domain.com/playlist.json
+```
+
+Or if the playlist is at the app root:
+
+```
+VITE_PLAYLIST_ENDPOINT=playlist.json
+```
+
+**Option B: Legacy Configuration via `manifest.json`**
+
+If not configured in `.env`, the player will use the endpoint from `manifest.json`:
+
+Edit `manifest.json` and update:
+
+```json
+"api_endpoints": {
+  "playlist": "https://your-domain.com/playlist.json"
+}
+```
+
+The `.env` method is recommended as it doesn't require editing `manifest.json` and follows environment best practices.
+
+### 4. Legacy Fallback (Optional)
+
+If neither `.env` nor `manifest.json` contain playlist configuration, the player will fall back to `manifest.json` values:
 
 - `"custom_radio_config"`: Radio station settings
 - `"background_color"`: PWA background color
