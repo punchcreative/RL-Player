@@ -397,6 +397,17 @@ async function waitForServiceWorkerThenStart() {
   // Start fetching streaming data
   debugLog("Starting to fetch streaming data with playlistData:", playlistData);
 
+  // Set a timeout to hide loader after 10 seconds even if no data is received
+  setTimeout(() => {
+    if (isFirstLoad) {
+      debugLog(
+        "Loader timeout reached - hiding loader to show player interface",
+      );
+      hideLoader();
+      isFirstLoad = false;
+    }
+  }, 10000);
+
   // Use longer interval for localhost to be gentle on CORS proxies
   const isLocalhost =
     window.location.hostname === "localhost" ||
@@ -508,25 +519,36 @@ async function loadAppVars() {
     debugLog("ℹ️  No APP_CONFIG found - using manifest.json defaults.");
   }
 
-  // Now load manifest for app metadata
-  debugLog("📄 Loading manifest.json...");
-  fetch("manifest.json")
-    .then((response) => {
+  // Load app.json for version info and manifest.json for radio config
+  debugLog("📄 Loading app.json and manifest.json...");
+
+  Promise.all([
+    fetch("app.json").then((response) => {
+      if (!response.ok) {
+        throw new Error(
+          `Failed to load app.json: ${response.status} ${response.statusText}`,
+        );
+      }
+      return response.json();
+    }),
+    fetch("manifest.json").then((response) => {
       if (!response.ok) {
         throw new Error(
           `Failed to load manifest: ${response.status} ${response.statusText}`,
         );
       }
       return response.json();
-    })
-    .then((manifest) => {
+    }),
+  ])
+    .then(([appConfig, manifest]) => {
+      debugLog("App config loaded successfully:", appConfig);
       debugLog("Manifest loaded successfully:", manifest);
 
-      // Assign manifest values to global variables
-      APP_VERSION = manifest.version;
-      APP_NAME = manifest.name;
-      APP_DESCRIPTION = manifest.description;
-      APP_AUTHOR = manifest.author;
+      // Assign app.json values to global variables (version info)
+      APP_VERSION = appConfig.version;
+      APP_NAME = appConfig.name;
+      APP_DESCRIPTION = appConfig.description;
+      APP_AUTHOR = appConfig.author;
 
       // Override with CONFIG values if available, otherwise use manifest defaults
       if (CONFIG?.APP_CONFIG) {
@@ -636,7 +658,7 @@ async function loadAppVars() {
       }
     })
     .catch((error) => {
-      debugLog.error("Error loading manifest:", error);
+      debugLog.error("Error loading app.json or manifest:", error);
       alert(
         "Failed to load application configuration. Please check your network connection and try again.",
       );
@@ -815,14 +837,14 @@ async function getStreamingData() {
 
     debugLog("Received data:", data);
 
-    // Hide loader on first call, regardless of data availability
-    if (isFirstLoad) {
-      debugLog("First load attempt - hiding loader and starting player");
-      hideLoader();
-      isFirstLoad = false;
-    }
-
     if (data) {
+      // Hide loader on first successful data fetch
+      if (isFirstLoad) {
+        debugLog("First successful load - hiding loader and starting player");
+        hideLoader();
+        isFirstLoad = false;
+      }
+
       // Reset JSON error retry counter on successful data fetch
       if (jsonErrorRetryCount > 0) {
         debugLog(
