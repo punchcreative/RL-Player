@@ -293,10 +293,75 @@ async function registerServiceWorker() {
       const registration =
         await navigator.serviceWorker.register("service-worker.js");
       debugLog("Service Worker registered successfully:", registration);
+
+      // Check for updates every time the app loads
+      registration.addEventListener("updatefound", () => {
+        const newWorker = registration.installing;
+        debugLog("Service Worker update found");
+
+        newWorker.addEventListener("statechange", () => {
+          if (
+            newWorker.state === "installed" &&
+            navigator.serviceWorker.controller
+          ) {
+            debugLog("New service worker available, showing update prompt");
+            // Show update notification to user
+            showUpdateNotification();
+          }
+        });
+      });
+
+      // Check for updates periodically (once a week when app is visible)
+      setInterval(
+        () => {
+          if (document.visibilityState === "visible") {
+            registration.update();
+          }
+        },
+        7 * 24 * 60 * 60 * 1000,
+      );
     } catch (err) {
       debugLog("Service Worker registration failed:", err);
     }
   }
+}
+
+// Function to manually check for service worker updates
+function checkForUpdates() {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistration().then((registration) => {
+      if (registration) {
+        registration.update().then(() => {
+          debugLog("Service worker update check completed");
+        });
+      }
+    });
+  }
+}
+
+// Add to global scope for debugging
+window.checkForUpdates = checkForUpdates;
+
+// Function to show update notification
+function showUpdateNotification() {
+  const updateDiv = document.createElement("div");
+  updateDiv.id = "update-notification";
+  updateDiv.innerHTML = `
+    <div style="position: fixed; top: 10px; right: 10px; background: #031521; color: white; padding: 10px; border-radius: 5px; z-index: 10000; box-shadow: 0 2px 10px rgba(0,0,0,0.5);">
+      <p style="margin: 0 0 10px 0;">App update available!</p>
+      <button id="update-btn" style="background: #007bff; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Update Now</button>
+      <button id="dismiss-btn" style="background: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-left: 5px;">Later</button>
+    </div>
+  `;
+  document.body.appendChild(updateDiv);
+
+  document.getElementById("update-btn").addEventListener("click", () => {
+    window.location.reload();
+  });
+
+  document.getElementById("dismiss-btn").addEventListener("click", () => {
+    updateDiv.remove();
+  });
 }
 
 // playlistData data json url will be set after manifest loads
