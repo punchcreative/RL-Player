@@ -54,6 +54,12 @@ debugLog.info = (...args) => {
   }
 };
 
+function isPlaceholderValue(value) {
+  if (value === null || value === undefined) return true;
+  const trimmed = value.toString().trim();
+  return trimmed === "" || trimmed === "-" || trimmed.startsWith("<rl-");
+}
+
 // SVG Icon helper functions
 function setPlayerIcon(isPlaying) {
   const playerButton = document.getElementById("playerButton");
@@ -942,19 +948,122 @@ async function getStreamingData() {
         .replace(/&/g, "&")
         .trim();
 
-      // Clean up placeholder dashes created by template when no data available
-      const cleanArtist = safeCurrentArtist === "-" ? "" : safeCurrentArtist;
-      const cleanSong = safeCurrentSong === "-" ? "" : safeCurrentSong;
+      // Clean up placeholder dashes and template values created by template when no data available
+      const cleanArtist = isPlaceholderValue(safeCurrentArtist)
+        ? ""
+        : safeCurrentArtist;
+      const cleanSong = isPlaceholderValue(safeCurrentSong)
+        ? ""
+        : safeCurrentSong;
+
+      if (isPlaceholderValue(currentDurationVal)) {
+        currentDurationVal = null;
+      }
+      if (isPlaceholderValue(currentStartTime)) {
+        currentStartTime = null;
+      }
+
+      const toplayArray = data.Next
+        ? data.Next.map((item) => ({
+            Title: (item.Title || "").trim(),
+            Artist: (item.Artist || "").trim(),
+          }))
+        : [];
+
+      const historyArray = data.Last
+        ? data.Last.map((item) => ({
+            Title: (item.Title || "").trim(),
+            Artist: (item.Artist || "").trim(),
+          }))
+        : [];
+
+      const validToplay = toplayArray.filter(
+        (item) =>
+          !isPlaceholderValue(item.Title) || !isPlaceholderValue(item.Artist),
+      );
+      const validHistory = historyArray.filter(
+        (item) =>
+          !isPlaceholderValue(item.Title) || !isPlaceholderValue(item.Artist),
+      );
+
+      function renderTrackList(
+        containerId,
+        sectionSelector,
+        list,
+        sectionName,
+      ) {
+        const container = document.getElementById(containerId);
+        if (!container) {
+          debugLog.error(`${containerId} element not found in DOM`);
+          return;
+        }
+        container.innerHTML = "";
+
+        const section = document.querySelector(sectionSelector);
+        if (section) {
+          if (list.length === 0) {
+            section.style.display = "none";
+            debugLog(`Hiding ${sectionName} section - no valid songs`);
+          } else {
+            section.style.display = "";
+            debugLog(`Showing ${sectionName} section - songs available`);
+          }
+        }
+
+        const maxItems = sectionName === "toplay" ? nrToplay : nrHistory;
+        const limited = list.slice(Math.max(0, list.length - maxItems));
+
+        debugLog(`Limited ${sectionName}:`, limited);
+
+        limited.forEach((songInfo, index) => {
+          const textSize = `text-size-${index}`;
+          const article = document.createElement("article");
+          article.classList.add("col-12");
+
+          const validArtist = !isPlaceholderValue(songInfo.Artist)
+            ? songInfo.Artist
+            : "";
+          const validTitle = !isPlaceholderValue(songInfo.Title)
+            ? songInfo.Title
+            : "";
+
+          if (!validArtist && !validTitle) {
+            debugLog(`Skipping invalid entry in ${sectionName}`);
+            return;
+          }
+
+          let displayTitle = validTitle;
+          if (displayTitle.length > charsToplayTitle) {
+            displayTitle = displayTitle.substring(0, charsToplayTitle) + "...";
+          }
+
+          const songDisplay =
+            validArtist && validTitle
+              ? `${validArtist} - ${displayTitle}`
+              : validArtist || displayTitle;
+
+          article.innerHTML = `
+            <div class="music-info text-center">
+              <p class="song ${textSize}">${songDisplay}</p>
+            </div>
+          `;
+          container.appendChild(article);
+        });
+      }
+
+      let nextTrackStarttime =
+        data.Next && data.Next.length > 0 ? data.Next[0].Starttime : null;
+      if (isPlaceholderValue(nextTrackStarttime)) {
+        nextTrackStarttime = null;
+      }
 
       if (cleanSong !== musicActual) {
         debugLog("New song detected:", cleanSong);
 
-        // Reset the awaiting next song flag since we found the new song
         if (awaitingNextSong) {
           debugLog("New song detected - clearing awaiting next song state");
           awaitingNextSong = false;
 
-          // Reset duration display styling
           const currentDuration = document.getElementById(
             "currentDurationDisplay",
           );
@@ -964,7 +1073,6 @@ async function getStreamingData() {
           }
         }
 
-        // Clear any existing polling interval when a new song is detected (including first song)
         if (fetchIntervalId) {
           clearInterval(fetchIntervalId);
           fetchIntervalId = null;
@@ -972,11 +1080,8 @@ async function getStreamingData() {
             "Cleared polling interval - new song detected, switching to smart polling",
           );
         }
-        musicActual = cleanSong;
 
-        // Get the next track's start time for accurate countdown
-        const nextTrackStarttime =
-          data.Next && data.Next.length > 0 ? data.Next[0].Starttime : null;
+        musicActual = cleanSong;
 
         refreshCurrentSong(
           cleanSong,
@@ -986,180 +1091,13 @@ async function getStreamingData() {
           nextTrackStarttime,
         );
 
-        // Display what is coming up next
-        const toplayContainer = document.getElementById("toplaySong");
-        if (!toplayContainer) {
-          debugLog.error("toplaySong element not found in DOM");
-          return;
-        }
-        toplayContainer.innerHTML = "";
-
-        const toplayArray = data.Next
-          ? data.Next.map((item) => ({
-              Title: item.Title,
-              Artist: item.Artist,
-            }))
-          : [];
-
-        debugLog("Toplay array:", toplayArray);
-
-        // Hide/show toplay section based on whether there's data
-        const toplaySection = document.querySelector(".toplay");
-        if (toplaySection) {
-          if (toplayArray.length === 0) {
-            toplaySection.style.display = "none";
-            debugLog("Hiding toplay section - no upcoming songs");
-          } else {
-            toplaySection.style.display = "";
-            debugLog("Showing toplay section - upcoming songs available");
-          }
-        }
-
-        const maxToplayToDisplay = nrToplay;
-        const limitedToplay = toplayArray
-          ? toplayArray.slice(
-              Math.max(0, toplayArray.length - maxToplayToDisplay),
-            )
-          : [];
-
-        debugLog("Limited toplay:", limitedToplay);
-
-        for (let i = 0; i < limitedToplay.length; i++) {
-          const songInfo = limitedToplay[i];
-          const textSize = "text-size-" + i;
-          const article = document.createElement("article");
-          article.classList.add("col-12");
-
-          // Clean up empty or dash-only values
-          const cleanArtist = (songInfo.Artist || "").trim();
-          const cleanTitle = (songInfo.Title || "").trim();
-
-          // Skip if both artist and title are empty or just dashes
-          if (
-            (!cleanArtist || cleanArtist === "-") &&
-            (!cleanTitle || cleanTitle === "-")
-          ) {
-            debugLog("Skipping empty song entry in toplay");
-            continue;
-          }
-
-          // Only use title and artist if they're not dashes
-          const validArtist =
-            cleanArtist && cleanArtist !== "-" ? cleanArtist : "";
-          const validTitle = cleanTitle && cleanTitle !== "-" ? cleanTitle : "";
-
-          // Skip if there's no valid content after cleaning
-          if (!validArtist && !validTitle) {
-            debugLog("Skipping song with only dashes in toplay");
-            continue;
-          }
-
-          let displayTitle = validTitle;
-          if (displayTitle.length > charsToplayTitle) {
-            displayTitle = displayTitle.substring(0, charsToplayTitle) + "...";
-          }
-
-          const songDisplay =
-            validArtist && validTitle
-              ? `${validArtist} - ${displayTitle}`
-              : validArtist || displayTitle;
-
-          article.innerHTML = `
-            <div class="music-info text-center">
-              <p class="song ${textSize}">${songDisplay}</p>
-            </div>
-          `;
-          toplayContainer.appendChild(article);
-        }
-
-        // Display the last played songs
-        const historicContainer = document.getElementById("historicSong");
-        if (!historicContainer) {
-          debugLog.error("historicSong element not found in DOM");
-          return;
-        }
-        historicContainer.innerHTML = "";
-
-        const historyArray = data.Last
-          ? data.Last.map((item) => ({
-              Title: item.Title,
-              Artist: item.Artist,
-            }))
-          : [];
-
-        debugLog("History array:", historyArray);
-
-        // Hide/show historic section based on whether there's data
-        const historicSection = document.querySelector(".historic");
-        if (historicSection) {
-          if (historyArray.length === 0) {
-            historicSection.style.display = "none";
-            debugLog("Hiding historic section - no past songs");
-          } else {
-            historicSection.style.display = "";
-            debugLog("Showing historic section - past songs available");
-          }
-        }
-
-        const maxHistoryToDisplay = nrHistory;
-        const limitedHistory = historyArray
-          ? historyArray.slice(
-              Math.max(0, historyArray.length - maxHistoryToDisplay),
-            )
-          : [];
-
-        debugLog("Limited history:", limitedHistory);
-
-        for (let i = 0; i < limitedHistory.length; i++) {
-          const songInfo = limitedHistory[i];
-          const textSize = "text-size-" + i;
-          const article = document.createElement("article");
-          article.classList.add("col-12");
-
-          // Clean up empty or dash-only values
-          const cleanArtist = (songInfo.Artist || "").trim();
-          const cleanTitle = (songInfo.Title || "").trim();
-
-          // Skip if both artist and title are empty or just dashes
-          if (
-            (!cleanArtist || cleanArtist === "-") &&
-            (!cleanTitle || cleanTitle === "-")
-          ) {
-            debugLog("Skipping empty song entry in history");
-            continue;
-          }
-
-          // Only use title and artist if they're not dashes
-          const validArtist =
-            cleanArtist && cleanArtist !== "-" ? cleanArtist : "";
-          const validTitle = cleanTitle && cleanTitle !== "-" ? cleanTitle : "";
-
-          // Skip if there's no valid content after cleaning
-          if (!validArtist && !validTitle) {
-            debugLog("Skipping song with only dashes in history");
-            continue;
-          }
-
-          let displayTitle = validTitle;
-          if (displayTitle.length > charsToplayTitle) {
-            displayTitle = displayTitle.substring(0, charsToplayTitle) + "...";
-          }
-
-          const songDisplay =
-            validArtist && validTitle
-              ? `${validArtist} - ${displayTitle}`
-              : validArtist || displayTitle;
-
-          article.innerHTML = `
-            <div class="music-info text-center">
-              <p class="song ${textSize}">${songDisplay}</p>
-            </div>
-          `;
-          historicContainer.appendChild(article);
-        }
-
-        document.title = `${RADIO_NAME} | ${cleanSong}${cleanArtist ? " - " + cleanArtist : ""}`;
+        document.title = `${RADIO_NAME} | ${cleanSong}${
+          cleanArtist ? " - " + cleanArtist : ""
+        }`;
       }
+
+      renderTrackList("toplaySong", ".toplay", validToplay, "toplay");
+      renderTrackList("historicSong", ".historic", validHistory, "historic");
     }
   } catch (error) {
     debugLog.error("Error in getStreamingData:", error);
@@ -1212,6 +1150,14 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
     // console.error("Current duration element not found.");
     return;
   }
+
+  if (isPlaceholderValue(duration) || isPlaceholderValue(startTime)) {
+    currentDurationElem.textContent = "";
+    currentDurationElem.style.display = "none";
+    return;
+  }
+
+  currentDurationElem.style.display = "";
   // Stop any previous countdown when a new song starts
   if (window.countdownInterval) {
     clearInterval(window.countdownInterval);
