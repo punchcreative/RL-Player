@@ -119,6 +119,20 @@
                         </div>
                       </div>
                     </div>
+                    <div class="visualizer col-12 text-center">
+                      <!-- Visualizer controls removed for production -->
+                      <canvas
+                        id="visualizer"
+                        class="w-100 mb-3"
+                        height="64"
+                        style="max-height: 64px; width: 100%"
+                      ></canvas>
+                      <!-- fallback: plain soundbar for very old browsers -->
+                      <div
+                        class="soundbar w-100 mb-3"
+                        style="display: none"
+                      ></div>
+                    </div>
                   </div>
                   <div class="row historic mt-3 mt-lg-0">
                     <div class="col-12">

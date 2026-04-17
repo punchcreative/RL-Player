@@ -54,12 +54,6 @@ debugLog.info = (...args) => {
   }
 };
 
-function isPlaceholderValue(value) {
-  if (value === null || value === undefined) return true;
-  const trimmed = value.toString().trim();
-  return trimmed === "" || trimmed === "-" || trimmed.startsWith("<rl-");
-}
-
 // SVG Icon helper functions
 function setPlayerIcon(isPlaying) {
   const playerButton = document.getElementById("playerButton");
@@ -143,8 +137,8 @@ function showLoader() {
         i === idx && direction === 1
           ? "1"
           : i === idx && direction === -1
-            ? "0"
-            : span.style.opacity;
+          ? "0"
+          : span.style.opacity;
     });
     if (direction === 1) {
       idx++;
@@ -180,7 +174,7 @@ function hideLoader() {
 function showPlaylistFormatErrorNotification(url, error) {
   // Remove any existing notification
   const existingNotification = document.getElementById(
-    "playlistFormatErrorNotification",
+    "playlistFormatErrorNotification"
   );
   if (existingNotification) {
     existingNotification.remove();
@@ -235,7 +229,7 @@ function showPlaylistFormatErrorNotification(url, error) {
 function showPlaylistErrorNotification(url, error) {
   // Remove any existing notification
   const existingNotification = document.getElementById(
-    "playlistErrorNotification",
+    "playlistErrorNotification"
   );
   if (existingNotification) {
     existingNotification.remove();
@@ -283,10 +277,10 @@ function showPlaylistErrorNotification(url, error) {
 }
 
 // Call the loadAppVars function when the page loads (first thing to happen)
-window.addEventListener("load", async () => {
+window.addEventListener("load", () => {
   // Register service worker first, then load app vars
   registerServiceWorker();
-  await loadAppVars();
+  loadAppVars();
 });
 
 // Show loader on DOM ready, but it will use RADIO_NAME once loaded
@@ -296,78 +290,14 @@ window.addEventListener("DOMContentLoaded", showLoader);
 async function registerServiceWorker() {
   if ("serviceWorker" in navigator) {
     try {
-      const registration =
-        await navigator.serviceWorker.register("service-worker.js");
-      debugLog("Service Worker registered successfully:", registration);
-
-      // Check for updates every time the app loads
-      registration.addEventListener("updatefound", () => {
-        const newWorker = registration.installing;
-        debugLog("Service Worker update found");
-
-        newWorker.addEventListener("statechange", () => {
-          if (
-            newWorker.state === "installed" &&
-            navigator.serviceWorker.controller
-          ) {
-            debugLog("New service worker available, showing update prompt");
-            // Show update notification to user
-            showUpdateNotification();
-          }
-        });
-      });
-
-      // Check for updates periodically (once a week when app is visible)
-      setInterval(
-        () => {
-          if (document.visibilityState === "visible") {
-            registration.update();
-          }
-        },
-        7 * 24 * 60 * 60 * 1000,
+      const registration = await navigator.serviceWorker.register(
+        "service-worker.js"
       );
+      debugLog("Service Worker registered successfully:", registration);
     } catch (err) {
       debugLog("Service Worker registration failed:", err);
     }
   }
-}
-
-// Function to manually check for service worker updates
-function checkForUpdates() {
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.getRegistration().then((registration) => {
-      if (registration) {
-        registration.update().then(() => {
-          debugLog("Service worker update check completed");
-        });
-      }
-    });
-  }
-}
-
-// Add to global scope for debugging
-window.checkForUpdates = checkForUpdates;
-
-// Function to show update notification
-function showUpdateNotification() {
-  const updateDiv = document.createElement("div");
-  updateDiv.id = "update-notification";
-  updateDiv.innerHTML = `
-    <div style="position: fixed; top: 10px; right: 10px; background: #031521; color: white; padding: 10px; border-radius: 5px; z-index: 10000; box-shadow: 0 2px 10px rgba(0,0,0,0.5);">
-      <p style="margin: 0 0 10px 0;">App update available!</p>
-      <button id="update-btn" style="background: #007bff; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Update Now</button>
-      <button id="dismiss-btn" style="background: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-left: 5px;">Later</button>
-    </div>
-  `;
-  document.body.appendChild(updateDiv);
-
-  document.getElementById("update-btn").addEventListener("click", () => {
-    window.location.reload();
-  });
-
-  document.getElementById("dismiss-btn").addEventListener("click", () => {
-    updateDiv.remove();
-  });
 }
 
 // playlistData data json url will be set after manifest loads
@@ -376,10 +306,19 @@ let playlistData = "playlist.json"; // Default fallback
 // Only use localStorage volume if not on mobile device
 // Only check for phones (not tablets) using user agent
 const isPhone = /iPhone|Android.*Mobile|Windows Phone|iPod/i.test(
-  navigator.userAgent,
+  navigator.userAgent
 );
 // set the initial volume to start at
 let initialVol = DEFAULT_VOLUME || 100;
+// Visualizer controller handle (global)
+let visualizerController = null;
+// Shared audio context + map for media element sources to avoid duplicate createMediaElementSource calls
+window.__rlplayerAudioContext = window.__rlplayerAudioContext || null;
+const __rlplayerMediaElemSourceMap =
+  typeof WeakMap !== "undefined" ? new WeakMap() : new Map();
+const __rlplayerAnalyserMap =
+  typeof WeakMap !== "undefined" ? new WeakMap() : new Map();
+// No global developer overrides in production
 const dimVolumeSleeptimer = DIM_VOLUME_SLEEP_TIMER || 50; // Volume to set when sleep timer is active (0-100)
 
 // Function to check if a stream URL is reachable and set it directly, without timeout
@@ -468,17 +407,6 @@ async function waitForServiceWorkerThenStart() {
   // Start fetching streaming data
   debugLog("Starting to fetch streaming data with playlistData:", playlistData);
 
-  // Set a timeout to hide loader after 10 seconds even if no data is received
-  setTimeout(() => {
-    if (isFirstLoad) {
-      debugLog(
-        "Loader timeout reached - hiding loader to show player interface",
-      );
-      hideLoader();
-      isFirstLoad = false;
-    }
-  }, 10000);
-
   // Use longer interval for localhost to be gentle on CORS proxies
   const isLocalhost =
     window.location.hostname === "localhost" ||
@@ -530,9 +458,7 @@ async function loadAppVars() {
         debugLog("✅ Using config.js fallback");
       } catch (error) {
         debugLog.error("❌ Neither .env nor config.js found!");
-        debugLog.error(
-          "📋 Please copy .env.example to .env and configure your settings",
-        );
+        debugLog.error("📋 Please run: ./setup-env.sh or create config.js");
 
         // Create a minimal CONFIG to prevent crashes
         window.CONFIG = {
@@ -565,7 +491,7 @@ async function loadAppVars() {
     correctPasswordHash === "your-password-hash-here"
   ) {
     debugLog.warn(
-      "⚠️  Using default password hash! Please configure your own password.",
+      "⚠️  Using default password hash! Please configure your own password."
     );
     debugLog.warn('📋 Generate hash with: await hashString("your-password")');
   }
@@ -578,10 +504,10 @@ async function loadAppVars() {
       CONFIG.APP_CONFIG.app_url === "https://your-domain.com/app/"
     ) {
       debugLog.warn(
-        "⚠️  Using default APP_CONFIG values! Please customize your radio settings.",
+        "⚠️  Using default APP_CONFIG values! Please customize your radio settings."
       );
       debugLog.warn(
-        "📋 Edit config.js to set your station name, stream URL, and app URL.",
+        "📋 Edit config.js to set your station name, stream URL, and app URL."
       );
     } else {
       debugLog("✅ Custom APP_CONFIG detected - using personalized settings.");
@@ -590,36 +516,25 @@ async function loadAppVars() {
     debugLog("ℹ️  No APP_CONFIG found - using manifest.json defaults.");
   }
 
-  // Load app.json for version info and manifest.json for radio config
-  debugLog("📄 Loading app.json and manifest.json...");
-
-  Promise.all([
-    fetch("app.json").then((response) => {
+  // Now load manifest for app metadata
+  debugLog("📄 Loading manifest.json...");
+  fetch("manifest.json")
+    .then((response) => {
       if (!response.ok) {
         throw new Error(
-          `Failed to load app.json: ${response.status} ${response.statusText}`,
+          `Failed to load manifest: ${response.status} ${response.statusText}`
         );
       }
       return response.json();
-    }),
-    fetch("manifest.json").then((response) => {
-      if (!response.ok) {
-        throw new Error(
-          `Failed to load manifest: ${response.status} ${response.statusText}`,
-        );
-      }
-      return response.json();
-    }),
-  ])
-    .then(([appConfig, manifest]) => {
-      debugLog("App config loaded successfully:", appConfig);
+    })
+    .then((manifest) => {
       debugLog("Manifest loaded successfully:", manifest);
 
-      // Assign app.json values to global variables (version info)
-      APP_VERSION = appConfig.version;
-      APP_NAME = appConfig.name;
-      APP_DESCRIPTION = appConfig.description;
-      APP_AUTHOR = appConfig.author;
+      // Assign manifest values to global variables
+      APP_VERSION = manifest.version;
+      APP_NAME = manifest.name;
+      APP_DESCRIPTION = manifest.description;
+      APP_AUTHOR = manifest.author;
 
       // Override with CONFIG values if available, otherwise use manifest defaults
       if (CONFIG?.APP_CONFIG) {
@@ -652,26 +567,10 @@ async function loadAppVars() {
           manifest.custom_radio_config.dim_volume_sleep_timer;
       }
 
-      // Ensure APP_URL has a trailing slash for proper URL construction
-      if (APP_URL && !APP_URL.endsWith("/")) {
-        APP_URL = APP_URL + "/";
-        debugLog("Normalized APP_URL to ensure trailing slash:", APP_URL);
-      }
+      PLAYLIST = manifest.api_endpoints.playlist;
 
-      // Use .env PLAYLIST_ENDPOINT if configured, otherwise fall back to manifest
-      PLAYLIST =
-        CONFIG?.PLAYLIST_ENDPOINT ||
-        manifest.api_endpoints.playlist ||
-        "playlist.json";
-
-      // Set playlistData after PLAYLIST is loaded
-      playlistData = PLAYLIST;
-      debugLog(
-        "Playlist endpoint source:",
-        CONFIG?.PLAYLIST_ENDPOINT
-          ? ".env (VITE_PLAYLIST_ENDPOINT)"
-          : "manifest.json",
-      );
+      // Set playlistData after PLAYLIST is loaded from manifest
+      playlistData = PLAYLIST || "playlist.json";
       debugLog("playlistData set to:", playlistData);
 
       // Log all key variables to console for debugging
@@ -693,7 +592,7 @@ async function loadAppVars() {
         setStreamingUrl(STREAM_URL);
       } else {
         debugLog.warn(
-          "STREAM_URL is undefined or empty. Skipping setStreamingUrl.",
+          "STREAM_URL is undefined or empty. Skipping setStreamingUrl."
         );
       }
 
@@ -701,7 +600,7 @@ async function loadAppVars() {
       const existingLoader = document.getElementById("radioLoader");
       if (existingLoader) {
         const lettersContainer = existingLoader.querySelector(
-          ".radio-loader-letters",
+          ".radio-loader-letters"
         );
         if (lettersContainer) {
           // Clear existing letters
@@ -729,9 +628,9 @@ async function loadAppVars() {
       }
     })
     .catch((error) => {
-      debugLog.error("Error loading app.json or manifest:", error);
+      debugLog.error("Error loading manifest:", error);
       alert(
-        "Failed to load application configuration. Please check your network connection and try again.",
+        "Failed to load application configuration. Please check your network connection and try again."
       );
     });
 }
@@ -825,7 +724,7 @@ function refreshCurrentSong(
   artist,
   duration,
   startTime,
-  nextTrackStarttime,
+  nextTrackStarttime
 ) {
   const currentSong = document.getElementById("currentSongDisplay");
   const currentArtist = document.getElementById("currentArtistDisplay");
@@ -854,7 +753,6 @@ function refreshCurrentSong(
       if ("mediaSession" in navigator) {
         // Create a unique cache-busting string, like a timestamp
         const cacheBuster = Date.now();
-        // APP_URL is guaranteed to have trailing slash, so we don't need to add one
         const artworkUrl = `${APP_URL}albumart/art-00.jpg?cb=${cacheBuster}`;
         navigator.mediaSession.metadata = new MediaMetadata({
           title: song,
@@ -909,19 +807,19 @@ async function getStreamingData() {
     debugLog("Received data:", data);
 
     if (data) {
-      // Hide loader on first successful data fetch
-      if (isFirstLoad) {
-        debugLog("First successful load - hiding loader and starting player");
-        hideLoader();
-        isFirstLoad = false;
-      }
-
       // Reset JSON error retry counter on successful data fetch
       if (jsonErrorRetryCount > 0) {
         debugLog(
-          "Playlist fetched successfully - resetting JSON error retry counter",
+          "Playlist fetched successfully - resetting JSON error retry counter"
         );
         jsonErrorRetryCount = 0;
+      }
+
+      // Hide loader on first successful data fetch
+      if (isFirstLoad) {
+        debugLog("First playlist data loaded successfully - hiding loader");
+        hideLoader();
+        isFirstLoad = false;
       }
       var currentSong = data.Current.Title;
       var charsToplayTitle = 25;
@@ -941,131 +839,22 @@ async function getStreamingData() {
 
       const safeCurrentSong = (currentSong || "")
         .replace(/'/g, "'")
-        .replace(/&/g, "&")
-        .trim();
+        .replace(/&/g, "&");
       const safeCurrentArtist = (currentArtistVal || "")
         .replace(/'/g, "'")
-        .replace(/&/g, "&")
-        .trim();
+        .replace(/&/g, "&");
 
-      // Clean up placeholder dashes and template values created by template when no data available
-      const cleanArtist = isPlaceholderValue(safeCurrentArtist)
-        ? ""
-        : safeCurrentArtist;
-      const cleanSong = isPlaceholderValue(safeCurrentSong)
-        ? ""
-        : safeCurrentSong;
+      if (safeCurrentSong !== musicActual) {
+        debugLog("New song detected:", safeCurrentSong);
 
-      if (isPlaceholderValue(currentDurationVal)) {
-        currentDurationVal = null;
-      }
-      if (isPlaceholderValue(currentStartTime)) {
-        currentStartTime = null;
-      }
-
-      const toplayArray = data.Next
-        ? data.Next.map((item) => ({
-            Title: (item.Title || "").trim(),
-            Artist: (item.Artist || "").trim(),
-          }))
-        : [];
-
-      const historyArray = data.Last
-        ? data.Last.map((item) => ({
-            Title: (item.Title || "").trim(),
-            Artist: (item.Artist || "").trim(),
-          }))
-        : [];
-
-      const validToplay = toplayArray.filter(
-        (item) =>
-          !isPlaceholderValue(item.Title) || !isPlaceholderValue(item.Artist),
-      );
-      const validHistory = historyArray.filter(
-        (item) =>
-          !isPlaceholderValue(item.Title) || !isPlaceholderValue(item.Artist),
-      );
-
-      function renderTrackList(
-        containerId,
-        sectionSelector,
-        list,
-        sectionName,
-      ) {
-        const container = document.getElementById(containerId);
-        if (!container) {
-          debugLog.error(`${containerId} element not found in DOM`);
-          return;
-        }
-        container.innerHTML = "";
-
-        const section = document.querySelector(sectionSelector);
-        if (section) {
-          if (list.length === 0) {
-            section.style.display = "none";
-            debugLog(`Hiding ${sectionName} section - no valid songs`);
-          } else {
-            section.style.display = "";
-            debugLog(`Showing ${sectionName} section - songs available`);
-          }
-        }
-
-        const maxItems = sectionName === "toplay" ? nrToplay : nrHistory;
-        const limited = list.slice(Math.max(0, list.length - maxItems));
-
-        debugLog(`Limited ${sectionName}:`, limited);
-
-        limited.forEach((songInfo, index) => {
-          const textSize = `text-size-${index}`;
-          const article = document.createElement("article");
-          article.classList.add("col-12");
-
-          const validArtist = !isPlaceholderValue(songInfo.Artist)
-            ? songInfo.Artist
-            : "";
-          const validTitle = !isPlaceholderValue(songInfo.Title)
-            ? songInfo.Title
-            : "";
-
-          if (!validArtist && !validTitle) {
-            debugLog(`Skipping invalid entry in ${sectionName}`);
-            return;
-          }
-
-          let displayTitle = validTitle;
-          if (displayTitle.length > charsToplayTitle) {
-            displayTitle = displayTitle.substring(0, charsToplayTitle) + "...";
-          }
-
-          const songDisplay =
-            validArtist && validTitle
-              ? `${validArtist} - ${displayTitle}`
-              : validArtist || displayTitle;
-
-          article.innerHTML = `
-            <div class="music-info text-center">
-              <p class="song ${textSize}">${songDisplay}</p>
-            </div>
-          `;
-          container.appendChild(article);
-        });
-      }
-
-      let nextTrackStarttime =
-        data.Next && data.Next.length > 0 ? data.Next[0].Starttime : null;
-      if (isPlaceholderValue(nextTrackStarttime)) {
-        nextTrackStarttime = null;
-      }
-
-      if (cleanSong !== musicActual) {
-        debugLog("New song detected:", cleanSong);
-
+        // Reset the awaiting next song flag since we found the new song
         if (awaitingNextSong) {
           debugLog("New song detected - clearing awaiting next song state");
           awaitingNextSong = false;
 
+          // Reset duration display styling
           const currentDuration = document.getElementById(
-            "currentDurationDisplay",
+            "currentDurationDisplay"
           );
           if (currentDuration) {
             currentDuration.style.opacity = "1";
@@ -1073,31 +862,128 @@ async function getStreamingData() {
           }
         }
 
+        // Clear any existing polling interval when a new song is detected (including first song)
         if (fetchIntervalId) {
           clearInterval(fetchIntervalId);
           fetchIntervalId = null;
           debugLog(
-            "Cleared polling interval - new song detected, switching to smart polling",
+            "Cleared polling interval - new song detected, switching to smart polling"
           );
         }
+        musicActual = safeCurrentSong;
 
-        musicActual = cleanSong;
+        // Get the next track's start time for accurate countdown
+        const nextTrackStarttime =
+          data.Next && data.Next.length > 0 ? data.Next[0].Starttime : null;
 
         refreshCurrentSong(
-          cleanSong,
-          cleanArtist,
+          safeCurrentSong,
+          safeCurrentArtist,
           currentDurationVal,
           currentStartTime,
-          nextTrackStarttime,
+          nextTrackStarttime
         );
 
-        document.title = `${RADIO_NAME} | ${cleanSong}${
-          cleanArtist ? " - " + cleanArtist : ""
-        }`;
-      }
+        // Display what is coming up next
+        const toplayContainer = document.getElementById("toplaySong");
+        if (!toplayContainer) {
+          debugLog.error("toplaySong element not found in DOM");
+          return;
+        }
+        toplayContainer.innerHTML = "";
 
-      renderTrackList("toplaySong", ".toplay", validToplay, "toplay");
-      renderTrackList("historicSong", ".historic", validHistory, "historic");
+        const toplayArray = data.Next
+          ? data.Next.map((item) => ({
+              Title: item.Title,
+              Artist: item.Artist,
+            }))
+          : [];
+
+        debugLog("Toplay array:", toplayArray);
+
+        const maxToplayToDisplay = nrToplay;
+        const limitedToplay = toplayArray
+          ? toplayArray.slice(
+              Math.max(0, toplayArray.length - maxToplayToDisplay)
+            )
+          : [];
+
+        debugLog("Limited toplay:", limitedToplay);
+
+        for (let i = 0; i < limitedToplay.length; i++) {
+          const songInfo = limitedToplay[i];
+          const textSize = "text-size-" + i;
+          const article = document.createElement("article");
+          article.classList.add("col-12");
+          if (songInfo.Title.length > charsToplayTitle) {
+            var string = songInfo.Title;
+            var length = charsToplayTitle;
+            var trimmedString = string.substring(0, length) + "...";
+            songInfo.Title = trimmedString;
+          }
+          article.innerHTML = `
+            <div class="music-info text-center">
+              <p class="song ${textSize}">${
+            songInfo.Artist
+              ? `${songInfo.Artist} - ${songInfo.Title || ""}`
+              : `${songInfo.Title || ""}`
+          }</p>
+            </div>
+          `;
+          toplayContainer.appendChild(article);
+        }
+
+        // Display the last played songs
+        const historicContainer = document.getElementById("historicSong");
+        if (!historicContainer) {
+          debugLog.error("historicSong element not found in DOM");
+          return;
+        }
+        historicContainer.innerHTML = "";
+
+        const historyArray = data.Last
+          ? data.Last.map((item) => ({
+              Title: item.Title,
+              Artist: item.Artist,
+            }))
+          : [];
+
+        debugLog("History array:", historyArray);
+
+        const maxHistoryToDisplay = nrHistory;
+        const limitedHistory = historyArray
+          ? historyArray.slice(
+              Math.max(0, historyArray.length - maxHistoryToDisplay)
+            )
+          : [];
+
+        debugLog("Limited history:", limitedHistory);
+
+        for (let i = 0; i < limitedHistory.length; i++) {
+          const songInfo = limitedHistory[i];
+          const textSize = "text-size-" + i;
+          const article = document.createElement("article");
+          article.classList.add("col-12");
+          if (songInfo.Title.length > charsToplayTitle) {
+            var string = songInfo.Title;
+            var length = charsToplayTitle;
+            var trimmedString = string.substring(0, length) + "...";
+            songInfo.Title = trimmedString;
+          }
+          article.innerHTML = `
+                        <div class="music-info text-center">
+                          <p class="song ${textSize}">${
+            songInfo.Artist
+              ? `${songInfo.Artist} - ${songInfo.Title || ""}`
+              : `${songInfo.Title || ""}`
+          }</p>
+                        </div>
+                      `;
+          historicContainer.appendChild(article);
+        }
+
+        document.title = `${RADIO_NAME} | ${safeCurrentSong} - ${safeCurrentArtist}`;
+      }
     }
   } catch (error) {
     debugLog.error("Error in getStreamingData:", error);
@@ -1112,23 +998,23 @@ async function getStreamingData() {
       if (jsonErrorRetryCount < MAX_JSON_ERROR_RETRIES) {
         jsonErrorRetryCount++;
         debugLog(
-          `JSON format error detected - retry ${jsonErrorRetryCount}/${MAX_JSON_ERROR_RETRIES} in 15 seconds`,
+          `JSON format error detected - retry ${jsonErrorRetryCount}/${MAX_JSON_ERROR_RETRIES} in 15 seconds`
         );
         setTimeout(() => {
           debugLog(
-            `Retrying playlist fetch after JSON format error (attempt ${jsonErrorRetryCount}/${MAX_JSON_ERROR_RETRIES})...`,
+            `Retrying playlist fetch after JSON format error (attempt ${jsonErrorRetryCount}/${MAX_JSON_ERROR_RETRIES})...`
           );
           getStreamingData();
         }, 15000);
       } else {
         debugLog.error(
-          "Maximum JSON error retries reached. Please check the playlist.json format.",
+          "Maximum JSON error retries reached. Please check the playlist.json format."
         );
         // Reset counter for future potential fixes
         setTimeout(() => {
           jsonErrorRetryCount = 0;
           debugLog(
-            "Reset JSON error retry counter - will try again if new errors occur",
+            "Reset JSON error retry counter - will try again if new errors occur"
           );
         }, 300000); // Reset after 5 minutes
       }
@@ -1150,14 +1036,6 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
     // console.error("Current duration element not found.");
     return;
   }
-
-  if (isPlaceholderValue(duration) || isPlaceholderValue(startTime)) {
-    currentDurationElem.textContent = "";
-    currentDurationElem.style.display = "none";
-    return;
-  }
-
-  currentDurationElem.style.display = "";
   // Stop any previous countdown when a new song starts
   if (window.countdownInterval) {
     clearInterval(window.countdownInterval);
@@ -1199,7 +1077,7 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
     // This prevents the countdown from reaching 0:00 too early
     totalSeconds += COUNTDOWN_BUFFER_SECONDS;
     debugLog(
-      `Added ${COUNTDOWN_BUFFER_SECONDS}s buffer to duration. Total: ${totalSeconds}s`,
+      `Added ${COUNTDOWN_BUFFER_SECONDS}s buffer to duration. Total: ${totalSeconds}s`
     );
 
     // Calculate elapsed time based on start time
@@ -1224,16 +1102,16 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
 
         debugLog(`Song started at: ${startTime} (${isoStartTime})`);
         debugLog(
-          `Song has been playing for ${elapsedSeconds} seconds out of ${totalSeconds} total`,
+          `Song has been playing for ${elapsedSeconds} seconds out of ${totalSeconds} total`
         );
       } catch (error) {
         debugLog.warn(
           "Invalid startTime format, using current time as start:",
-          error,
+          error
         );
         debugLog.warn(
           "Expected format: YYYY-MM-DD HH:MM:SS, received:",
-          startTime,
+          startTime
         );
         elapsedSeconds = 0;
       }
@@ -1262,20 +1140,20 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
         if (remainingSeconds > 0 && remainingSeconds < totalSeconds + 30) {
           useNextTrackTiming = true;
           debugLog(
-            `Using next track start time: ${nextTrackStarttime} (${isoNextStartTime})`,
+            `Using next track start time: ${nextTrackStarttime} (${isoNextStartTime})`
           );
           debugLog(
-            `Accurate remaining time: ${remainingSeconds} seconds until next track`,
+            `Accurate remaining time: ${remainingSeconds} seconds until next track`
           );
         } else {
           debugLog.warn(
-            `Next track timing seems unreasonable: ${remainingSeconds}s, falling back to duration calculation`,
+            `Next track timing seems unreasonable: ${remainingSeconds}s, falling back to duration calculation`
           );
         }
       } catch (error) {
         debugLog.warn(
           "Invalid nextTrackStarttime format, falling back to duration calculation:",
-          error,
+          error
         );
       }
     }
@@ -1284,7 +1162,7 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
     if (!useNextTrackTiming) {
       remainingSeconds = totalSeconds - elapsedSeconds;
       debugLog(
-        `Using duration-based calculation: ${remainingSeconds} seconds remaining`,
+        `Using duration-based calculation: ${remainingSeconds} seconds remaining`
       );
     }
 
@@ -1304,8 +1182,8 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
       pollDelay = Math.max(1000, (remainingSeconds - pollBeforeEnd) * 1000);
       debugLog(
         `Using precise next-track timing: polling in ${Math.floor(
-          pollDelay / 1000,
-        )}s`,
+          pollDelay / 1000
+        )}s`
       );
     } else {
       // Fallback to duration-based logic
@@ -1319,8 +1197,8 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
       pollDelay = Math.max(1000, (remainingSeconds - pollBeforeEnd) * 1000);
       debugLog(
         `Using duration-based timing: polling in ${Math.floor(
-          pollDelay / 1000,
-        )}s`,
+          pollDelay / 1000
+        )}s`
       );
     }
 
@@ -1340,7 +1218,7 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
 
       fetchIntervalId = setInterval(getStreamingData, interval);
       debugLog(
-        "Smart polling: Started interval getStreamingData for next song detection.",
+        "Smart polling: Started interval getStreamingData for next song detection."
       );
     }, pollDelay);
 
@@ -1366,7 +1244,7 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
       // When countdown reaches 0:00, show loading indicator and trigger aggressive polling
       if (remaining === 0 && !awaitingNextSong) {
         debugLog(
-          "Countdown reached 0:00 - triggering immediate playlist refresh",
+          "Countdown reached 0:00 - triggering immediate playlist refresh"
         );
         awaitingNextSong = true;
 
@@ -1426,7 +1304,6 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
 }
 
 async function fetchStreamingData(apiUrl) {
-  let actualUrl = apiUrl; // Declare outside try block to avoid reference errors
   try {
     debugLog("Attempting to fetch from URL:", apiUrl);
 
@@ -1435,26 +1312,16 @@ async function fetchStreamingData(apiUrl) {
       window.location.hostname === "localhost" ||
       window.location.hostname === "127.0.0.1";
 
+    let actualUrl = apiUrl;
+
     // If we're on localhost and have a relative URL, convert to production URL
     if (isLocalhost && !apiUrl.startsWith("http")) {
-      // Check if app_url is configured
-      const productionBaseUrl = CONFIG?.APP_CONFIG?.app_url;
-
-      if (
-        !productionBaseUrl ||
-        productionBaseUrl === "https://your-domain.com/app/"
-      ) {
-        debugLog.error("❌ VITE_APP_URL is not configured in .env file");
-        showPlaylistErrorNotification(
-          "Configuration Error",
-          "VITE_APP_URL is not configured. Please set it in your .env file.",
-        );
-        throw new Error("Missing VITE_APP_URL configuration");
-      }
-
+      // Convert relative URL to production URL for CORS proxy
+      const productionBaseUrl =
+        CONFIG?.APP_CONFIG?.app_url || "https://eajt.nl/kvpn/";
       actualUrl = new URL(apiUrl, productionBaseUrl).href;
       debugLog(
-        `Localhost detected: Converting relative URL "${apiUrl}" to production URL: ${actualUrl}`,
+        `Localhost detected: Converting relative URL "${apiUrl}" to production URL: ${actualUrl}`
       );
     }
 
@@ -1475,7 +1342,7 @@ async function fetchStreamingData(apiUrl) {
       ) {
         const corsProxyUrl = actualUrl.replace(
           "playlist.json",
-          "cors-playlist.php",
+          "cors-playlist.php"
         );
         debugLog("Trying CORS-enabled playlist proxy:", corsProxyUrl);
 
@@ -1494,21 +1361,30 @@ async function fetchStreamingData(apiUrl) {
             debugLog("CORS proxy response length:", text.length);
             debugLog("Raw response (first 100 chars):", text.substring(0, 100));
 
+            // Check if the JSON appears to be truncated
+            const trimmedText = text.trim();
+            if (!trimmedText.endsWith("}") && !trimmedText.endsWith("]")) {
+              debugLog.warn(
+                "JSON appears to be truncated - does not end with } or ]"
+              );
+              throw new Error("JSON file appears to be truncated or corrupted");
+            }
+
             const data = JSON.parse(text);
             debugLog(
-              "Successfully fetched and parsed streaming data via CORS proxy",
+              "Successfully fetched and parsed streaming data via CORS proxy"
             );
             return data;
           } else {
             debugLog.warn(
-              "cors-playlist.php failed, falling back to generic CORS proxy",
+              "cors-playlist.php failed, falling back to generic CORS proxy"
             );
             throw new Error(`CORS proxy failed: ${response.status}`);
           }
         } catch (corsError) {
           debugLog.warn(
             "CORS proxy failed, trying generic proxies:",
-            corsError.message,
+            corsError.message
           );
         }
       }
@@ -1546,7 +1422,7 @@ async function fetchStreamingData(apiUrl) {
 
     if (!response.ok) {
       throw new Error(
-        `Error fetching playlist: ${response.status} ${response.statusText}`,
+        `Error fetching playlist: ${response.status} ${response.statusText}`
       );
     }
 
@@ -1596,8 +1472,16 @@ async function fetchStreamingData(apiUrl) {
     debugLog("Raw response (first 100 chars):", actualText.substring(0, 100));
     debugLog(
       "Raw response (last 100 chars):",
-      actualText.substring(actualText.length - 100),
+      actualText.substring(actualText.length - 100)
     );
+
+    // Check if the JSON appears to be truncated
+    const trimmedText = actualText.trim();
+    if (!trimmedText.endsWith("}") && !trimmedText.endsWith("]")) {
+      debugLog.warn("JSON appears to be truncated - does not end with } or ]");
+      debugLog("Last 50 characters:", actualText.slice(-50));
+      throw new Error("JSON file appears to be truncated or corrupted");
+    }
 
     // Try to parse the JSON
     const data = JSON.parse(actualText);
@@ -1607,18 +1491,40 @@ async function fetchStreamingData(apiUrl) {
     console.error("fetchStreamingData error:", error);
     console.error("Failed URL:", actualUrl || apiUrl);
 
-    // Log error but continue polling - playlist data will be fetched when available
-    debugLog.warn(
-      "Playlist fetch failed, will retry on next poll:",
-      error.message,
-    );
+    // If we're on localhost and external fetch failed, try local fallback
+    const isLocalhost =
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
+    const isExternalUrl =
+      (actualUrl || apiUrl).startsWith("http://") ||
+      (actualUrl || apiUrl).startsWith("https://");
+
+    if (
+      isLocalhost &&
+      isExternalUrl &&
+      !(actualUrl || apiUrl).includes("localhost")
+    ) {
+      // Show user notification about playlist fetch failure
+      showPlaylistErrorNotification(actualUrl || apiUrl, error);
+      debugLog.warn(
+        "External playlist fetch failed - user has been notified. Not using local fallback to avoid stale data."
+      );
+    } else {
+      // Show notification for production failures too
+      showPlaylistErrorNotification(actualUrl || apiUrl, error);
+    }
 
     if (error instanceof SyntaxError) {
       console.error(
-        "JSON parsing failed - the playlist.json file appears to be malformed or truncated",
+        "JSON parsing failed - the playlist.json file appears to be malformed or truncated"
       );
-      // Don't show notifications, just log and continue polling
-      debugLog.warn("JSON format error - will continue polling for valid data");
+      console.error(
+        "This could happen if the file is being uploaded while the app is trying to read it"
+      );
+
+      // Show user-friendly notification for JSON format errors
+      showPlaylistFormatErrorNotification(actualUrl || apiUrl, error);
+
       return null;
     }
 
@@ -1639,497 +1545,658 @@ function setCopyright() {
   setupAudioPlayer();
 }
 
-async function setupAudioPlayer() {
-  audio = new Audio(URL_STREAMING);
-  audio.crossOrigin = "anonymous";
-  audio.preload = "metadata"; // Changed from "none" to "metadata" for better buffering
-  audio.autoplay = false;
-  audio.loop = false;
-  audio.muted = false;
+/**
+ * setupVisualizer
+ * Creates an AnalyserNode for the provided audio element and renders a
+ * lightweight bar visualizer to a canvas element. Automatically disables
+ * when the device indicates low-power or reduced motion preferences.
+ */
+function setupVisualizer({
+  audio,
+  canvasId = "visualizer",
+  options = {},
+} = {}) {
+  if (!audio) return null;
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return null;
 
-  // Add some additional properties that might help with streaming
-  if ("mozPreservesPitch" in audio) {
-    audio.mozPreservesPitch = false;
-  }
-  if ("webkitPreservesPitch" in audio) {
-    audio.webkitPreservesPitch = false;
-  }
+  const deviceMemory = navigator.deviceMemory || 4;
+  const effectiveType =
+    navigator.connection && navigator.connection.effectiveType
+      ? navigator.connection.effectiveType
+      : "4g";
+  const saveData = navigator.connection && navigator.connection.saveData;
+  const prefersReduceMotion =
+    window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  setupAudioEventListeners();
-
-  document.getElementById("volume").oninput = function () {
-    changeVolumeLocalStorage(this.value);
-    // debugLog.log("Volume slider changed to:", this.value);
-    audio.volume = intToDecimal(this.value);
-  };
-
-  // Set up player button click listener
-  const playerButton = document.getElementById("playerButton");
-  if (playerButton) {
-    playerButton.addEventListener("click", togglePlay);
-    debugLog("Player button click listener attached");
-  } else {
-    debugLog.warn(
-      "Player button not found - click functionality will not work",
-    );
-  }
-}
-
-function setupAudioEventListeners() {
-  if (!audio) return;
-
-  let retryCount = 0;
-  let retryTimer = null;
-  let bufferingTimeout = null;
-  let healthCheckInterval = null;
-
-  function resetButtonState() {
-    const playerButton = document.getElementById("playerButton");
-    if (playerButton && isPlayerIconPaused()) {
-      debugLog("Stream stopped - resetting button state");
-      setPlayerIcon(false); // Set to play icon
+  // Conservative heuristics: disable visualizer for low-power devices
+  const forceOverride = !!options.forceTest;
+  if (saveData || prefersReduceMotion) {
+    if (!forceOverride && (saveData || prefersReduceMotion)) {
+      canvas.style.display = "none";
+      return null;
     }
-  }
+    if (deviceMemory <= 1) {
+      canvas.style.display = "none";
+      return null;
+    }
 
-  function startHealthCheck() {
-    if (healthCheckInterval) clearInterval(healthCheckInterval);
-    healthCheckInterval = setInterval(() => {
-      const playerButton = document.getElementById("playerButton");
-      if (playerButton && isPlayerIconPaused()) {
-        // Should be playing, check if it actually is
-        if (audio.paused || audio.ended || audio.readyState < 2) {
-          debugLog.warn("Health check failed - stream appears stopped");
-          resetButtonState();
-          // Try a quick recovery
-          audio.load();
-          const playPromise = audio.play();
-          if (playPromise !== undefined) {
-            playPromise.catch(() => {});
-          }
-        }
+    // visualizer config
+    const bars = options.bars || 32;
+    const fftSize = options.fftSize || 256;
+    const smoothing =
+      typeof options.smoothing === "number" ? options.smoothing : 0.8;
+    // sensitivity multiplier - use the provided options or default
+    const sensitivity =
+      typeof options.sensitivity === "number" ? options.sensitivity : 1.0;
+
+    // Ensure canvas has reasonable size and update on resize
+    function resizeCanvas() {
+      canvas.width = Math.floor(canvas.clientWidth || window.innerWidth);
+      canvas.height = options.height || 64;
+    }
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+    const ctx = canvas.getContext("2d");
+
+    // Setup audio context and analyser
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    // Use a shared AudioContext for the app so we don't create/close it repeatedly
+    let audioCtx = window.__rlplayerAudioContext;
+    try {
+      if (!audioCtx) {
+        audioCtx = new AudioCtx();
+        window.__rlplayerAudioContext = audioCtx;
       }
-    }, 3000); // Check every 3 seconds
-  }
-
-  function stopHealthCheck() {
-    if (healthCheckInterval) {
-      clearInterval(healthCheckInterval);
-      healthCheckInterval = null;
+    } catch (e) {
+      console.warn("Web Audio API not supported, disabling visualizer: ", e);
+      canvas.style.display = "none";
+      return null;
     }
-  }
+    // Try to resume the shared audio context immediately to ensure analyser receives data
+    try {
+      if (audioCtx && audioCtx.state === "suspended")
+        audioCtx.resume().catch(() => {});
+    } catch (e) {}
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = fftSize;
+    analyser.smoothingTimeConstant = smoothing;
 
-  function handleStreamError(eventType = "unknown") {
-    debugLog.warn(`Stream ${eventType} detected`);
-
-    // Clear any existing timeouts to prevent loops
-    if (retryTimer) {
-      clearTimeout(retryTimer);
-      retryTimer = null;
-    }
-    if (bufferingTimeout) {
-      clearTimeout(bufferingTimeout);
-      bufferingTimeout = null;
-    }
-
-    resetButtonState();
-
-    if (retryCount < 3) {
-      // Reduced from 6 to 3 retries
-      retryCount++;
-      debugLog.warn(
-        `Stream error detected. Retrying in 10 seconds... (${retryCount}/3)`,
+    let source = null;
+    // Reuse existing MediaElementSource if already created for this HTMLMediaElement
+    try {
+      source = __rlplayerMediaElemSourceMap.get(audio) || null;
+      if (!source) {
+        source = audioCtx.createMediaElementSource(audio);
+        __rlplayerMediaElemSourceMap.set(audio, source);
+        try {
+          audio.__rlplayerMediaElemSource = source;
+        } catch (e) {}
+        // Created MediaElementSource for audio element
+      } else {
+        // Reusing existing MediaElementSource for audio element
+      }
+      // Connect source -> analyser -> destination
+      try {
+        source.connect(analyser);
+      } catch (e) {
+        /* ignore if already connected */
+      }
+      try {
+        analyser.connect(audioCtx.destination);
+      } catch (e) {}
+    } catch (e) {
+      // Could be InvalidStateError if the element already has a source created elsewhere
+      console.warn(
+        "Could not create MediaElementSource for visualizer, disabling: ",
+        e
       );
-
-      // Shorter retry delay and simpler recovery
-      retryTimer = setTimeout(() => {
-        debugLog.log("Attempting stream recovery...");
-        // Simple recovery - just try to play again without load()
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise.catch((error) => {
-            debugLog.warn("Recovery failed, will try again:", error);
-          });
+      // attempt to use existing stored source if present
+      try {
+        source = __rlplayerMediaElemSourceMap.get(audio) || null;
+        if (source) {
+          try {
+            source.connect(analyser);
+          } catch (err) {}
+          try {
+            analyser.connect(audioCtx.destination);
+          } catch (err) {}
+          // Used previously-created MediaElementSource
+        } else {
+          canvas.style.display = "none";
+          return null;
         }
-        retryTimer = null;
-      }, 10000); // Reduced from 30 to 10 seconds
-    } else {
-      console.error("Maximum retry attempts reached. Stream may be offline.");
-      resetButtonState();
-      retryCount = 0; // Reset for future attempts
-    }
-  }
-
-  // More intelligent event listeners - only handle real errors
-  audio.addEventListener("error", (e) => {
-    debugLog.warn("Audio error event:", e);
-    handleStreamError("error");
-  });
-
-  // Only handle stalled if it persists (not during normal loading)
-  audio.addEventListener("stalled", () => {
-    setTimeout(() => {
-      if (audio.readyState < 2) {
-        // Only if still not loaded after delay
-        debugLog.warn("Stream stalled - no data received");
-        handleStreamError("stalled");
+      } catch (err) {
+        canvas.style.display = "none";
+        return null;
       }
-    }, 10000); // Wait 10 seconds before treating as error
-  });
-
-  // Suspend is often normal, only treat as error if repeated
-  let suspendCount = 0;
-  audio.addEventListener("suspend", () => {
-    suspendCount++;
-    if (suspendCount > 3) {
-      debugLog.warn("Multiple suspend events detected");
-      handleStreamError("suspend");
-      suspendCount = 0;
     }
-  });
 
-  // Abort and emptied are normal during stream loading - don't treat as errors
-  audio.addEventListener("abort", () => {
-    debugLog.log("Audio abort event (normal during loading)");
-  });
+    const bufferLength = analyser.frequencyBinCount;
+    // Store analyser in a map for debugging access and sampling
+    try {
+      __rlplayerAnalyserMap.set(audio, analyser);
+    } catch (e) {}
+    const dataArray = new Uint8Array(bufferLength);
+    const step = Math.max(1, Math.floor(bufferLength / bars));
+    let rafId = null;
+    let frameSkip = 0;
+    let debugFrameCounter = 0;
 
-  audio.addEventListener("emptied", () => {
-    debugLog.log("Audio emptied event (normal during loading)");
-  });
-
-  // Monitor for unexpected pauses that might indicate buffering issues
-  // audio.addEventListener("pause", () => {
-  //   stopHealthCheck(); // Stop health checking when paused
-
-  //   // Only handle unexpected pauses (not user-initiated)
-  //   if (!userInitiatedPause) {
-  //     setTimeout(() => {
-  //       const playerButton = document.getElementById("playerButton");
-  //       if (playerButton && isPlayerIconPaused() && audio.paused) {
-  //         debugLog.warn("Unexpected pause detected - stream may have stopped");
-  //         resetButtonState();
-  //       }
-  //     }, 100);
-  //   } else {
-  //     debugLog.log("User-initiated pause detected - not treating as error");
-  //     userInitiatedPause = false; // Reset the flag
-  //   }
-  // });
-
-  // NEW 250912: Add a listener for the 'pause' event
-  audio.addEventListener("pause", () => {
-    debugLog.log("Audio 'pause' event triggered. Setting button to play icon.");
-    // This will set the button to the play icon when the audio pauses,
-    // whether by a user click or by the browser/OS.
-    setPlayerIcon(false);
-    // add the text shadow back here
-    const playerButton = document.getElementById("playerButton");
-    if (playerButton) {
-      playerButton.style.textShadow = "0 0 5px black";
-    }
-    stopHealthCheck();
-    // Do not reset the userInitiatedPause flag here.
-    // The `togglePlay` function already handles that.
-  });
-
-  audio.addEventListener("play", () => {
-    debugLog.log("Audio 'play' event triggered. Setting button to pause icon.");
-    // This will set the button to the pause icon when the audio starts playing,
-    // whether by a user click or by the browser automatically resuming it.
-    setPlayerIcon(true);
-    // You might also want to remove the text shadow here
-    const playerButton = document.getElementById("playerButton");
-    if (playerButton) {
-      playerButton.style.textShadow = "none";
-    }
-    retryCount = 0;
-    suspendCount = 0;
-    if (retryTimer) {
-      clearTimeout(retryTimer);
-      retryTimer = null;
-    }
-    if (bufferingTimeout) {
-      clearTimeout(bufferingTimeout);
-      bufferingTimeout = null;
-    }
-    startHealthCheck(); // Start monitoring stream health
-  });
-
-  // Monitor buffering state with shorter timeout for faster recovery
-  audio.addEventListener("waiting", () => {
-    debugLog.log("Stream buffering...");
-    // Only set timeout if not already buffering
-    if (bufferingTimeout) clearTimeout(bufferingTimeout);
-    bufferingTimeout = setTimeout(() => {
-      // Only attempt recovery if still buffering and not paused by user
-      if (audio.readyState < 3 && !audio.paused) {
-        debugLog.warn("Buffering timeout - stream may be having issues");
-        handleStreamError("buffering timeout");
+    function draw() {
+      rafId = requestAnimationFrame(draw);
+      // throttle for low-power devices a little (skip frames)
+      if (deviceMemory <= 2 && (++frameSkip & 1) === 1) return;
+      analyser.getByteFrequencyData(dataArray);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // draw bars
+      const barWidth = Math.floor(canvas.width / bars);
+      for (let i = 0; i < bars; i++) {
+        let sum = 0;
+        for (let j = 0; j < step; j++) {
+          sum += dataArray[i * step + j] || 0;
+        }
+        const avg = sum / step;
+        let percent = avg / 255;
+        percent = Math.min(1, percent * sensitivity);
+        const h = Math.max(2, Math.floor(percent * canvas.height));
+        const x = i * barWidth;
+        const hue = 180 - percent * 120;
+        ctx.fillStyle = `hsl(${hue},85%,${20 + percent * 40}%)`;
+        ctx.fillRect(x, canvas.height - h, barWidth - 1, h);
       }
-    }, 15000); // Increased to 15 seconds to avoid false positives
-  });
-
-  audio.addEventListener("canplaythrough", () => {
-    debugLog.log("Stream ready to play through");
-    if (bufferingTimeout) {
-      clearTimeout(bufferingTimeout);
-      bufferingTimeout = null;
-    }
-  });
-
-  // Button state is now managed by togglePlay() function only
-  // Removed onplay and onpause handlers to prevent race conditions
-
-  audio.onvolumechange = function () {
-    if (audio.volume > 0) {
-      audio.muted = false;
-    }
-  };
-
-  // The 'playing' event is triggered when playback has begun, while 'play' is triggered when the request to play is initiated. 'play' is a more reliable event to use for updating the button state.
-  audio.addEventListener("playing", () => {
-    debugLog.log("Stream playing successfully");
-    retryCount = 0;
-    suspendCount = 0; // Reset suspend counter when playing successfully
-    if (retryTimer) {
-      clearTimeout(retryTimer);
-      retryTimer = null;
-    }
-    if (bufferingTimeout) {
-      clearTimeout(bufferingTimeout);
-      bufferingTimeout = null;
-    }
-    startHealthCheck(); // Start monitoring stream health
-  });
-}
-
-function togglePlay() {
-  const playerButton = document.getElementById("playerButton");
-  const isPlaying = isPlayerIconPaused();
-  // debugLog.log("Toggle play state:", isPlaying);
-  if (isPlaying) {
-    // debugLog.log("Pausing audio");
-    setPlayerIcon(false); // Set to play icon
-    playerButton.style.textShadow = "0 0 5px black";
-
-    if (audio) {
-      userInitiatedPause = true; // Set flag before pausing
-      audio.pause();
-      // Don't create a new audio object, just reset the current one
-      audio.currentTime = 0;
+      // end of draw
     }
 
-    if (!sleepTimerId) {
-      removeSleepTimerElement();
-    } else {
-      cancelSleepTimer();
-      debugLog.log("Sleep timer canceled on pause.");
-    }
-  } else {
-    // debugLog.log("Playing audio");
-    setPlayerIcon(true); // Set to pause icon
-    playerButton.style.textShadow = "0 0 5px black";
-
-    // Reuse existing audio object if available, otherwise create new one
-    if (!audio) {
-      audio = new Audio(URL_STREAMING);
-      audio.crossOrigin = "anonymous";
-      audio.preload = "none";
-      audio.autoplay = false;
-      audio.loop = false;
-      audio.muted = false;
-
-      // Attach event listeners for the new audio object
-      setupAudioEventListeners();
-    } else if (audio.src !== URL_STREAMING) {
-      // Just update the source without recreating the object
-      audio.src = URL_STREAMING;
+    // Return the controller with stop function
+    function stop() {
+      if (rafId) cancelAnimationFrame(rafId);
+      try {
+        analyser.disconnect();
+        try {
+          __rlplayerAnalyserMap.delete(audio);
+        } catch (e) {}
+        // Only disconnect analyser - do not disconnect the shared source since it may be reused
+        // The source is owned/stored in __rlplayerMediaElemSourceMap
+      } catch (e) {}
+      if (audioCtx && audioCtx.state !== "closed") {
+        // Do not close the shared audio context - it may be used by other visualizers or audio features
+        // Optionally close only if it was created in this function and no other existing references
+      }
+      window.removeEventListener("resize", resizeCanvas);
     }
 
-    setVolume(initialVol);
-
-    // Handle the play promise properly
-    const playPromise = audio.play();
-    if (playPromise !== undefined) {
-      playPromise.catch((error) => {
-        debugLog.warn("Audio play failed:", error);
-        // Reset button state if play fails
-        setPlayerIcon(false); // Set to play icon
-      });
+    // Start on a user gesture or when playing
+    function resumeAndStart() {
+      if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
+      if (!rafId) draw();
     }
+
+    // Resume and start on play
+    audio.addEventListener("play", resumeAndStart);
+    // Also make sure audiocontext is resumed on first user click
+    document.addEventListener("click", resumeAndStart, { once: true });
+
+    return { stop };
   }
-}
 
-// Sleep timer logic
-let sleepTimerId = null;
-let sleepTimerCountdownId = null;
-let sleepTimerEndTime = null;
-const timerButton = document.getElementById("timerButton");
+  async function setupAudioPlayer() {
+    audio = new Audio(URL_STREAMING);
+    audio.crossOrigin = "anonymous";
+    audio.preload = "metadata"; // Changed from "none" to "metadata" for better buffering
+    audio.autoplay = false;
+    audio.loop = false;
+    audio.muted = false;
 
-// Use the existing <span id="timerDisplay"> for countdown display
-const timerCountdownDisplay = document.getElementById("timerDisplay");
-
-function updateSleepTimerCountdown() {
-  if (!sleepTimerEndTime) return;
-  const now = Date.now();
-  const remainingMs = sleepTimerEndTime - now;
-  if (remainingMs <= 0) {
-    timerCountdownDisplay.textContent = "";
-    clearInterval(sleepTimerCountdownId);
-    sleepTimerCountdownId = null;
-    sleepTimerEndTime = null;
-    return;
-  }
-  const remainingMin = Math.ceil(remainingMs / 60000);
-  timerCountdownDisplay.textContent = `${remainingMin} min`;
-}
-
-timerButton.addEventListener("click", function () {
-  // Create a modal dialog for timer selection
-  const modal = document.createElement("div");
-  modal.style.position = "fixed";
-  modal.style.top = "0";
-  modal.style.left = "0";
-  modal.style.width = "100vw";
-  modal.style.height = "100vh";
-  modal.style.background = "rgba(0, 0, 0, 0.3)";
-  modal.style.display = "flex";
-  modal.style.alignItems = "center";
-  modal.style.justifyContent = "center";
-  modal.style.zIndex = "9999";
-
-  // Allow closing modal by clicking outside the box
-  modal.addEventListener("click", function (e) {
-    if (e.target === modal) {
-      document.body.removeChild(modal);
-      cancelSleepTimer();
+    // Add some additional properties that might help with streaming
+    if ("mozPreservesPitch" in audio) {
+      audio.mozPreservesPitch = false;
     }
-  });
+    if ("webkitPreservesPitch" in audio) {
+      audio.webkitPreservesPitch = false;
+    }
 
-  const box = document.createElement("div");
-  box.style.background = "#fff";
-  box.style.padding = "24px";
-  box.style.borderRadius = "8px";
-  box.style.textAlign = "center";
-  box.style.minWidth = "220px";
+    setupAudioEventListeners();
 
-  box.innerHTML = `Set or stop a sleep timer. <strong>Audio gets dimmed by, this will be undone after the timer ends or is canceled.</strong><br><br>`;
-
-  const validTimes = [15, 30, 45, 60];
-  validTimes.forEach((min) => {
-    const btn = document.createElement("button");
-    btn.textContent = `${min} min`;
-    btn.style.margin = "3px";
-    btn.style.color = "white";
-    btn.style.backgroundColor = "#031521";
-    btn.style.border = "none";
-    btn.style.borderRadius = "4px";
-    btn.style.padding = "4px 6px";
-
-    btn.onclick = () => {
-      setSleepTimer(min);
-      document.body.removeChild(modal);
+    document.getElementById("volume").oninput = function () {
+      changeVolumeLocalStorage(this.value);
+      // debugLog.log("Volume slider changed to:", this.value);
+      audio.volume = intToDecimal(this.value);
     };
-    box.appendChild(btn);
-  });
 
-  // Cancel button
-  const cancelBtn = document.createElement("button");
-  cancelBtn.textContent = "Stop timer";
-  cancelBtn.style.margin = "3px";
-  cancelBtn.style.color = "white";
-  cancelBtn.style.backgroundColor = "#031521";
-  cancelBtn.style.border = "none";
-  cancelBtn.style.borderRadius = "4px";
-  cancelBtn.style.padding = "4px 6px";
-  cancelBtn.onclick = () => {
-    cancelSleepTimer();
-    document.body.removeChild(modal);
-    debugLog.log("Sleep timer canceled from modal.");
-  };
-  box.appendChild(document.createElement("br"));
-  box.appendChild(cancelBtn);
-
-  modal.appendChild(box);
-  document.body.appendChild(modal);
-
-  function setSleepTimer(selected) {
-    if (sleepTimerId) clearTimeout(sleepTimerId);
-    if (sleepTimerCountdownId) clearInterval(sleepTimerCountdownId);
-
-    // Create timer circle container when sleep timer is actually set
-    let timerCircleContainer = document.getElementById("timerCircleContainer");
-    if (!timerCircleContainer) {
-      timerCircleContainer = document.createElement("div");
-      timerCircleContainer.id = "timerCircleContainer";
-      timerCircleContainer.style.display = "flex";
-      timerCircleContainer.style.alignItems = "center";
-      timerCircleContainer.style.justifyContent = "center";
-      timerCircleContainer.style.gap = "0.5rem";
-      timerCountdownDisplay.parentNode.insertBefore(
-        timerCircleContainer,
-        timerCountdownDisplay.nextSibling,
+    // Set up player button click listener
+    const playerButton = document.getElementById("playerButton");
+    if (playerButton) {
+      playerButton.addEventListener("click", togglePlay);
+      debugLog("Player button click listener attached");
+    } else {
+      debugLog.warn(
+        "Player button not found - click functionality will not work"
       );
     }
-    // Only add the SVG if not already present
-    if (!timerCircleContainer.querySelector("#timerCircleProgress")) {
-      timerCircleContainer.innerHTML = `
+
+    // Initialize visualizer if we have a canvas and the audio element
+    try {
+      if (visualizerController && visualizerController.stop) {
+        visualizerController.stop();
+        visualizerController = null;
+      }
+      if (document.getElementById("visualizer")) {
+        visualizerController = setupVisualizer({
+          audio,
+          canvasId: "visualizer",
+          options: { bars: 32, fftSize: 256 },
+        });
+        debugLog("Visualizer initialized");
+      }
+    } catch (e) {
+      debugLog.warn("Visualizer setup failed:", e);
+    }
+  }
+
+  // No developer UI in production
+
+  function setupAudioEventListeners() {
+    // No dev UI initialization in production
+
+    // Suspend is often normal, only treat as error if repeated
+    let suspendCount = 0;
+    audio.addEventListener("suspend", () => {
+      suspendCount++;
+      if (suspendCount > 3) {
+        debugLog.warn("Multiple suspend events detected");
+        handleStreamError("suspend");
+        suspendCount = 0;
+      }
+    });
+
+    // Abort and emptied are normal during stream loading - don't treat as errors
+    audio.addEventListener("abort", () => {
+      debugLog.log("Audio abort event (normal during loading)");
+    });
+
+    audio.addEventListener("emptied", () => {
+      debugLog.log("Audio emptied event (normal during loading)");
+    });
+
+    // Monitor for unexpected pauses that might indicate buffering issues
+    // audio.addEventListener("pause", () => {
+    //   stopHealthCheck(); // Stop health checking when paused
+
+    //   // Only handle unexpected pauses (not user-initiated)
+    //   if (!userInitiatedPause) {
+    //     setTimeout(() => {
+    //       const playerButton = document.getElementById("playerButton");
+    //       if (playerButton && isPlayerIconPaused() && audio.paused) {
+    //         debugLog.warn("Unexpected pause detected - stream may have stopped");
+    //         resetButtonState();
+    //       }
+    //     }, 100);
+    //   } else {
+    //     debugLog.log("User-initiated pause detected - not treating as error");
+    //     userInitiatedPause = false; // Reset the flag
+    //   }
+    // });
+
+    // NEW 250912: Add a listener for the 'pause' event
+    audio.addEventListener("pause", () => {
+      debugLog.log(
+        "Audio 'pause' event triggered. Setting button to play icon."
+      );
+      // This will set the button to the play icon when the audio pauses,
+      // whether by a user click or by the browser/OS.
+      setPlayerIcon(false);
+      // add the text shadow back here
+      const playerButton = document.getElementById("playerButton");
+      if (playerButton) {
+        playerButton.style.textShadow = "0 0 5px black";
+      }
+      stopHealthCheck();
+      // Stop visualizer to reduce CPU/battery usage while paused
+      if (visualizerController && visualizerController.stop) {
+        visualizerController.stop();
+        visualizerController = null;
+      }
+      // Do not reset the userInitiatedPause flag here.
+      // The `togglePlay` function already handles that.
+    });
+
+    audio.addEventListener("play", () => {
+      debugLog.log(
+        "Audio 'play' event triggered. Setting button to pause icon."
+      );
+      // This will set the button to the pause icon when the audio starts playing,
+      // whether by a user click or by the browser automatically resuming it.
+      setPlayerIcon(true);
+      // You might also want to remove the text shadow here
+      const playerButton = document.getElementById("playerButton");
+      if (playerButton) {
+        playerButton.style.textShadow = "none";
+      }
+      // Ensure visualizer is active when playback starts
+      try {
+        if (!visualizerController && document.getElementById("visualizer")) {
+          visualizerController = setupVisualizer({
+            audio,
+            canvasId: "visualizer",
+            options: { bars: 32, fftSize: 256 },
+          });
+          debugLog("Visualizer (re)initialized on play");
+        }
+      } catch (e) {
+        debugLog.warn("Visualizer init on play failed:", e);
+      }
+      retryCount = 0;
+      suspendCount = 0;
+      if (retryTimer) {
+        clearTimeout(retryTimer);
+        retryTimer = null;
+      }
+      if (bufferingTimeout) {
+        clearTimeout(bufferingTimeout);
+        bufferingTimeout = null;
+      }
+      startHealthCheck(); // Start monitoring stream health
+    });
+
+    // Monitor buffering state with shorter timeout for faster recovery
+    audio.addEventListener("waiting", () => {
+      debugLog.log("Stream buffering...");
+      // Only set timeout if not already buffering
+      if (bufferingTimeout) clearTimeout(bufferingTimeout);
+      bufferingTimeout = setTimeout(() => {
+        // Only attempt recovery if still buffering and not paused by user
+        if (audio.readyState < 3 && !audio.paused) {
+          debugLog.warn("Buffering timeout - stream may be having issues");
+          handleStreamError("buffering timeout");
+        }
+      }, 15000); // Increased to 15 seconds to avoid false positives
+    });
+
+    audio.addEventListener("canplaythrough", () => {
+      debugLog.log("Stream ready to play through");
+      if (bufferingTimeout) {
+        clearTimeout(bufferingTimeout);
+        bufferingTimeout = null;
+      }
+    });
+
+    // Button state is now managed by togglePlay() function only
+    // Removed onplay and onpause handlers to prevent race conditions
+
+    audio.onvolumechange = function () {
+      if (audio.volume > 0) {
+        audio.muted = false;
+      }
+    };
+
+    // The 'playing' event is triggered when playback has begun, while 'play' is triggered when the request to play is initiated. 'play' is a more reliable event to use for updating the button state.
+    audio.addEventListener("playing", () => {
+      debugLog.log("Stream playing successfully");
+      retryCount = 0;
+      suspendCount = 0; // Reset suspend counter when playing successfully
+      if (retryTimer) {
+        clearTimeout(retryTimer);
+        retryTimer = null;
+      }
+      if (bufferingTimeout) {
+        clearTimeout(bufferingTimeout);
+        bufferingTimeout = null;
+      }
+      startHealthCheck(); // Start monitoring stream health
+    });
+  }
+
+  function togglePlay() {
+    const playerButton = document.getElementById("playerButton");
+    const isPlaying = isPlayerIconPaused();
+    // debugLog.log("Toggle play state:", isPlaying);
+    if (isPlaying) {
+      // debugLog.log("Pausing audio");
+      setPlayerIcon(false); // Set to play icon
+      playerButton.style.textShadow = "0 0 5px black";
+
+      if (audio) {
+        userInitiatedPause = true; // Set flag before pausing
+        audio.pause();
+        // Don't create a new audio object, just reset the current one
+        audio.currentTime = 0;
+      }
+
+      if (!sleepTimerId) {
+        removeSleepTimerElement();
+      } else {
+        cancelSleepTimer();
+        debugLog.log("Sleep timer canceled on pause.");
+      }
+    } else {
+      // debugLog.log("Playing audio");
+      setPlayerIcon(true); // Set to pause icon
+      playerButton.style.textShadow = "0 0 5px black";
+
+      // Reuse existing audio object if available, otherwise create new one
+      if (!audio) {
+        audio = new Audio(URL_STREAMING);
+        audio.crossOrigin = "anonymous";
+        audio.preload = "none";
+        audio.autoplay = false;
+        audio.loop = false;
+        audio.muted = false;
+
+        // Attach event listeners for the new audio object
+        setupAudioEventListeners();
+      } else if (audio.src !== URL_STREAMING) {
+        // Just update the source without recreating the object
+        audio.src = URL_STREAMING;
+      }
+
+      setVolume(initialVol);
+
+      // Initialize visualizer for the new audio object (if any)
+      try {
+        if (visualizerController && visualizerController.stop) {
+          visualizerController.stop();
+          visualizerController = null;
+        }
+        if (document.getElementById("visualizer")) {
+          visualizerController = setupVisualizer({
+            audio,
+            canvasId: "visualizer",
+            options: { bars: 32, fftSize: 256 },
+          });
+          debugLog("Visualizer initialized for togglePlay new audio");
+        }
+      } catch (e) {
+        debugLog.warn("Visualizer setup failed (togglePlay):", e);
+      }
+
+      // Handle the play promise properly
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          debugLog.warn("Audio play failed:", error);
+          // Reset button state if play fails
+          setPlayerIcon(false); // Set to play icon
+        });
+      }
+    }
+  }
+
+  // Sleep timer logic
+  let sleepTimerId = null;
+  let sleepTimerCountdownId = null;
+  let sleepTimerEndTime = null;
+  const timerButton = document.getElementById("timerButton");
+
+  // Use the existing <span id="timerDisplay"> for countdown display
+  const timerCountdownDisplay = document.getElementById("timerDisplay");
+
+  function updateSleepTimerCountdown() {
+    if (!sleepTimerEndTime) return;
+    const now = Date.now();
+    const remainingMs = sleepTimerEndTime - now;
+    if (remainingMs <= 0) {
+      timerCountdownDisplay.textContent = "";
+      clearInterval(sleepTimerCountdownId);
+      sleepTimerCountdownId = null;
+      sleepTimerEndTime = null;
+      return;
+    }
+    const remainingMin = Math.ceil(remainingMs / 60000);
+    timerCountdownDisplay.textContent = `${remainingMin} min`;
+  }
+
+  timerButton.addEventListener("click", function () {
+    // Create a modal dialog for timer selection
+    const modal = document.createElement("div");
+    modal.style.position = "fixed";
+    modal.style.top = "0";
+    modal.style.left = "0";
+    modal.style.width = "100vw";
+    modal.style.height = "100vh";
+    modal.style.background = "rgba(0, 0, 0, 0.3)";
+    modal.style.display = "flex";
+    modal.style.alignItems = "center";
+    modal.style.justifyContent = "center";
+    modal.style.zIndex = "9999";
+
+    // Allow closing modal by clicking outside the box
+    modal.addEventListener("click", function (e) {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
+        cancelSleepTimer();
+      }
+    });
+
+    const box = document.createElement("div");
+    box.style.background = "#fff";
+    box.style.padding = "24px";
+    box.style.borderRadius = "8px";
+    box.style.textAlign = "center";
+    box.style.minWidth = "220px";
+
+    box.innerHTML = `Set or stop a sleep timer. <strong>Audio gets dimmed by, this will be undone after the timer ends or is canceled.</strong><br><br>`;
+
+    const validTimes = [15, 30, 45, 60];
+    validTimes.forEach((min) => {
+      const btn = document.createElement("button");
+      btn.textContent = `${min} min`;
+      btn.style.margin = "3px";
+      btn.style.color = "white";
+      btn.style.backgroundColor = "#031521";
+      btn.style.border = "none";
+      btn.style.borderRadius = "4px";
+      btn.style.padding = "4px 6px";
+
+      btn.onclick = () => {
+        setSleepTimer(min);
+        document.body.removeChild(modal);
+      };
+      box.appendChild(btn);
+    });
+
+    // Cancel button
+    const cancelBtn = document.createElement("button");
+    cancelBtn.textContent = "Stop timer";
+    cancelBtn.style.margin = "3px";
+    cancelBtn.style.color = "white";
+    cancelBtn.style.backgroundColor = "#031521";
+    cancelBtn.style.border = "none";
+    cancelBtn.style.borderRadius = "4px";
+    cancelBtn.style.padding = "4px 6px";
+    cancelBtn.onclick = () => {
+      cancelSleepTimer();
+      document.body.removeChild(modal);
+      debugLog.log("Sleep timer canceled from modal.");
+    };
+    box.appendChild(document.createElement("br"));
+    box.appendChild(cancelBtn);
+
+    modal.appendChild(box);
+    document.body.appendChild(modal);
+
+    function setSleepTimer(selected) {
+      if (sleepTimerId) clearTimeout(sleepTimerId);
+      if (sleepTimerCountdownId) clearInterval(sleepTimerCountdownId);
+
+      // Create timer circle container when sleep timer is actually set
+      let timerCircleContainer = document.getElementById(
+        "timerCircleContainer"
+      );
+      if (!timerCircleContainer) {
+        timerCircleContainer = document.createElement("div");
+        timerCircleContainer.id = "timerCircleContainer";
+        timerCircleContainer.style.display = "flex";
+        timerCircleContainer.style.alignItems = "center";
+        timerCircleContainer.style.justifyContent = "center";
+        timerCircleContainer.style.gap = "0.5rem";
+        timerCountdownDisplay.parentNode.insertBefore(
+          timerCircleContainer,
+          timerCountdownDisplay.nextSibling
+        );
+      }
+      // Only add the SVG if not already present
+      if (!timerCircleContainer.querySelector("#timerCircleProgress")) {
+        timerCircleContainer.innerHTML = `
         <svg width="32" height="32" viewBox="0 0 32 32" style="transform: rotate(-90deg);">
           <circle cx="15" cy="15" r="12" stroke="#ffffffff" stroke-width="1" fill="none" opacity="1"/>
           <circle id="timerCircleProgress" cx="15" cy="15" r="11" stroke="#26599dff" stroke-width="2" fill="none"
             stroke-dasharray="75.4" stroke-dashoffset="0" style="transition: stroke-dashoffset 1s linear;"/>
         </svg>
       `;
-    }
-
-    // Helper to set initial offset based on selected sleep time
-    function setInitialCircleOffset(selected) {
-      const circle = timerCircleContainer.querySelector("#timerCircleProgress");
-      const circumference = 2 * Math.PI * 11; // r=11
-      let offset = 0;
-      if (selected === 15) {
-        offset = circumference * 0.75; // 25% visible
-      } else if (selected === 30) {
-        offset = circumference * 0.5; // 50% visible
-      } else if (selected === 45) {
-        offset = circumference * 0.25; // 75% visible
-      } else if (selected === 60) {
-        offset = 0; // 100% visible
       }
-      circle.style.strokeDashoffset = offset;
-    }
 
-    // Set initial offset for selected time
-    setInitialCircleOffset(selected);
+      // Helper to set initial offset based on selected sleep time
+      function setInitialCircleOffset(selected) {
+        const circle = timerCircleContainer.querySelector(
+          "#timerCircleProgress"
+        );
+        const circumference = 2 * Math.PI * 11; // r=11
+        let offset = 0;
+        if (selected === 15) {
+          offset = circumference * 0.75; // 25% visible
+        } else if (selected === 30) {
+          offset = circumference * 0.5; // 50% visible
+        } else if (selected === 45) {
+          offset = circumference * 0.25; // 75% visible
+        } else if (selected === 60) {
+          offset = 0; // 100% visible
+        }
+        circle.style.strokeDashoffset = offset;
+      }
 
-    sleepTimerEndTime = Date.now() + selected * 60 * 1000;
-    // If not playing, start playing and toggle play/pause
-    if (audio && audio.paused) {
-      togglePlay();
-      setVolume(dimVolumeSleeptimer);
-    } else {
-      setVolume(dimVolumeSleeptimer);
-    }
-    debugLog.log(
-      "Sleep timer started, audio started. Volume set to " +
-        dimVolumeSleeptimer +
-        "%",
-    );
-    timerCountdownDisplay.classList.add("ml-2");
-    timerCircleContainer.style.display = "flex";
-    timerCircleContainer.style.alignItems = "center";
-    timerCircleContainer.style.justifyContent = "center";
+      // Set initial offset for selected time
+      setInitialCircleOffset(selected);
 
-    // Circle animation setup
-    const circle = timerCircleContainer.querySelector("#timerCircleProgress");
-    const totalSeconds = selected * 60;
-    const circumference = 2 * Math.PI * 11; // r=11
-    circle.setAttribute("stroke-dasharray", circumference);
+      sleepTimerEndTime = Date.now() + selected * 60 * 1000;
+      // If not playing, start playing and toggle play/pause
+      if (audio && audio.paused) {
+        togglePlay();
+        setVolume(dimVolumeSleeptimer);
+      } else {
+        setVolume(dimVolumeSleeptimer);
+      }
+      debugLog.log(
+        "Sleep timer started, audio started. Volume set to " +
+          dimVolumeSleeptimer +
+          "%"
+      );
+      timerCountdownDisplay.classList.add("ml-2");
+      timerCircleContainer.style.display = "flex";
+      timerCircleContainer.style.alignItems = "center";
+      timerCircleContainer.style.justifyContent = "center";
 
-    // Set initial offset for selected time
-    setInitialCircleOffset(selected);
+      // Circle animation setup
+      const circle = timerCircleContainer.querySelector("#timerCircleProgress");
+      const totalSeconds = selected * 60;
+      const circumference = 2 * Math.PI * 11; // r=11
+      circle.setAttribute("stroke-dasharray", circumference);
 
-    sleepTimerId = setTimeout(
-      () => {
+      // Set initial offset for selected time
+      setInitialCircleOffset(selected);
+
+      sleepTimerId = setTimeout(() => {
         if (audio && !audio.paused) {
           togglePlay();
           setVolume(100);
@@ -2142,107 +2209,105 @@ timerButton.addEventListener("click", function () {
           sleepTimerCountdownId = null;
         }
         sleepTimerEndTime = null;
-      },
-      selected * 60 * 1000,
-    );
+      }, selected * 60 * 1000);
 
-    function updateSleepTimerCircle() {
-      if (!sleepTimerEndTime) return;
-      const now = Date.now();
-      const remainingMs = sleepTimerEndTime - now;
-      if (remainingMs <= 0) {
-        circle.setAttribute("stroke-dashoffset", circumference);
-        circle.setAttribute("stroke", "#fff"); // Set color to white when finished
-        timerCircleContainer.style.display = "none";
+      function updateSleepTimerCircle() {
+        if (!sleepTimerEndTime) return;
+        const now = Date.now();
+        const remainingMs = sleepTimerEndTime - now;
+        if (remainingMs <= 0) {
+          circle.setAttribute("stroke-dashoffset", circumference);
+          circle.setAttribute("stroke", "#fff"); // Set color to white when finished
+          timerCircleContainer.style.display = "none";
+          clearInterval(sleepTimerCountdownId);
+          sleepTimerCountdownId = null;
+          sleepTimerEndTime = null;
+          return;
+        }
+        const elapsed = totalSeconds - Math.floor(remainingMs / 1000);
+        // Progress: 0 (start) to 1 (end)
+        const progress = elapsed / totalSeconds;
+        // Initial offset for selected time
+        let initialOffset = 0;
+        if (selected === 15) {
+          initialOffset = circumference * 0.75;
+        } else if (selected === 30) {
+          initialOffset = circumference * 0.5;
+        } else if (selected === 45) {
+          initialOffset = circumference * 0.25;
+        } else {
+          initialOffset = 0;
+        }
+        // Animate offset from initialOffset to circumference
+        const offset =
+          initialOffset + (circumference - initialOffset) * progress;
+        circle.setAttribute("stroke-dashoffset", offset);
+        circle.setAttribute("stroke", "#26599dff");
+      }
+
+      updateSleepTimerCircle();
+      sleepTimerCountdownId = setInterval(updateSleepTimerCircle, 1000);
+    }
+  });
+
+  function cancelSleepTimer() {
+    if (sleepTimerId) {
+      clearTimeout(sleepTimerId);
+      sleepTimerId = null;
+      timerCountdownDisplay.textContent = "";
+      timerCountdownDisplay.classList.remove("ml-2");
+      if (sleepTimerCountdownId) {
         clearInterval(sleepTimerCountdownId);
         sleepTimerCountdownId = null;
-        sleepTimerEndTime = null;
-        return;
       }
-      const elapsed = totalSeconds - Math.floor(remainingMs / 1000);
-      // Progress: 0 (start) to 1 (end)
-      const progress = elapsed / totalSeconds;
-      // Initial offset for selected time
-      let initialOffset = 0;
-      if (selected === 15) {
-        initialOffset = circumference * 0.75;
-      } else if (selected === 30) {
-        initialOffset = circumference * 0.5;
-      } else if (selected === 45) {
-        initialOffset = circumference * 0.25;
-      } else {
-        initialOffset = 0;
+      sleepTimerEndTime = null;
+
+      removeSleepTimerElement();
+      if (audio && !audio.paused) {
+        setVolume(100);
+        debugLog.log("Sleep timer canceled, volume restored to 100%");
       }
-      // Animate offset from initialOffset to circumference
-      const offset = initialOffset + (circumference - initialOffset) * progress;
-      circle.setAttribute("stroke-dashoffset", offset);
-      circle.setAttribute("stroke", "#26599dff");
+    } else {
+      removeSleepTimerElement();
+      debugLog.log("No sleep timer is set.");
     }
-
-    updateSleepTimerCircle();
-    sleepTimerCountdownId = setInterval(updateSleepTimerCircle, 1000);
   }
-});
 
-function cancelSleepTimer() {
-  if (sleepTimerId) {
-    clearTimeout(sleepTimerId);
-    sleepTimerId = null;
-    timerCountdownDisplay.textContent = "";
-    timerCountdownDisplay.classList.remove("ml-2");
-    if (sleepTimerCountdownId) {
-      clearInterval(sleepTimerCountdownId);
-      sleepTimerCountdownId = null;
+  function removeSleepTimerElement() {
+    const timerCircleElement = document.getElementById("timerCircleContainer");
+    if (timerCircleElement) {
+      debugLog.log("Found sleep timer element, and set display none");
+      timerCircleElement.style.display = "none";
+      timerCircleElement.innerHTML = "";
     }
-    sleepTimerEndTime = null;
+  }
 
-    removeSleepTimerElement();
-    if (audio && !audio.paused) {
-      setVolume(100);
-      debugLog.log("Sleep timer canceled, volume restored to 100%");
+  function intToDecimal(vol) {
+    return vol / 100;
+  }
+
+  function decimalToInt(vol) {
+    return vol * 100;
+  }
+
+  function mute() {
+    if (!audio.muted) {
+      document.getElementById("volIndicator").innerHTML = 0;
+      document.getElementById("volume").value = 0;
+      audio.volume = 0;
+      audio.muted = true;
+    } else {
+      var localVolume = localStorage.getItem("volume");
+      document.getElementById("volIndicator").innerHTML = localVolume;
+      document.getElementById("volume").value = localVolume;
+      audio.volume = intToDecimal(localVolume);
+      audio.muted = false;
     }
-  } else {
-    removeSleepTimerElement();
-    debugLog.log("No sleep timer is set.");
   }
-}
 
-function removeSleepTimerElement() {
-  const timerCircleElement = document.getElementById("timerCircleContainer");
-  if (timerCircleElement) {
-    debugLog.log("Found sleep timer element, and set display none");
-    timerCircleElement.style.display = "none";
-    timerCircleElement.innerHTML = "";
-  }
-}
-
-function intToDecimal(vol) {
-  return vol / 100;
-}
-
-function decimalToInt(vol) {
-  return vol * 100;
-}
-
-function mute() {
-  if (!audio.muted) {
-    document.getElementById("volIndicator").innerHTML = 0;
-    document.getElementById("volume").value = 0;
-    audio.volume = 0;
-    audio.muted = true;
-  } else {
-    var localVolume = localStorage.getItem("volume");
-    document.getElementById("volIndicator").innerHTML = localVolume;
-    document.getElementById("volume").value = localVolume;
-    audio.volume = intToDecimal(localVolume);
-    audio.muted = false;
-  }
-}
-
-// Nightshift / lightmode toggle
-// Clicking the #nightshift image will toggle the class 'lightmode' on the <body>
-// The choice is persisted in localStorage under key 'rl_lightmode'
-(function () {
+  // Nightshift / lightmode toggle
+  // Clicking the #nightshift image will toggle the class 'lightmode' on the <body>
+  // The choice is persisted in localStorage under key 'rl_lightmode'
   function initNightshift() {
     const night = document.getElementById("nightshift");
     if (!night) return;
@@ -2278,10 +2343,9 @@ function mute() {
       }
     });
   }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initNightshift);
-  } else {
-    initNightshift();
-  }
-})();
+}
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initNightshift);
+} else {
+  initNightshift();
+}

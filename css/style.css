@@ -237,6 +237,7 @@ body.lightmode .player-icon {
 .bulb .nightshift-icon {
   width: 12px !important;
   filter: brightness(0) invert(1); /* Makes SVG white */
+  opacity: 0.7;
   cursor: pointer;
   transition: opacity 0.3s ease;
   vertical-align: middle;
@@ -262,6 +263,8 @@ body.lightmode .timer-icon {
 .timer-icon:hover {
   opacity: 0.8;
 }
+
+/* Developer visualizer controls removed */
 
 .close {
   color: var(--modal-text);
