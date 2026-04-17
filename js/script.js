@@ -53,6 +53,11 @@ debugLog.info = (...args) => {
   }
 };
 
+// Helper to check if a string is a Radiologik placeholder
+function isPlaceholder(str) {
+  return !str || str.trim() === "" || str.includes("<rl-");
+}
+
 // SVG Icon helper functions
 function setPlayerIcon(isPlaying) {
   const playerButton = document.getElementById("playerButton");
@@ -433,6 +438,17 @@ function refreshCurrentSong(
   const currentSong = document.getElementById("currentSongDisplay");
   const currentArtist = document.getElementById("currentArtistDisplay");
   const currentDuration = document.getElementById("currentDurationDisplay");
+  const currentContainer =
+    document.getElementById("currentTrackContainer") ||
+    currentSong?.parentElement;
+
+  // If the track is a placeholder, hide the section and stop
+  if (isPlaceholder(song)) {
+    if (currentContainer) currentContainer.style.display = "none";
+    return;
+  } else {
+    if (currentContainer) currentContainer.style.display = "";
+  }
 
   if (
     song !== currentSong.textContent ||
@@ -480,6 +496,45 @@ async function getStreamingData() {
         isFirstLoad = false;
       }
 
+      // Radiologik uses "Last" for history
+      const historyData = data.History || data.Last;
+
+      // Handle History Section visibility
+      const historySection = document.getElementById("historySection");
+      if (historySection) {
+        const hasHistory =
+          historyData &&
+          historyData.length > 0 &&
+          !isPlaceholder(historyData[0].Title);
+        historySection.style.display = hasHistory ? "" : "none";
+        if (hasHistory) {
+          renderTrackList("historyList", historyData);
+        }
+      }
+
+      // Handle Next/Upcoming Section visibility
+      const nextSection = document.getElementById("nextSection");
+      if (nextSection) {
+        const hasNext =
+          data.Next &&
+          data.Next.length > 0 &&
+          !isPlaceholder(data.Next[0].Title);
+        nextSection.style.display = hasNext ? "" : "none";
+        if (hasNext) {
+          renderTrackList("nextList", data.Next);
+        }
+      }
+
+      // Check if Current song is a placeholder
+      if (isPlaceholder(data.Current.Title)) {
+        const currentContainer = document.getElementById(
+          "currentTrackContainer",
+        );
+        if (currentContainer) currentContainer.style.display = "none";
+        musicActual = null;
+        return;
+      }
+
       const safeCurrentSong = data.Current.Title.replace(/'/g, "'");
       const safeCurrentArtist = data.Current.Artist.replace(/'/g, "'");
 
@@ -497,6 +552,24 @@ async function getStreamingData() {
   } catch (error) {
     debugLog.error("Stream data error:", error);
   }
+}
+
+// Helper to render History or Next tracks into a list
+function renderTrackList(elementId, tracks) {
+  const container = document.getElementById(elementId);
+  if (!container) return;
+
+  container.innerHTML = tracks
+    .filter((track) => !isPlaceholder(track.Title))
+    .map(
+      (track) => `
+      <div class="track-item animated fadeIn">
+        <div class="track-title">${track.Title}</div>
+        <div class="track-artist">${track.Artist}</div>
+      </div>
+    `,
+    )
+    .join("");
 }
 
 function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {

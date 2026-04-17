@@ -59,7 +59,10 @@
                   </div>
                   <div class="row">
                     <div class="col-12">
-                      <div class="info-current-song text-center">
+                      <div
+                        id="currentTrackContainer"
+                        class="info-current-song text-center"
+                      >
                         <p
                           id="currentSongDisplay"
                           class="current-song text-uppercase"
@@ -120,11 +123,34 @@
                       </div>
                     </div>
                   </div>
-                  <div class="row historic mt-3 mt-lg-0">
+                  <!-- Upcoming Section -->
+                  <div
+                    id="nextSection"
+                    class="row toplay mt-3"
+                    style="display: none"
+                  >
                     <div class="col-12">
-                      <div class="row" id="historicSong">
-                        <!-- filled by script function -->
-                      </div>
+                      <h5
+                        class="section-title text-center text-uppercase small muted"
+                      >
+                        Upcoming
+                      </h5>
+                      <div id="nextList" class="track-list"></div>
+                    </div>
+                  </div>
+                  <!-- History Section -->
+                  <div
+                    id="historySection"
+                    class="row historic mt-3"
+                    style="display: none"
+                  >
+                    <div class="col-12">
+                      <h5
+                        class="section-title text-center text-uppercase small muted"
+                      >
+                        Recently Played
+                      </h5>
+                      <div id="historyList" class="track-list"></div>
                     </div>
                   </div>
                 </div>

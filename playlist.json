@@ -1,10 +1,54 @@
 {
-  "Last": [],
+  "Last": [
+    {
+      "Artist": "KVPN",
+      "Title": "Come closer 1",
+      "Duration": "0:05"
+    },
+    {
+      "Artist": "Dua Lipa",
+      "Title": "Love Again",
+      "Duration": "4:09"
+    },
+    {
+      "Artist": "Nikka Costa",
+      "Title": "Keep It High",
+      "Duration": "3:53",
+      "Starttime": "2026-04-17 17:05:33"
+    }
+  ],
   "Current": {
-    "Artist": "Test Artist",
-    "Title": "Test Song",
-    "Duration": "3:45",
-    "Starttime": "2024-04-09T10:00:00Z"
+    "Artist": "OMC",
+    "Title": "How Bizzare",
+    "Duration": "3:43",
+    "Starttime": "2026-04-17 17:13:36"
   },
-  "Next": []
+  "Next": [
+    {
+      "Artist": "Celeste, Gotts Street Park",
+      "Title": "Both Sides Of The Moon",
+      "Duration": "4:17"
+    },
+    {
+      "Artist": "Sugababes",
+      "Title": "Stronger",
+      "Duration": "4:01"
+    },
+    {
+      "Artist": "KVPN",
+      "Title": "KVPN stacato delay",
+      "Duration": "0:09"
+    },
+    {
+      "Artist": "J. Cole",
+      "Title": "False Prophets",
+      "Duration": "3:57"
+    },
+    {
+      "Artist": "Super Disco Club, Sadako Pointer",
+      "Title": "Happiness (ft. Sadako Pointer)",
+      "Duration": "3:00",
+      "Starttime": "2026-04-17 17:17:18"
+    }
+  ]
 }
