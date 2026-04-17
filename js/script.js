@@ -57,7 +57,6 @@ debugLog.info = (...args) => {
 function isPlaceholder(str) {
   return !str || str.trim() === "" || str.includes("<rl-");
 }
-
 // SVG Icon helper functions
 function setPlayerIcon(isPlaying) {
   const playerButton = document.getElementById("playerButton");
@@ -496,80 +495,232 @@ async function getStreamingData() {
         isFirstLoad = false;
       }
 
-      // Radiologik uses "Last" for history
-      const historyData = data.History || data.Last;
-
-      // Handle History Section visibility
-      const historySection = document.getElementById("historySection");
-      if (historySection) {
-        const hasHistory =
-          historyData &&
-          historyData.length > 0 &&
-          !isPlaceholder(historyData[0].Title);
-        historySection.style.display = hasHistory ? "" : "none";
-        if (hasHistory) {
-          renderTrackList("historyList", historyData);
-        }
-      }
-
-      // Handle Next/Upcoming Section visibility
-      const nextSection = document.getElementById("nextSection");
-      if (nextSection) {
-        const hasNext =
-          data.Next &&
-          data.Next.length > 0 &&
-          !isPlaceholder(data.Next[0].Title);
-        nextSection.style.display = hasNext ? "" : "none";
-        if (hasNext) {
-          renderTrackList("nextList", data.Next);
-        }
-      }
-
-      // Check if Current song is a placeholder
-      if (isPlaceholder(data.Current.Title)) {
-        const currentContainer = document.getElementById(
-          "currentTrackContainer",
+      // Reset JSON error retry counter on successful data fetch
+      if (jsonErrorRetryCount > 0) {
+        debugLog(
+          "Playlist fetched successfully - resetting JSON error retry counter",
         );
-        if (currentContainer) currentContainer.style.display = "none";
-        musicActual = null;
-        return;
+        jsonErrorRetryCount = 0;
+      }
+      var currentSong = data.Current.Title;
+      var charsToplayTitle = 25;
+      var charsPlayingTitle = 40;
+      var nrToplay = 5;
+      var nrHistory = 3;
+      const currentArtistVal = data.Current.Artist;
+      let currentDurationVal = data.Current.Duration;
+      let currentStartTime = data.Current.Starttime;
+
+      if (currentSong.length > charsPlayingTitle) {
+        var string = currentSong;
+        var length = charsPlayingTitle;
+        var trimmedString = string.substring(0, length) + "...";
+        currentSong = trimmedString;
       }
 
-      const safeCurrentSong = data.Current.Title.replace(/'/g, "'");
-      const safeCurrentArtist = data.Current.Artist.replace(/'/g, "'");
+      const safeCurrentSong = (currentSong || "")
+        .replace(/'/g, "'")
+        .replace(/&/g, "&")
+        .trim();
+      const safeCurrentArtist = (currentArtistVal || "")
+        .replace(/'/g, "'")
+        .replace(/&/g, "&")
+        .trim();
 
-      if (safeCurrentSong !== musicActual) {
-        musicActual = safeCurrentSong;
+      // Handle Current Track visibility - hide if it's a placeholder
+      const currentContainer = document.getElementById("currentTrackContainer");
+      const isCurrentPlaceholder = isPlaceholderValue(safeCurrentSong);
+
+      if (currentContainer) {
+        currentContainer.style.display = isCurrentPlaceholder ? "none" : "";
+      }
+
+      // Clean up placeholder dashes and template values created by template when no data available
+      const cleanArtist = isPlaceholderValue(safeCurrentArtist)
+        ? ""
+        : safeCurrentArtist;
+      const cleanSong = isPlaceholderValue(safeCurrentSong)
+        ? ""
+        : safeCurrentSong;
+
+      if (isPlaceholderValue(currentDurationVal)) {
+        currentDurationVal = null;
+      }
+      if (isPlaceholderValue(currentStartTime)) {
+        currentStartTime = null;
+      }
+
+      const toplayArray = data.Next
+        ? data.Next.map((item) => ({
+            Title: (item.Title || "").trim(),
+            Artist: (item.Artist || "").trim(),
+          }))
+        : [];
+
+      const historyArray = data.Last
+        ? data.Last.map((item) => ({
+            Title: (item.Title || "").trim(),
+            Artist: (item.Artist || "").trim(),
+          }))
+        : [];
+
+      const validToplay = toplayArray.filter(
+        (item) =>
+          !isPlaceholderValue(item.Title) || !isPlaceholderValue(item.Artist),
+      );
+      const validHistory = historyArray.filter(
+        (item) =>
+          !isPlaceholderValue(item.Title) || !isPlaceholderValue(item.Artist),
+      );
+
+      function renderTrackList(
+        containerId,
+        sectionSelector,
+        list,
+        sectionName,
+      ) {
+        const container = document.getElementById(containerId);
+        if (!container) {
+          debugLog.error(`${containerId} element not found in DOM`);
+          return;
+        }
+        container.innerHTML = "";
+
+        const section = document.querySelector(sectionSelector);
+        if (section) {
+          if (list.length === 0) {
+            section.style.display = "none";
+            debugLog(`Hiding ${sectionName} section - no valid songs`);
+          } else {
+            section.style.display = "";
+            debugLog(`Showing ${sectionName} section - songs available`);
+          }
+        }
+
+        const maxItems = sectionName === "toplay" ? nrToplay : nrHistory;
+        const limited = list.slice(Math.max(0, list.length - maxItems));
+
+        debugLog(`Limited ${sectionName}:`, limited);
+
+        limited.forEach((songInfo, index) => {
+          const textSize = `text-size-${index}`;
+          const article = document.createElement("article");
+          article.classList.add("col-12");
+
+          const validArtist = !isPlaceholderValue(songInfo.Artist)
+            ? songInfo.Artist
+            : "";
+          const validTitle = !isPlaceholderValue(songInfo.Title)
+            ? songInfo.Title
+            : "";
+
+          if (!validArtist && !validTitle) {
+            debugLog(`Skipping invalid entry in ${sectionName}`);
+            return;
+          }
+
+          let displayTitle = validTitle;
+          if (displayTitle.length > charsToplayTitle) {
+            displayTitle = displayTitle.substring(0, charsToplayTitle) + "...";
+          }
+
+          const songDisplay =
+            validArtist && validTitle
+              ? `${validArtist} - ${displayTitle}`
+              : validArtist || displayTitle;
+
+          article.innerHTML = `
+            <div class="music-info text-center">
+              <p class="song ${textSize}">${songDisplay}</p>
+            </div>
+          `;
+          container.appendChild(article);
+        });
+      }
+
+      let nextTrackStarttime =
+        data.Next && data.Next.length > 0 ? data.Next[0].Starttime : null;
+      if (isPlaceholderValue(nextTrackStarttime)) {
+        nextTrackStarttime = null;
+      }
+
+      if (cleanSong !== musicActual && !isCurrentPlaceholder) {
+        debugLog("New song detected:", cleanSong);
+
+        if (awaitingNextSong) {
+          debugLog("New song detected - clearing awaiting next song state");
+          awaitingNextSong = false;
+
+          const currentDuration = document.getElementById(
+            "currentDurationDisplay",
+          );
+          if (currentDuration) {
+            currentDuration.style.opacity = "1";
+            currentDuration.style.animation = "";
+          }
+        }
+
+        if (fetchIntervalId) {
+          clearInterval(fetchIntervalId);
+          fetchIntervalId = null;
+          debugLog(
+            "Cleared polling interval - new song detected, switching to smart polling",
+          );
+        }
+
+        musicActual = cleanSong;
+
         refreshCurrentSong(
-          safeCurrentSong,
-          safeCurrentArtist,
-          data.Current.Duration,
-          data.Current.Starttime,
-          data.Next?.[0]?.Starttime,
+          cleanSong,
+          cleanArtist,
+          currentDurationVal,
+          currentStartTime,
+          nextTrackStarttime,
         );
+
+        document.title = `${RADIO_NAME} | ${cleanSong}${
+          cleanArtist ? " - " + cleanArtist : ""
+        }`;
       }
+
+      renderTrackList("toplaySong", ".toplay", validToplay, "toplay");
+      renderTrackList("historicSong", ".historic", validHistory, "historic");
     }
   } catch (error) {
-    debugLog.error("Stream data error:", error);
+    debugLog.error("Error in getStreamingData:", error);
+    debugLog("playlistData value:", playlistData);
+    debugLog("Playlist endpoint:", PLAYLIST);
+
+    // If this is a JSON format error, schedule a retry with limit
+    if (
+      (error.message && error.message.includes("JSON")) ||
+      error.name === "SyntaxError"
+    ) {
+      if (jsonErrorRetryCount < MAX_JSON_ERROR_RETRIES) {
+        jsonErrorRetryCount++;
+        debugLog(
+          `JSON format error detected - retry ${jsonErrorRetryCount}/${MAX_JSON_ERROR_RETRIES} in 15 seconds`,
+        );
+        setTimeout(() => {
+          debugLog(
+            `Retrying playlist fetch after JSON format error (attempt ${jsonErrorRetryCount}/${MAX_JSON_ERROR_RETRIES})...`,
+          );
+          getStreamingData();
+        }, 15000);
+      } else {
+        debugLog.error(
+          "Maximum JSON error retries reached. Please check the playlist.json format.",
+        );
+        // Reset counter for future potential fixes
+        setTimeout(() => {
+          jsonErrorRetryCount = 0;
+          debugLog(
+            "Reset JSON error retry counter - will try again if new errors occur",
+          );
+        }, 300000); // Reset after 5 minutes
+      }
+    }
   }
-}
-
-// Helper to render History or Next tracks into a list
-function renderTrackList(elementId, tracks) {
-  const container = document.getElementById(elementId);
-  if (!container) return;
-
-  container.innerHTML = tracks
-    .filter((track) => !isPlaceholder(track.Title))
-    .map(
-      (track) => `
-      <div class="track-item animated fadeIn">
-        <div class="track-title">${track.Title}</div>
-        <div class="track-artist">${track.Artist}</div>
-      </div>
-    `,
-    )
-    .join("");
 }
 
 function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
