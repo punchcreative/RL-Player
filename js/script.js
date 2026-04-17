@@ -54,8 +54,13 @@ debugLog.info = (...args) => {
 };
 
 // Helper to check if a string is a Radiologik placeholder
-function isPlaceholder(str) {
-  return !str || str.trim() === "" || str.includes("<rl-");
+function isPlaceholderValue(str) {
+  return (
+    !str ||
+    String(str).trim() === "" ||
+    String(str).includes("<rl-") ||
+    String(str).trim() === "-"
+  );
 }
 // SVG Icon helper functions
 function setPlayerIcon(isPlaying) {
@@ -264,16 +269,7 @@ let initialVol = 100;
 window.__rlplayerAudioContext = window.__rlplayerAudioContext || null;
 
 async function setStreamingUrl(url) {
-  try {
-    const response = await fetch(url, { method: "GET", mode: "cors" });
-    if (response.ok) {
-      URL_STREAMING = url;
-      return;
-    }
-  } catch (error) {
-    /* ignore */
-  }
-  // alert("Streaming server is not reachable at the moment.");
+  URL_STREAMING = url;
 }
 
 function setVolume(volume) {
@@ -346,7 +342,7 @@ async function loadAppVars() {
       DEFAULT_VOLUME = cfg.default_volume;
       APP_URL = cfg.app_url;
       DIM_VOLUME_SLEEP_TIMER = cfg.dim_volume_sleep_timer;
-      PLAYLIST = manifest.api_endpoints.playlist;
+      PLAYLIST = CONFIG?.PLAYLIST_ENDPOINT || manifest.api_endpoints.playlist;
       playlistData = PLAYLIST || "playlist.json";
 
       if (STREAM_URL) setStreamingUrl(STREAM_URL);
@@ -442,7 +438,7 @@ function refreshCurrentSong(
     currentSong?.parentElement;
 
   // If the track is a placeholder, hide the section and stop
-  if (isPlaceholder(song)) {
+  if (isPlaceholderValue(song)) {
     if (currentContainer) currentContainer.style.display = "none";
     return;
   } else {
@@ -776,10 +772,11 @@ function setCopyright() {
   setupAudioPlayer();
 }
 
-async function setupAudioPlayer() {
+function setupAudioPlayer() {
   audio = new Audio(URL_STREAMING);
   audio.crossOrigin = "anonymous";
   audio.preload = "metadata";
+  setVolume(DEFAULT_VOLUME || 100);
 
   setupAudioEventListeners();
 
@@ -823,6 +820,7 @@ function togglePlay() {
     if (!audio) setupAudioPlayer();
     audio.src = URL_STREAMING;
     setVolume(initialVol);
+    audio.load();
     audio.play().catch((e) => debugLog.warn("Play failed", e));
   }
 }
