@@ -59,7 +59,6 @@ function isPlaceholderValue(value) {
   const trimmed = value.toString().trim();
   return trimmed === "" || trimmed === "-" || trimmed.startsWith("<rl-");
 }
-
 // SVG Icon helper functions
 function setPlayerIcon(isPlaying) {
   const playerButton = document.getElementById("playerButton");
@@ -948,6 +947,14 @@ async function getStreamingData() {
         .replace(/&/g, "&")
         .trim();
 
+      // Handle Current Track visibility - hide if it's a placeholder
+      const currentContainer = document.getElementById("currentTrackContainer");
+      const isCurrentPlaceholder = isPlaceholderValue(safeCurrentSong);
+
+      if (currentContainer) {
+        currentContainer.style.display = isCurrentPlaceholder ? "none" : "";
+      }
+
       // Clean up placeholder dashes and template values created by template when no data available
       const cleanArtist = isPlaceholderValue(safeCurrentArtist)
         ? ""
@@ -1057,7 +1064,7 @@ async function getStreamingData() {
         nextTrackStarttime = null;
       }
 
-      if (cleanSong !== musicActual) {
+      if (cleanSong !== musicActual && !isCurrentPlaceholder) {
         debugLog("New song detected:", cleanSong);
 
         if (awaitingNextSong) {
