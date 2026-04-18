@@ -7,7 +7,6 @@ let APP_VERSION,
   DEFAULT_VOLUME,
   THEME_COLOR,
   PLAYLIST,
-  METADATA,
   APP_URL,
   DIM_VOLUME_SLEEP_TIMER,
   fetchIntervalId,
@@ -48,12 +47,6 @@ debugLog.error = (...args) => {
   console.error(...args);
 };
 
-debugLog.info = (...args) => {
-  if (typeof CONFIG !== "undefined" && CONFIG?.DEBUG_MODE === true) {
-    console.info(...args);
-  }
-};
-
 function isPlaceholderValue(value) {
   if (value === null || value === undefined) return true;
   const trimmed = value.toString().trim();
@@ -75,17 +68,6 @@ function isPlayerIconPaused() {
   const playerButton = document.getElementById("playerButton");
   return playerButton && playerButton.src.includes("circle-pause.svg");
 }
-
-function isPlayerIconPlaying() {
-  const playerButton = document.getElementById("playerButton");
-  return playerButton && playerButton.src.includes("circle-play.svg");
-}
-
-debugLog.log = (...args) => {
-  if (typeof CONFIG !== "undefined" && CONFIG?.DEBUG_MODE === true) {
-    console.log(...args);
-  }
-};
 
 function showLoader() {
   var nameToSplit = RADIO_NAME || "LOADING";
@@ -174,61 +156,6 @@ function hideLoader() {
   if (loader) loader.remove();
   const player = document.getElementById("player");
   if (player) player.style.display = "";
-}
-
-// Show notification when playlist has JSON format errors
-function showPlaylistFormatErrorNotification(url, error) {
-  // Remove any existing notification
-  const existingNotification = document.getElementById(
-    "playlistFormatErrorNotification",
-  );
-  if (existingNotification) {
-    existingNotification.remove();
-  }
-
-  // Create notification element
-  const notification = document.createElement("div");
-  notification.id = "playlistFormatErrorNotification";
-  notification.style.position = "fixed";
-  notification.style.top = "20px";
-  notification.style.right = "20px";
-  notification.style.background = "#ff6b35";
-  notification.style.color = "white";
-  notification.style.padding = "16px 20px";
-  notification.style.borderRadius = "8px";
-  notification.style.zIndex = "10000";
-  notification.style.maxWidth = "400px";
-  notification.style.fontSize = "14px";
-  notification.style.boxShadow = "0 4px 12px rgba(0,0,0,0.3)";
-  notification.style.border = "2px solid #ff4444";
-
-  notification.innerHTML = `
-    <div style="font-weight: bold; margin-bottom: 8px; font-size: 16px;">🚨 Playlist Format Error</div>
-    <div style="font-size: 13px; margin-bottom: 8px; line-height: 1.4;">
-      The playlist.json file contains invalid JSON format and cannot be parsed.
-    </div>
-    <div style="font-size: 12px; margin-bottom: 8px; line-height: 1.3;">
-      <strong>Auto-retry:</strong> Will automatically retry fetching in a few seconds.
-    </div>
-    <div style="font-size: 12px; margin-bottom: 8px; line-height: 1.3;">
-      <strong>Recommended:</strong> Check the online playlist.json file or verify the RadioLogik template format.
-    </div>
-    <div style="font-size: 11px; margin-top: 10px; text-align: center; border-top: 1px solid rgba(255,255,255,0.5); padding-top: 8px;">
-      Click to dismiss • Auto-dismiss in 12 seconds
-    </div>
-  `;
-
-  // Auto-dismiss after 12 seconds or on click
-  notification.style.cursor = "pointer";
-  notification.onclick = () => notification.remove();
-
-  setTimeout(() => {
-    if (notification.parentNode) {
-      notification.remove();
-    }
-  }, 12000);
-
-  document.body.appendChild(notification);
 }
 
 // Show notification when playlist fetch fails
@@ -684,7 +611,6 @@ async function loadAppVars() {
       debugLog("DEFAULT_VOLUME:", DEFAULT_VOLUME);
       debugLog("THEME_COLOR:", THEME_COLOR);
       debugLog("PLAYLIST:", PLAYLIST);
-      debugLog("METADATA:", METADATA);
       debugLog("APP_URL:", APP_URL);
       debugLog("DIM_VOLUME_SLEEP_TIMER:", DIM_VOLUME_SLEEP_TIMER);
 
@@ -908,14 +834,15 @@ async function getStreamingData() {
 
     debugLog("Received data:", data);
 
-    if (data) {
-      // Hide loader on first successful data fetch
-      if (isFirstLoad) {
-        debugLog("First successful load - hiding loader and starting player");
-        hideLoader();
-        isFirstLoad = false;
-      }
+    // Move this outside the "if (data)" block.
+    // This ensures that even if the playlist is offline, the "Loading" overlay disappears
+    // so the user can at least see the player and hit the Play button.
+    if (isFirstLoad) {
+      hideLoader();
+      isFirstLoad = false;
+    }
 
+    if (data) {
       // Reset JSON error retry counter on successful data fetch
       if (jsonErrorRetryCount > 0) {
         debugLog(
@@ -1617,12 +1544,10 @@ async function fetchStreamingData(apiUrl) {
       console.error(
         "JSON parsing failed - the playlist.json file appears to be malformed or truncated",
       );
-      // Don't show notifications, just log and continue polling
-      debugLog.warn("JSON format error - will continue polling for valid data");
-      return null;
     }
 
-    return null;
+    // Re-throw so getStreamingData's catch block can trigger the UI notification
+    throw error;
   }
 }
 
@@ -1635,6 +1560,11 @@ function setCopyright() {
   let jaar = new Date().getFullYear();
   copy.textContent =
     appName + " " + appVersion + " | ©" + jaar + " " + appAuthor;
+
+  const versionInfo = document.getElementById("version-info");
+  if (versionInfo) {
+    versionInfo.textContent = `v${appVersion}`;
+  }
 
   setupAudioPlayer();
 }
@@ -1878,12 +1808,6 @@ function setupAudioEventListeners() {
 
   // Button state is now managed by togglePlay() function only
   // Removed onplay and onpause handlers to prevent race conditions
-
-  audio.onvolumechange = function () {
-    if (audio.volume > 0) {
-      audio.muted = false;
-    }
-  };
 
   // The 'playing' event is triggered when playback has begun, while 'play' is triggered when the request to play is initiated. 'play' is a more reliable event to use for updating the button state.
   audio.addEventListener("playing", () => {
@@ -2218,25 +2142,6 @@ function removeSleepTimerElement() {
 
 function intToDecimal(vol) {
   return vol / 100;
-}
-
-function decimalToInt(vol) {
-  return vol * 100;
-}
-
-function mute() {
-  if (!audio.muted) {
-    document.getElementById("volIndicator").innerHTML = 0;
-    document.getElementById("volume").value = 0;
-    audio.volume = 0;
-    audio.muted = true;
-  } else {
-    var localVolume = localStorage.getItem("volume");
-    document.getElementById("volIndicator").innerHTML = localVolume;
-    document.getElementById("volume").value = localVolume;
-    audio.volume = intToDecimal(localVolume);
-    audio.muted = false;
-  }
 }
 
 // Nightshift / lightmode toggle
