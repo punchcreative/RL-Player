@@ -8,7 +8,6 @@ let APP_VERSION,
   THEME_COLOR,
   PLAYLIST,
   APP_URL,
-  DIM_VOLUME_SLEEP_TIMER,
   fetchIntervalId,
   audio,
   userInitiatedPause = false; // Flag to track user-initiated pauses
@@ -307,7 +306,6 @@ const isPhone = /iPhone|Android.*Mobile|Windows Phone|iPod/i.test(
 );
 // set the initial volume to start at
 let initialVol = DEFAULT_VOLUME || 100;
-const dimVolumeSleeptimer = DIM_VOLUME_SLEEP_TIMER || 50; // Volume to set when sleep timer is active (0-100)
 
 // Function to check if a stream URL is reachable and set it directly, without timeout
 async function setStreamingUrl(url) {
@@ -565,9 +563,6 @@ async function loadAppVars() {
           manifest.custom_radio_config.theme_color;
         APP_URL =
           CONFIG.APP_CONFIG.app_url || manifest.custom_radio_config.app_url;
-        DIM_VOLUME_SLEEP_TIMER =
-          CONFIG.APP_CONFIG.dim_volume_sleep_timer ||
-          manifest.custom_radio_config.dim_volume_sleep_timer;
       } else {
         debugLog("Using manifest values (CONFIG.APP_CONFIG not found)...");
         RADIO_NAME = manifest.custom_radio_config.station_name;
@@ -575,8 +570,6 @@ async function loadAppVars() {
         DEFAULT_VOLUME = manifest.custom_radio_config.default_volume;
         THEME_COLOR = manifest.custom_radio_config.theme_color;
         APP_URL = manifest.custom_radio_config.app_url;
-        DIM_VOLUME_SLEEP_TIMER =
-          manifest.custom_radio_config.dim_volume_sleep_timer;
       }
 
       // Ensure APP_URL has a trailing slash for proper URL construction
@@ -612,7 +605,6 @@ async function loadAppVars() {
       debugLog("THEME_COLOR:", THEME_COLOR);
       debugLog("PLAYLIST:", PLAYLIST);
       debugLog("APP_URL:", APP_URL);
-      debugLog("DIM_VOLUME_SLEEP_TIMER:", DIM_VOLUME_SLEEP_TIMER);
 
       // Set up streaming URL after loading from manifest
       if (typeof STREAM_URL === "string" && STREAM_URL.trim() !== "") {
@@ -1841,13 +1833,6 @@ function togglePlay() {
       // Don't create a new audio object, just reset the current one
       audio.currentTime = 0;
     }
-
-    if (!sleepTimerId) {
-      removeSleepTimerElement();
-    } else {
-      cancelSleepTimer();
-      debugLog.log("Sleep timer canceled on pause.");
-    }
   } else {
     // debugLog.log("Playing audio");
     setPlayerIcon(true); // Set to pause icon
@@ -1880,263 +1865,6 @@ function togglePlay() {
         setPlayerIcon(false); // Set to play icon
       });
     }
-  }
-}
-
-// Sleep timer logic
-let sleepTimerId = null;
-let sleepTimerCountdownId = null;
-let sleepTimerEndTime = null;
-const timerButton = document.getElementById("timerButton");
-
-// Use the existing <span id="timerDisplay"> for countdown display
-const timerCountdownDisplay = document.getElementById("timerDisplay");
-
-function updateSleepTimerCountdown() {
-  if (!sleepTimerEndTime) return;
-  const now = Date.now();
-  const remainingMs = sleepTimerEndTime - now;
-  if (remainingMs <= 0) {
-    timerCountdownDisplay.textContent = "";
-    clearInterval(sleepTimerCountdownId);
-    sleepTimerCountdownId = null;
-    sleepTimerEndTime = null;
-    return;
-  }
-  const remainingMin = Math.ceil(remainingMs / 60000);
-  timerCountdownDisplay.textContent = `${remainingMin} min`;
-}
-
-timerButton.addEventListener("click", function () {
-  // Create a modal dialog for timer selection
-  const modal = document.createElement("div");
-  modal.style.position = "fixed";
-  modal.style.top = "0";
-  modal.style.left = "0";
-  modal.style.width = "100vw";
-  modal.style.height = "100vh";
-  modal.style.background = "rgba(0, 0, 0, 0.3)";
-  modal.style.display = "flex";
-  modal.style.alignItems = "center";
-  modal.style.justifyContent = "center";
-  modal.style.zIndex = "9999";
-
-  // Allow closing modal by clicking outside the box
-  modal.addEventListener("click", function (e) {
-    if (e.target === modal) {
-      document.body.removeChild(modal);
-      cancelSleepTimer();
-    }
-  });
-
-  const box = document.createElement("div");
-  box.style.background = "#fff";
-  box.style.padding = "24px";
-  box.style.borderRadius = "8px";
-  box.style.textAlign = "center";
-  box.style.minWidth = "220px";
-
-  box.innerHTML = `Set or stop a sleep timer. <strong>Audio gets dimmed by, this will be undone after the timer ends or is canceled.</strong><br><br>`;
-
-  const validTimes = [15, 30, 45, 60];
-  validTimes.forEach((min) => {
-    const btn = document.createElement("button");
-    btn.textContent = `${min} min`;
-    btn.style.margin = "3px";
-    btn.style.color = "white";
-    btn.style.backgroundColor = "#031521";
-    btn.style.border = "none";
-    btn.style.borderRadius = "4px";
-    btn.style.padding = "4px 6px";
-
-    btn.onclick = () => {
-      setSleepTimer(min);
-      document.body.removeChild(modal);
-    };
-    box.appendChild(btn);
-  });
-
-  // Cancel button
-  const cancelBtn = document.createElement("button");
-  cancelBtn.textContent = "Stop timer";
-  cancelBtn.style.margin = "3px";
-  cancelBtn.style.color = "white";
-  cancelBtn.style.backgroundColor = "#031521";
-  cancelBtn.style.border = "none";
-  cancelBtn.style.borderRadius = "4px";
-  cancelBtn.style.padding = "4px 6px";
-  cancelBtn.onclick = () => {
-    cancelSleepTimer();
-    document.body.removeChild(modal);
-    debugLog.log("Sleep timer canceled from modal.");
-  };
-  box.appendChild(document.createElement("br"));
-  box.appendChild(cancelBtn);
-
-  modal.appendChild(box);
-  document.body.appendChild(modal);
-
-  function setSleepTimer(selected) {
-    if (sleepTimerId) clearTimeout(sleepTimerId);
-    if (sleepTimerCountdownId) clearInterval(sleepTimerCountdownId);
-
-    // Create timer circle container when sleep timer is actually set
-    let timerCircleContainer = document.getElementById("timerCircleContainer");
-    if (!timerCircleContainer) {
-      timerCircleContainer = document.createElement("div");
-      timerCircleContainer.id = "timerCircleContainer";
-      timerCircleContainer.style.display = "flex";
-      timerCircleContainer.style.alignItems = "center";
-      timerCircleContainer.style.justifyContent = "center";
-      timerCircleContainer.style.gap = "0.5rem";
-      timerCountdownDisplay.parentNode.insertBefore(
-        timerCircleContainer,
-        timerCountdownDisplay.nextSibling,
-      );
-    }
-    // Only add the SVG if not already present
-    if (!timerCircleContainer.querySelector("#timerCircleProgress")) {
-      timerCircleContainer.innerHTML = `
-        <svg width="32" height="32" viewBox="0 0 32 32" style="transform: rotate(-90deg);">
-          <circle cx="15" cy="15" r="12" stroke="#ffffffff" stroke-width="1" fill="none" opacity="1"/>
-          <circle id="timerCircleProgress" cx="15" cy="15" r="11" stroke="#26599dff" stroke-width="2" fill="none"
-            stroke-dasharray="75.4" stroke-dashoffset="0" style="transition: stroke-dashoffset 1s linear;"/>
-        </svg>
-      `;
-    }
-
-    // Helper to set initial offset based on selected sleep time
-    function setInitialCircleOffset(selected) {
-      const circle = timerCircleContainer.querySelector("#timerCircleProgress");
-      const circumference = 2 * Math.PI * 11; // r=11
-      let offset = 0;
-      if (selected === 15) {
-        offset = circumference * 0.75; // 25% visible
-      } else if (selected === 30) {
-        offset = circumference * 0.5; // 50% visible
-      } else if (selected === 45) {
-        offset = circumference * 0.25; // 75% visible
-      } else if (selected === 60) {
-        offset = 0; // 100% visible
-      }
-      circle.style.strokeDashoffset = offset;
-    }
-
-    // Set initial offset for selected time
-    setInitialCircleOffset(selected);
-
-    sleepTimerEndTime = Date.now() + selected * 60 * 1000;
-    // If not playing, start playing and toggle play/pause
-    if (audio && audio.paused) {
-      togglePlay();
-      setVolume(dimVolumeSleeptimer);
-    } else {
-      setVolume(dimVolumeSleeptimer);
-    }
-    debugLog.log(
-      "Sleep timer started, audio started. Volume set to " +
-        dimVolumeSleeptimer +
-        "%",
-    );
-    timerCountdownDisplay.classList.add("ml-2");
-    timerCircleContainer.style.display = "flex";
-    timerCircleContainer.style.alignItems = "center";
-    timerCircleContainer.style.justifyContent = "center";
-
-    // Circle animation setup
-    const circle = timerCircleContainer.querySelector("#timerCircleProgress");
-    const totalSeconds = selected * 60;
-    const circumference = 2 * Math.PI * 11; // r=11
-    circle.setAttribute("stroke-dasharray", circumference);
-
-    // Set initial offset for selected time
-    setInitialCircleOffset(selected);
-
-    sleepTimerId = setTimeout(
-      () => {
-        if (audio && !audio.paused) {
-          togglePlay();
-          setVolume(100);
-          debugLog.log("Sleep timer ended, audio paused. Volume set to 100%");
-        }
-        sleepTimerId = null;
-        timerCircleContainer.style.display = "none";
-        if (sleepTimerCountdownId) {
-          clearInterval(sleepTimerCountdownId);
-          sleepTimerCountdownId = null;
-        }
-        sleepTimerEndTime = null;
-      },
-      selected * 60 * 1000,
-    );
-
-    function updateSleepTimerCircle() {
-      if (!sleepTimerEndTime) return;
-      const now = Date.now();
-      const remainingMs = sleepTimerEndTime - now;
-      if (remainingMs <= 0) {
-        circle.setAttribute("stroke-dashoffset", circumference);
-        circle.setAttribute("stroke", "#fff"); // Set color to white when finished
-        timerCircleContainer.style.display = "none";
-        clearInterval(sleepTimerCountdownId);
-        sleepTimerCountdownId = null;
-        sleepTimerEndTime = null;
-        return;
-      }
-      const elapsed = totalSeconds - Math.floor(remainingMs / 1000);
-      // Progress: 0 (start) to 1 (end)
-      const progress = elapsed / totalSeconds;
-      // Initial offset for selected time
-      let initialOffset = 0;
-      if (selected === 15) {
-        initialOffset = circumference * 0.75;
-      } else if (selected === 30) {
-        initialOffset = circumference * 0.5;
-      } else if (selected === 45) {
-        initialOffset = circumference * 0.25;
-      } else {
-        initialOffset = 0;
-      }
-      // Animate offset from initialOffset to circumference
-      const offset = initialOffset + (circumference - initialOffset) * progress;
-      circle.setAttribute("stroke-dashoffset", offset);
-      circle.setAttribute("stroke", "#26599dff");
-    }
-
-    updateSleepTimerCircle();
-    sleepTimerCountdownId = setInterval(updateSleepTimerCircle, 1000);
-  }
-});
-
-function cancelSleepTimer() {
-  if (sleepTimerId) {
-    clearTimeout(sleepTimerId);
-    sleepTimerId = null;
-    timerCountdownDisplay.textContent = "";
-    timerCountdownDisplay.classList.remove("ml-2");
-    if (sleepTimerCountdownId) {
-      clearInterval(sleepTimerCountdownId);
-      sleepTimerCountdownId = null;
-    }
-    sleepTimerEndTime = null;
-
-    removeSleepTimerElement();
-    if (audio && !audio.paused) {
-      setVolume(100);
-      debugLog.log("Sleep timer canceled, volume restored to 100%");
-    }
-  } else {
-    removeSleepTimerElement();
-    debugLog.log("No sleep timer is set.");
-  }
-}
-
-function removeSleepTimerElement() {
-  const timerCircleElement = document.getElementById("timerCircleContainer");
-  if (timerCircleElement) {
-    debugLog.log("Found sleep timer element, and set display none");
-    timerCircleElement.style.display = "none";
-    timerCircleElement.innerHTML = "";
   }
 }
 

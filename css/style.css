@@ -22,7 +22,9 @@
   font-optical-sizing: auto;
   font-weight: 200;
   font-style: normal;
-  font-variation-settings: "wdth" 100, "YTLC" 500;
+  font-variation-settings:
+    "wdth" 100,
+    "YTLC" 500;
 }
 
 .nunito-sans-bold {
@@ -30,7 +32,9 @@
   font-optical-sizing: auto;
   font-weight: 700;
   font-style: normal;
-  font-variation-settings: "wdth" 100, "YTLC" 500;
+  font-variation-settings:
+    "wdth" 100,
+    "YTLC" 500;
 }
 
 html,
@@ -65,7 +69,10 @@ body,
 .web-player,
 #bgCover,
 .bg-mask {
-  transition: background-color 0.25s ease, color 0.25s ease, filter 0.25s ease;
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    filter 0.25s ease;
 }
 #page-container {
   position: relative;
@@ -194,32 +201,6 @@ body.lightmode .web-player {
 body.lightmode .play-pause #playerButton {
   color: var(--text-dark) !important;
 }
-.play-pause #timerButton {
-  padding-top: 0.1em;
-  color: var(--modal-text);
-  line-height: 1;
-  cursor: pointer;
-}
-body.lightmode .play-pause #timerButton {
-  color: rgb(3, 21, 33) !;
-}
-.play-pause .timer-display {
-  line-height: 1;
-  vertical-align: middle;
-}
-.play-pause #timerDisplay {
-  font-size: 0.8em;
-  color: rgba(255, 255, 255, 0.636);
-  vertical-align: middle;
-}
-.play-pause #timerDisplay {
-  font-size: 0.8em;
-  color: rgba(255, 255, 255, 0.636);
-  vertical-align: middle;
-}
-body.lightmode .play-pause #timerDisplay {
-  color: rgba(0, 0, 0, 0.636);
-}
 /* SVG Icon styles replacing FontAwesome */
 .player-icon {
   width: 48px;
@@ -247,20 +228,7 @@ body.lightmode .bulb .nightshift-icon {
   filter: brightness(1) invert(0); /* Makes SVG dark */
 }
 
-.timer-icon {
-  width: 25px;
-  filter: brightness(0) invert(1); /* Makes SVG white */
-  cursor: pointer;
-  transition: opacity 0.3s ease;
-  vertical-align: middle;
-}
-
-body.lightmode .timer-icon {
-  filter: brightness(1) invert(0) !important; /* Makes SVG dark */
-}
-
-.player-icon:hover,
-.timer-icon:hover {
+.player-icon:hover {
   opacity: 0.8;
 }
 
