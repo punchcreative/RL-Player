@@ -288,7 +288,26 @@ function showUpdateNotification() {
   document.body.appendChild(updateDiv);
 
   document.getElementById("update-btn").addEventListener("click", () => {
-    window.location.reload();
+    // When the user clicks "Update", we need to tell the new service worker to take over.
+    navigator.serviceWorker.getRegistration().then((registration) => {
+      const waitingWorker = registration?.waiting;
+      if (!waitingWorker) {
+        // If there's no waiting worker, just reload.
+        window.location.reload();
+        return;
+      }
+
+      // Add a listener for the controllerchange event. This event is fired when the
+      // service worker controlling the page changes.
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        // Once the new worker has taken control, it's safe to reload the page.
+        window.location.reload();
+      });
+
+      // Send a message to the waiting service worker to trigger its activation.
+      // This will cause it to fire its "activate" event and call clients.claim().
+      waitingWorker.postMessage({ type: "SKIP_WAITING" });
+    });
   });
 
   document.getElementById("dismiss-btn").addEventListener("click", () => {
