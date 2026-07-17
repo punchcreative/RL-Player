@@ -992,12 +992,19 @@ async function getStreamingData() {
           }
         }
 
-        if (fetchIntervalId) {
-          clearInterval(fetchIntervalId);
-          fetchIntervalId = null;
-          debugLog(
-            "Cleared polling interval - new song detected, switching to smart polling",
-          );
+        // If a new song is detected, decide whether to switch to smart polling or continue with regular polling.
+        const hasDuration =
+          !isPlaceholderValue(currentDurationVal) &&
+          !isPlaceholderValue(currentStartTime);
+
+        if (hasDuration) {
+          // We have enough data for smart polling. Stop the continuous polling.
+          // The countdown function will schedule the next check.
+          if (fetchIntervalId) {
+            clearInterval(fetchIntervalId);
+            fetchIntervalId = null;
+            debugLog("Switching to smart polling based on track duration.");
+          }
         }
 
         musicActual = cleanSong;
