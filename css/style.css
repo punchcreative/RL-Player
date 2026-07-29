@@ -174,15 +174,15 @@ body.lightmode .web-player {
 }
 
 .current-song {
-  font-size: 1.4em;
-  line-height: 1em;
+  font-size: 1.2em;
+  line-height: 0.8em;
   text-transform: uppercase;
   font-weight: 200;
   /* text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5); */
 }
 
 .current-artist {
-  font-size: 1.2em;
+  font-size: 1.1em;
   font-weight: 700;
   /* text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5); */
 }

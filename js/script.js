@@ -10,9 +10,8 @@ let APP_VERSION,
   APP_URL,
   fetchIntervalId,
   audio,
-  userInitiatedPause = false; // Flag to track user-initiated pauses
+  userInitiatedPause = false;
 
-// Helper function to hash a string using SHA-256 and return a hex string
 async function sha256(str) {
   const encoder = new TextEncoder();
   const data = encoder.encode(str);
@@ -21,14 +20,10 @@ async function sha256(str) {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// Initialize the streaming URL
 let URL_STREAMING;
-
-// These will be set after CONFIG is loaded in loadAppVars()
 let correctPasswordHash = "default-hash-please-configure";
 let correctPasswordHashPromise;
 
-// Debug logging wrapper - respects DEBUG_MODE setting
 function debugLog(...args) {
   if (typeof CONFIG !== "undefined" && CONFIG?.DEBUG_MODE === true) {
     console.log(...args);
@@ -42,7 +37,6 @@ debugLog.warn = (...args) => {
 };
 
 debugLog.error = (...args) => {
-  // Always show errors, regardless of debug mode
   console.error(...args);
 };
 
@@ -52,7 +46,6 @@ function isPlaceholderValue(value) {
   return trimmed === "" || trimmed === "-" || trimmed.startsWith("<rl-");
 }
 
-// SVG Icon helper functions
 function setPlayerIcon(isPlaying) {
   const playerButton = document.getElementById("playerButton");
   if (playerButton) {
@@ -70,11 +63,9 @@ function isPlayerIconPaused() {
 
 function showLoader() {
   var nameToSplit = RADIO_NAME || "LOADING";
-  // Hide the player while loading
   const player = document.getElementById("player");
   if (player) player.style.display = "none";
 
-  // Remove existing loader if present
   let existing = document.getElementById("radioLoader");
   if (existing) existing.remove();
 
@@ -101,7 +92,6 @@ function showLoader() {
   lettersContainer.style.color = "#fff";
   lettersContainer.style.letterSpacing = "0.15em";
 
-  // Each letter gets its own span for animation
   for (let i = 0; i < nameToSplit.length; i++) {
     const span = document.createElement("span");
     span.textContent = nameToSplit[i];
@@ -114,9 +104,8 @@ function showLoader() {
   loader.appendChild(lettersContainer);
   document.body.appendChild(loader);
 
-  // Animate letters in and out
   let idx = 0;
-  let direction = 1; // 1: fade in, -1: fade out
+  let direction = 1;
   const spans = lettersContainer.querySelectorAll(".radio-loader-letter");
   function animateLetters() {
     spans.forEach((span, i) => {
@@ -132,7 +121,8 @@ function showLoader() {
       if (idx >= spans.length) {
         direction = -1;
         idx = spans.length - 1;
-        setTimeout(animateLetters, 400);
+        // HIER ZIT DE MAGIC: Verhoogd van 400 naar 1500 (1.5 seconde)
+        setTimeout(animateLetters, 1500);
         return;
       }
     } else {
@@ -140,6 +130,7 @@ function showLoader() {
       if (idx < 0) {
         direction = 1;
         idx = 0;
+        // Tijd voordat hij weer opnieuw begint met indaden
         setTimeout(animateLetters, 400);
         return;
       }
@@ -149,7 +140,6 @@ function showLoader() {
   animateLetters();
 }
 
-// Modify hideLoader to show the player after loading
 function hideLoader() {
   const loader = document.getElementById("radioLoader");
   if (loader) loader.remove();
@@ -157,17 +147,12 @@ function hideLoader() {
   if (player) player.style.display = "";
 }
 
-// Show notification when playlist fetch fails
 function showPlaylistErrorNotification(url, error) {
-  // Remove any existing notification
   const existingNotification = document.getElementById(
     "playlistErrorNotification",
   );
-  if (existingNotification) {
-    existingNotification.remove();
-  }
+  if (existingNotification) existingNotification.remove();
 
-  // Create notification element
   const notification = document.createElement("div");
   notification.id = "playlistErrorNotification";
   notification.style.position = "fixed";
@@ -195,30 +180,23 @@ function showPlaylistErrorNotification(url, error) {
     <div style="font-size: 11px; margin-top: 6px;">Click to dismiss</div>
   `;
 
-  // Auto-dismiss after 8 seconds or on click
   notification.style.cursor = "pointer";
   notification.onclick = () => notification.remove();
 
   setTimeout(() => {
-    if (notification.parentNode) {
-      notification.remove();
-    }
+    if (notification.parentNode) notification.remove();
   }, 8000);
 
   document.body.appendChild(notification);
 }
 
-// Call the loadAppVars function when the page loads (first thing to happen)
 window.addEventListener("load", async () => {
-  // Register service worker first, then load app vars
   registerServiceWorker();
   await loadAppVars();
 });
 
-// Show loader on DOM ready, but it will use RADIO_NAME once loaded
 window.addEventListener("DOMContentLoaded", showLoader);
 
-// Service Worker Registration
 async function registerServiceWorker() {
   if ("serviceWorker" in navigator) {
     try {
@@ -226,7 +204,6 @@ async function registerServiceWorker() {
         await navigator.serviceWorker.register("service-worker.js");
       debugLog("Service Worker registered successfully:", registration);
 
-      // Check for updates every time the app loads
       registration.addEventListener("updatefound", () => {
         const newWorker = registration.installing;
         debugLog("Service Worker update found");
@@ -237,18 +214,14 @@ async function registerServiceWorker() {
             navigator.serviceWorker.controller
           ) {
             debugLog("New service worker available, showing update prompt");
-            // Show update notification to user
             showUpdateNotification();
           }
         });
       });
 
-      // Check for updates periodically (once a week when app is visible)
       setInterval(
         () => {
-          if (document.visibilityState === "visible") {
-            registration.update();
-          }
+          if (document.visibilityState === "visible") registration.update();
         },
         7 * 24 * 60 * 60 * 1000,
       );
@@ -258,23 +231,19 @@ async function registerServiceWorker() {
   }
 }
 
-// Function to manually check for service worker updates
 function checkForUpdates() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.getRegistration().then((registration) => {
-      if (registration) {
-        registration.update().then(() => {
-          debugLog("Service worker update check completed");
-        });
-      }
+      if (registration)
+        registration
+          .update()
+          .then(() => debugLog("Service worker update check completed"));
     });
   }
 }
 
-// Add to global scope for debugging
 window.checkForUpdates = checkForUpdates;
 
-// Function to show update notification
 function showUpdateNotification() {
   const updateDiv = document.createElement("div");
   updateDiv.id = "update-notification";
@@ -288,162 +257,100 @@ function showUpdateNotification() {
   document.body.appendChild(updateDiv);
 
   document.getElementById("update-btn").addEventListener("click", () => {
-    // When the user clicks "Update", we need to tell the new service worker to take over.
     navigator.serviceWorker.getRegistration().then((registration) => {
       const waitingWorker = registration?.waiting;
       if (!waitingWorker) {
-        // If there's no waiting worker, just reload.
         window.location.reload();
         return;
       }
-
-      // Add a listener for the controllerchange event. This event is fired when the
-      // service worker controlling the page changes.
-      navigator.serviceWorker.addEventListener("controllerchange", () => {
-        // Once the new worker has taken control, it's safe to reload the page.
-        window.location.reload();
-      });
-
-      // Send a message to the waiting service worker to trigger its activation.
-      // This will cause it to fire its "activate" event and call clients.claim().
+      navigator.serviceWorker.addEventListener("controllerchange", () =>
+        window.location.reload(),
+      );
       waitingWorker.postMessage({ type: "SKIP_WAITING" });
     });
   });
 
-  document.getElementById("dismiss-btn").addEventListener("click", () => {
-    updateDiv.remove();
-  });
+  document
+    .getElementById("dismiss-btn")
+    .addEventListener("click", () => updateDiv.remove());
 }
 
-// playlistData data json url will be set after manifest loads
-let playlistData = "playlist.json"; // Default fallback
-
-// Only use localStorage volume if not on mobile device
-// Only check for phones (not tablets) using user agent
+let playlistData = "playlist.json";
 const isPhone = /iPhone|Android.*Mobile|Windows Phone|iPod/i.test(
   navigator.userAgent,
 );
-// set the initial volume to start at
 let initialVol = DEFAULT_VOLUME || 100;
 
-// Function to check if a stream URL is reachable and set it directly, without timeout
 async function setStreamingUrl(url) {
   try {
-    const response = await fetch(url, {
-      method: "GET",
-      mode: "cors",
-    });
+    const response = await fetch(url, { method: "GET", mode: "cors" });
     if (response.ok) {
       URL_STREAMING = url;
       return;
     }
     debugLog.warn(`Stream URL ${url} returned status: ${response.status}`);
-  } catch (error) {
-    // Ignore error, will alert below
-  }
+  } catch (error) {}
   alert("Streaming server is not reachable at the moment.");
 }
 
 function setVolume(volume) {
-  // debugLog.log("setVolume gets value:", volume);
-  // debugLog.log("isPhone:", isPhone);
-  if (!audio) {
-    debugLog.warn("Audio object not yet initialized, skipping setVolume");
-    return;
-  }
-
+  if (!audio) return;
   if (typeof Storage !== "undefined" && !isPhone) {
     const volumeLocalStorage =
       parseInt(localStorage.getItem("volume"), 10) || 100;
-    debugLog("Volume from localStorage or default:", volumeLocalStorage);
     const volumeElement = document.getElementById("volume");
-    if (volumeElement) {
-      volumeElement.value = volumeLocalStorage;
-    }
+    if (volumeElement) volumeElement.value = volumeLocalStorage;
     audio.volume = intToDecimal(volumeLocalStorage);
   } else {
     audio.volume = intToDecimal(volume);
   }
-  // debugLog.log("setVolume sets value:", audio.volume);
 }
 
 function changeVolumeLocalStorage(volume) {
   if (typeof Storage !== "undefined" && !isPhone) {
-    // debugLog.log("Storing volume in localStorage:", volume);
     localStorage.setItem("volume", volume);
   }
 }
 
 function initializePlayer() {
   debugLog("Initializing player...");
-
   changeTitlePage();
-  setCopyright(); // This calls setupAudioPlayer
-
-  // DON'T show the player yet - wait for first successful playlist fetch
-  // The player will be shown when hideLoader() is called after first data load
-
-  debugLog("Player initialization complete, waiting for playlist data...");
-
-  // Wait for service worker to be ready before starting data fetching
+  setCopyright();
   waitForServiceWorkerThenStart();
 }
 
 async function waitForServiceWorkerThenStart() {
-  debugLog("Waiting for service worker to be ready...");
-
   if ("serviceWorker" in navigator) {
     try {
-      // Wait for service worker to be ready
-      const registration = await navigator.serviceWorker.ready;
-      debugLog("Service worker is ready:", registration);
-
-      // Small delay to ensure everything is properly initialized
+      await navigator.serviceWorker.ready;
       await new Promise((resolve) => setTimeout(resolve, 100));
     } catch (error) {
-      debugLog("Service worker not available or failed:", error);
-      // Continue anyway after a short delay
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
-  } else {
-    debugLog("Service worker not supported, continuing without it");
   }
 
-  // Start fetching streaming data
-  debugLog("Starting to fetch streaming data with playlistData:", playlistData);
-
-  // Set a timeout to hide loader after 10 seconds even if no data is received
   setTimeout(() => {
     if (isFirstLoad) {
-      debugLog(
-        "Loader timeout reached - hiding loader to show player interface",
-      );
       hideLoader();
       isFirstLoad = false;
     }
   }, 10000);
 
-  // Use longer interval for localhost to be gentle on CORS proxies
   const isLocalhost =
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1";
-  const interval = isLocalhost ? 5000 : 1000; // 5 seconds for localhost, 1 second for production
-
-  debugLog(`Using polling interval: ${interval}ms`);
+  const interval = isLocalhost ? 5000 : 1000;
   getStreamingData();
   fetchIntervalId = setInterval(getStreamingData, interval);
 }
-// Helper function to dynamically load config.js
+
 function loadConfigJS() {
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
     script.src = "config.js";
     script.onload = () => {
-      if (typeof CONFIG !== "undefined") {
-        resolve();
-      } else {
-        reject(new Error("config.js loaded but CONFIG not defined"));
-      }
+      if (typeof CONFIG !== "undefined") resolve();
+      else reject(new Error("config.js loaded but CONFIG not defined"));
     };
     script.onerror = () => reject(new Error("config.js not found"));
     document.head.appendChild(script);
@@ -451,34 +358,16 @@ function loadConfigJS() {
 }
 
 async function loadAppVars() {
-  debugLog("🔧 Loading app configuration...");
-
-  // Try to load environment variables first
   let envLoaded = false;
   if (window.envLoader) {
     envLoaded = await window.envLoader.loadEnv();
-
     if (envLoaded) {
-      // Override CONFIG with environment variables
       window.CONFIG = window.envLoader.createConfig();
-      debugLog("✅ Using .env configuration");
-
-      // Validate environment configuration
       window.envLoader.validateConfig();
     } else {
-      debugLog("📋 .env not found, trying config.js fallback...");
-
-      // Try to load config.js dynamically
       try {
         await loadConfigJS();
-        debugLog("✅ Using config.js fallback");
       } catch (error) {
-        debugLog.error("❌ Neither .env nor config.js found!");
-        debugLog.error(
-          "📋 Please copy .env.example to .env and configure your settings",
-        );
-
-        // Create a minimal CONFIG to prevent crashes
         window.CONFIG = {
           PASSWORD_HASH: "default-hash-please-configure",
           ENABLE_PASSWORD_PROTECTION: false,
@@ -498,76 +387,32 @@ async function loadAppVars() {
     }
   }
 
-  // Now validate CONFIG and set up password hash
   correctPasswordHash =
     CONFIG?.PASSWORD_HASH || "default-hash-please-configure";
   correctPasswordHashPromise = Promise.resolve(correctPasswordHash);
 
-  // Validate that the user has set up a real password hash
-  if (
-    correctPasswordHash === "default-hash-please-configure" ||
-    correctPasswordHash === "your-password-hash-here"
-  ) {
-    debugLog.warn(
-      "⚠️  Using default password hash! Please configure your own password.",
-    );
-    debugLog.warn('📋 Generate hash with: await hashString("your-password")');
-  }
-
-  // Validate APP_CONFIG for personalized settings
   if (CONFIG?.APP_CONFIG) {
-    if (
-      CONFIG.APP_CONFIG.station_name === "Your Radio Name" ||
-      CONFIG.APP_CONFIG.stream_url === "https://your-stream-url.com" ||
-      CONFIG.APP_CONFIG.app_url === "https://your-domain.com/app/"
-    ) {
-      debugLog.warn(
-        "⚠️  Using default APP_CONFIG values! Please customize your radio settings.",
-      );
-      debugLog.warn(
-        "📋 Edit config.js to set your station name, stream URL, and app URL.",
-      );
-    } else {
-      debugLog("✅ Custom APP_CONFIG detected - using personalized settings.");
-    }
-  } else {
-    debugLog("ℹ️  No APP_CONFIG found - using manifest.json defaults.");
+    if (CONFIG.APP_CONFIG.station_name === "Your Radio Name")
+      debugLog.warn("Using default APP_CONFIG values!");
   }
-
-  // Load app.json for version info and manifest.json for radio config
-  debugLog("📄 Loading app.json and manifest.json...");
 
   Promise.all([
-    fetch("app.json").then((response) => {
-      if (!response.ok) {
-        throw new Error(
-          `Failed to load app.json: ${response.status} ${response.statusText}`,
-        );
-      }
-      return response.json();
+    fetch("app.json").then((r) => {
+      if (!r.ok) throw new Error();
+      return r.json();
     }),
-    fetch("manifest.json").then((response) => {
-      if (!response.ok) {
-        throw new Error(
-          `Failed to load manifest: ${response.status} ${response.statusText}`,
-        );
-      }
-      return response.json();
+    fetch("manifest.json").then((r) => {
+      if (!r.ok) throw new Error();
+      return r.json();
     }),
   ])
     .then(([appConfig, manifest]) => {
-      debugLog("App config loaded successfully:", appConfig);
-      debugLog("Manifest loaded successfully:", manifest);
-
-      // Assign app.json values to global variables (version info)
       APP_VERSION = appConfig.version;
       APP_NAME = appConfig.name;
       APP_DESCRIPTION = appConfig.description;
       APP_AUTHOR = appConfig.author;
 
-      // Override with CONFIG values if available, otherwise use manifest defaults
       if (CONFIG?.APP_CONFIG) {
-        debugLog("Overriding manifest values with CONFIG.APP_CONFIG...");
         RADIO_NAME =
           CONFIG.APP_CONFIG.station_name ||
           manifest.custom_radio_config.station_name;
@@ -583,7 +428,6 @@ async function loadAppVars() {
         APP_URL =
           CONFIG.APP_CONFIG.app_url || manifest.custom_radio_config.app_url;
       } else {
-        debugLog("Using manifest values (CONFIG.APP_CONFIG not found)...");
         RADIO_NAME = manifest.custom_radio_config.station_name;
         STREAM_URL = manifest.custom_radio_config.stream_url;
         DEFAULT_VOLUME = manifest.custom_radio_config.default_volume;
@@ -591,60 +435,24 @@ async function loadAppVars() {
         APP_URL = manifest.custom_radio_config.app_url;
       }
 
-      // Ensure APP_URL has a trailing slash for proper URL construction
-      if (APP_URL && !APP_URL.endsWith("/")) {
-        APP_URL = APP_URL + "/";
-        debugLog("Normalized APP_URL to ensure trailing slash:", APP_URL);
-      }
+      if (APP_URL && !APP_URL.endsWith("/")) APP_URL = APP_URL + "/";
 
-      // Use .env PLAYLIST_ENDPOINT if configured, otherwise fall back to manifest
       PLAYLIST =
         CONFIG?.PLAYLIST_ENDPOINT ||
         manifest.api_endpoints.playlist ||
         "playlist.json";
-
-      // Set playlistData after PLAYLIST is loaded
       playlistData = PLAYLIST;
-      debugLog(
-        "Playlist endpoint source:",
-        CONFIG?.PLAYLIST_ENDPOINT
-          ? ".env (VITE_PLAYLIST_ENDPOINT)"
-          : "manifest.json",
-      );
-      debugLog("playlistData set to:", playlistData);
 
-      // Log all key variables to console for debugging
-      debugLog("APP_VERSION:", APP_VERSION);
-      debugLog("APP_NAME:", APP_NAME);
-      debugLog("APP_DESCRIPTION:", APP_DESCRIPTION);
-      debugLog("APP_AUTHOR:", APP_AUTHOR);
-      debugLog("RADIO_NAME:", RADIO_NAME);
-      debugLog("STREAM_URL:", STREAM_URL);
-      debugLog("DEFAULT_VOLUME:", DEFAULT_VOLUME);
-      debugLog("THEME_COLOR:", THEME_COLOR);
-      debugLog("PLAYLIST:", PLAYLIST);
-      debugLog("APP_URL:", APP_URL);
-
-      // Set up streaming URL after loading from manifest
-      if (typeof STREAM_URL === "string" && STREAM_URL.trim() !== "") {
+      if (typeof STREAM_URL === "string" && STREAM_URL.trim() !== "")
         setStreamingUrl(STREAM_URL);
-      } else {
-        debugLog.warn(
-          "STREAM_URL is undefined or empty. Skipping setStreamingUrl.",
-        );
-      }
 
-      // Update the loader with the correct radio name if it's currently showing
       const existingLoader = document.getElementById("radioLoader");
       if (existingLoader) {
         const lettersContainer = existingLoader.querySelector(
           ".radio-loader-letters",
         );
         if (lettersContainer) {
-          // Clear existing letters
           lettersContainer.innerHTML = "";
-
-          // Add new letters with the correct radio name
           for (let i = 0; i < RADIO_NAME.length; i++) {
             const span = document.createElement("span");
             span.textContent = RADIO_NAME[i];
@@ -656,37 +464,33 @@ async function loadAppVars() {
         }
       }
 
-      // After loading app variables, check if password protection is enabled
       if (CONFIG?.ENABLE_PASSWORD_PROTECTION === true) {
         checkPassword();
       } else {
-        // Skip password check, go directly to player initialization
-        debugLog("🔓 Password protection disabled, starting player...");
         initializePlayer();
       }
     })
-    .catch((error) => {
-      debugLog.error("Error loading app.json or manifest:", error);
-      alert(
-        "Failed to load application configuration. Please check your network connection and try again.",
-      );
+    .catch(() => {
+      alert("Failed to load application configuration.");
     });
 }
+
 function checkPassword() {
-  // Check if the password has already been accepted
-  if (localStorage.getItem("passwordAccepted") === correctPasswordHash) {
-    // debugLog.log("Password already accepted.");
-    // Continue with the rest of your application logic here
+  const storedHash = localStorage.getItem("passwordAccepted");
+
+  if (
+    storedHash &&
+    storedHash.toLowerCase() === correctPasswordHash.trim().toLowerCase()
+  ) {
     initializePlayer();
   } else {
-    // Create a custom modal for password input with show/hide toggle
     const modal = document.createElement("div");
     modal.style.position = "fixed";
     modal.style.top = "0";
     modal.style.left = "0";
     modal.style.width = "100vw";
     modal.style.height = "100vh";
-    modal.style.background = "rgba(0,0,0,0.7)";
+    modal.style.background = "rgba(0,0,0,0.85)";
     modal.style.display = "flex";
     modal.style.alignItems = "center";
     modal.style.justifyContent = "center";
@@ -698,57 +502,64 @@ function checkPassword() {
     box.style.borderRadius = "8px";
     box.style.textAlign = "center";
     box.style.minWidth = "280px";
+    box.style.color = "#333";
 
     box.innerHTML = `
-      <strong>This stream is for private use only.</strong>
-      <p>Please enter the password to access this content:</p>
-      <input type="password" id="passwordInput" style="width: 80%; padding: 6px; font-size: 1em;" autofocus />
+      <strong style="display:block; margin-bottom:10px; font-size:1.1em;">Private Stream</strong>
+      <p style="margin-bottom:10px;">Please enter the password to access this content:</p>
+      <input type="password" id="passwordInput" style="width: 80%; padding: 8px; font-size: 1em; border: 1px solid #ccc; border-radius: 4px;" autofocus autocomplete="off" />
+      <p id="passwordError" style="color:red; font-size:0.9em; display:none; margin-top:8px;">Incorrect password.</p>
       <br>
-      <label style="font-size:0.95em;cursor:pointer;">
-      <input type="checkbox" id="togglePassword" style="margin-right:4px;" />
-      Show password
+      <label style="font-size:0.9em; cursor:pointer; display:inline-block; margin-top:10px;">
+        <input type="checkbox" id="togglePassword" style="margin-right:4px;" /> Show password
       </label>
       <br><br>
-      <button id="submitPassword" style="padding: 6px 16px; background: #031521; color: #fff; border: none; border-radius: 4px;">Submit</button>
+      <button id="submitPassword" style="padding: 8px 20px; background: #031521; color: #fff; border: none; border-radius: 4px; cursor:pointer;">Submit</button>
     `;
-
-    // Add Enter key support for password input
-    box
-      .querySelector("#passwordInput")
-      .addEventListener("keydown", function (e) {
-        if (e.key === "Enter") {
-          box.querySelector("#submitPassword").click();
-        }
-      });
 
     modal.appendChild(box);
     document.body.appendChild(modal);
 
-    // Show/hide password logic
     const passwordInput = box.querySelector("#passwordInput");
     const togglePassword = box.querySelector("#togglePassword");
+    const errorText = box.querySelector("#passwordError");
+
+    passwordInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") box.querySelector("#submitPassword").click();
+    });
+
     togglePassword.addEventListener("change", function () {
       passwordInput.type = this.checked ? "text" : "password";
     });
 
-    // Submit logic
     box.querySelector("#submitPassword").onclick = function () {
       const password = passwordInput.value;
-      document.body.removeChild(modal);
-      // Continue with password check
-      sha256(password).then((hash) => {
-        correctPasswordHashPromise.then((correctHash) => {
-          if (hash === correctHash) {
-            // debugLog.log("Password accepted.");
-            localStorage.setItem("passwordAccepted", correctPasswordHash);
-            initializePlayer();
-          } else {
-            // debugLog.warn("Incorrect password.");
-            document.body.innerHTML =
-              "<strong>Access Denied</strong><p>Incorrect password.</p>";
-          }
+      errorText.style.display = "none";
+
+      if (!window.crypto || !window.crypto.subtle) {
+        errorText.textContent = "Error: Hashing requires HTTPS context.";
+        errorText.style.display = "block";
+        return;
+      }
+
+      sha256(password)
+        .then((hash) => {
+          correctPasswordHashPromise.then((correctHash) => {
+            // Compare cleanly, avoiding space and capitalization mismatch issues
+            if (hash.toLowerCase() === correctHash.trim().toLowerCase()) {
+              localStorage.setItem("passwordAccepted", correctHash.trim());
+              document.body.removeChild(modal);
+              initializePlayer();
+            } else {
+              errorText.style.display = "block";
+              passwordInput.value = "";
+              passwordInput.focus();
+            }
+          });
+        })
+        .catch((err) => {
+          console.error("Hashing failed:", err);
         });
-      });
     };
   }
 }
@@ -789,33 +600,21 @@ function refreshCurrentSong(
       currentDuration.classList.add("fade-in");
 
       if ("mediaSession" in navigator) {
-        // Create a unique cache-busting string, like a timestamp
         const cacheBuster = Date.now();
-        // APP_URL is guaranteed to have trailing slash, so we don't need to add one
         const artworkUrl = `${APP_URL}albumart/art-00.jpg?cb=${cacheBuster}`;
         navigator.mediaSession.metadata = new MediaMetadata({
           title: song,
           artist: artist,
           album: RADIO_NAME,
-          artwork: [
-            {
-              src: artworkUrl,
-              sizes: "200x200",
-              type: "image/jpg",
-            },
-          ],
+          artwork: [{ src: artworkUrl, sizes: "200x200", type: "image/jpg" }],
         });
-        navigator.mediaSession.setActionHandler("play", () => {
-          togglePlay();
-        });
-        navigator.mediaSession.setActionHandler("pause", () => {
-          togglePlay();
-        });
+        navigator.mediaSession.setActionHandler("play", () => togglePlay());
+        navigator.mediaSession.setActionHandler("pause", () => togglePlay());
         navigator.mediaSession.setActionHandler("stop", () => {
-          if (isPlaying) {
-            setPlayerIcon(false); // Set to play icon
-            playerButton.style.textShadow = "0 0 5px black";
-
+          if (isPlayerIconPaused()) {
+            setPlayerIcon(false);
+            document.getElementById("playerButton").style.textShadow =
+              "0 0 5px black";
             audio.pause();
             audio.src = "";
           }
@@ -831,36 +630,24 @@ function refreshCurrentSong(
   }
 }
 
-// Remove the Page class and use functions directly
 let musicActual = null;
-let isFirstLoad = true; // Flag to track first successful load
-let jsonErrorRetryCount = 0; // Counter for JSON format error retries
-const MAX_JSON_ERROR_RETRIES = 3; // Maximum retries for JSON format errors
-let awaitingNextSong = false; // Flag to track when countdown reached 0:00 but no new song detected yet
+let isFirstLoad = true;
+let jsonErrorRetryCount = 0;
+const MAX_JSON_ERROR_RETRIES = 3;
+let awaitingNextSong = false;
 
 async function getStreamingData() {
   try {
-    debugLog("Fetching streaming data from:", playlistData);
     let data = await fetchStreamingData(playlistData);
 
-    debugLog("Received data:", data);
-
-    // Move this outside the "if (data)" block.
-    // This ensures that even if the playlist is offline, the "Loading" overlay disappears
-    // so the user can at least see the player and hit the Play button.
     if (isFirstLoad) {
       hideLoader();
       isFirstLoad = false;
     }
 
     if (data) {
-      // Reset JSON error retry counter on successful data fetch
-      if (jsonErrorRetryCount > 0) {
-        debugLog(
-          "Playlist fetched successfully - resetting JSON error retry counter",
-        );
-        jsonErrorRetryCount = 0;
-      }
+      if (jsonErrorRetryCount > 0) jsonErrorRetryCount = 0;
+
       var currentSong = data.Current.Title;
       var charsToplayTitle = 25;
       var charsPlayingTitle = 40;
@@ -886,7 +673,6 @@ async function getStreamingData() {
         .replace(/&/g, "&")
         .trim();
 
-      // Clean up placeholder dashes and template values created by template when no data available
       const cleanArtist = isPlaceholderValue(safeCurrentArtist)
         ? ""
         : safeCurrentArtist;
@@ -894,12 +680,8 @@ async function getStreamingData() {
         ? ""
         : safeCurrentSong;
 
-      if (isPlaceholderValue(currentDurationVal)) {
-        currentDurationVal = null;
-      }
-      if (isPlaceholderValue(currentStartTime)) {
-        currentStartTime = null;
-      }
+      if (isPlaceholderValue(currentDurationVal)) currentDurationVal = null;
+      if (isPlaceholderValue(currentStartTime)) currentStartTime = null;
 
       const toplayArray = data.Next
         ? data.Next.map((item) => ({
@@ -907,7 +689,6 @@ async function getStreamingData() {
             Artist: (item.Artist || "").trim(),
           }))
         : [];
-
       const historyArray = data.Last
         ? data.Last.map((item) => ({
             Title: (item.Title || "").trim(),
@@ -931,27 +712,13 @@ async function getStreamingData() {
         sectionName,
       ) {
         const container = document.getElementById(containerId);
-        if (!container) {
-          debugLog.error(`${containerId} element not found in DOM`);
-          return;
-        }
+        if (!container) return;
         container.innerHTML = "";
-
         const section = document.querySelector(sectionSelector);
-        if (section) {
-          if (list.length === 0) {
-            section.style.display = "none";
-            debugLog(`Hiding ${sectionName} section - no valid songs`);
-          } else {
-            section.style.display = "";
-            debugLog(`Showing ${sectionName} section - songs available`);
-          }
-        }
+        if (section) section.style.display = list.length === 0 ? "none" : "";
 
         const maxItems = sectionName === "toplay" ? nrToplay : nrHistory;
         const limited = list.slice(Math.max(0, list.length - maxItems));
-
-        debugLog(`Limited ${sectionName}:`, limited);
 
         limited.forEach((songInfo, index) => {
           const textSize = `text-size-${index}`;
@@ -965,43 +732,29 @@ async function getStreamingData() {
             ? songInfo.Title
             : "";
 
-          if (!validArtist && !validTitle) {
-            debugLog(`Skipping invalid entry in ${sectionName}`);
-            return;
-          }
+          if (!validArtist && !validTitle) return;
 
           let displayTitle = validTitle;
-          if (displayTitle.length > charsToplayTitle) {
+          if (displayTitle.length > charsToplayTitle)
             displayTitle = displayTitle.substring(0, charsToplayTitle) + "...";
-          }
 
           const songDisplay =
             validArtist && validTitle
               ? `${validArtist} - ${displayTitle}`
               : validArtist || displayTitle;
 
-          article.innerHTML = `
-            <div class="music-info text-center">
-              <p class="song ${textSize}">${songDisplay}</p>
-            </div>
-          `;
+          article.innerHTML = `<div class="music-info text-center"><p class="song ${textSize}">${songDisplay}</p></div>`;
           container.appendChild(article);
         });
       }
 
       let nextTrackStarttime =
         data.Next && data.Next.length > 0 ? data.Next[0].Starttime : null;
-      if (isPlaceholderValue(nextTrackStarttime)) {
-        nextTrackStarttime = null;
-      }
+      if (isPlaceholderValue(nextTrackStarttime)) nextTrackStarttime = null;
 
       if (cleanSong !== musicActual) {
-        debugLog("New song detected:", cleanSong);
-
         if (awaitingNextSong) {
-          debugLog("New song detected - clearing awaiting next song state");
           awaitingNextSong = false;
-
           const currentDuration = document.getElementById(
             "currentDurationDisplay",
           );
@@ -1011,23 +764,17 @@ async function getStreamingData() {
           }
         }
 
-        // If a new song is detected, decide whether to switch to smart polling or continue with regular polling.
         const hasDuration =
           !isPlaceholderValue(currentDurationVal) &&
           !isPlaceholderValue(currentStartTime);
-
         if (hasDuration) {
-          // We have enough data for smart polling. Stop the continuous polling.
-          // The countdown function will schedule the next check.
           if (fetchIntervalId) {
             clearInterval(fetchIntervalId);
             fetchIntervalId = null;
-            debugLog("Switching to smart polling based on track duration.");
           }
         }
 
         musicActual = cleanSong;
-
         refreshCurrentSong(
           cleanSong,
           cleanArtist,
@@ -1035,47 +782,24 @@ async function getStreamingData() {
           currentStartTime,
           nextTrackStarttime,
         );
-
-        document.title = `${RADIO_NAME} | ${cleanSong}${
-          cleanArtist ? " - " + cleanArtist : ""
-        }`;
+        document.title = `${RADIO_NAME} | ${cleanSong}${cleanArtist ? " - " + cleanArtist : ""}`;
       }
 
       renderTrackList("toplaySong", ".toplay", validToplay, "toplay");
       renderTrackList("historicSong", ".historic", validHistory, "historic");
     }
   } catch (error) {
-    debugLog.error("Error in getStreamingData:", error);
-    debugLog("playlistData value:", playlistData);
-    debugLog("Playlist endpoint:", PLAYLIST);
-
-    // If this is a JSON format error, schedule a retry with limit
     if (
       (error.message && error.message.includes("JSON")) ||
       error.name === "SyntaxError"
     ) {
       if (jsonErrorRetryCount < MAX_JSON_ERROR_RETRIES) {
         jsonErrorRetryCount++;
-        debugLog(
-          `JSON format error detected - retry ${jsonErrorRetryCount}/${MAX_JSON_ERROR_RETRIES} in 15 seconds`,
-        );
-        setTimeout(() => {
-          debugLog(
-            `Retrying playlist fetch after JSON format error (attempt ${jsonErrorRetryCount}/${MAX_JSON_ERROR_RETRIES})...`,
-          );
-          getStreamingData();
-        }, 15000);
+        setTimeout(() => getStreamingData(), 15000);
       } else {
-        debugLog.error(
-          "Maximum JSON error retries reached. Please check the playlist.json format.",
-        );
-        // Reset counter for future potential fixes
         setTimeout(() => {
           jsonErrorRetryCount = 0;
-          debugLog(
-            "Reset JSON error retry counter - will try again if new errors occur",
-          );
-        }, 300000); // Reset after 5 minutes
+        }, 300000);
       }
     }
   }
@@ -1084,17 +808,10 @@ async function getStreamingData() {
 function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
   const currentDurationElem = document.getElementById("currentDurationDisplay");
   let countdownInterval;
-
-  // Buffer time configuration - extends countdown to match actual song change timing
-  // This compensates for the delay between when the countdown reaches 0:00 and the actual song change
-  // User can configure this in .env with VITE_COUNTDOWN_BUFFER_SECONDS or in config.js
   const COUNTDOWN_BUFFER_SECONDS =
     CONFIG?.APP_CONFIG?.countdown_buffer_seconds || 8;
 
-  if (!currentDurationElem) {
-    // console.error("Current duration element not found.");
-    return;
-  }
+  if (!currentDurationElem) return;
 
   if (isPlaceholderValue(duration) || isPlaceholderValue(startTime)) {
     currentDurationElem.textContent = "";
@@ -1103,18 +820,12 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
   }
 
   currentDurationElem.style.display = "";
-  // Stop any previous countdown when a new song starts
   if (window.countdownInterval) {
     clearInterval(window.countdownInterval);
     window.countdownInterval = null;
-    // debugLog.log("Previous countdown cleared.");
   }
 
   function startCountdown(duration, startTime, nextTrackStarttime) {
-    // debugLog.log("Starting countdown with duration:", duration || "undefined");
-    // debugLog.log("Song started at:", startTime || "undefined");
-    // debugLog.log("Next track starts at:", nextTrackStarttime || "undefined");
-
     let totalSeconds = 0;
 
     if (typeof duration === "number") {
@@ -1125,168 +836,83 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
     ) {
       const durationStr = duration.toString();
       const parts = durationStr.split(":").map(Number);
-      if (parts.length === 0 || parts.some(isNaN)) {
-        // console.error("Invalid duration format:", duration);
-        return;
-      }
-      if (parts.length === 3) {
+      if (parts.length === 0 || parts.some(isNaN)) return;
+      if (parts.length === 3)
         totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
-      } else if (parts.length === 2) {
-        totalSeconds = parts[0] * 60 + parts[1];
-      } else if (parts.length === 1) {
-        totalSeconds = parts[0];
-      }
+      else if (parts.length === 2) totalSeconds = parts[0] * 60 + parts[1];
+      else if (parts.length === 1) totalSeconds = parts[0];
     } else {
       totalSeconds = parseInt(duration, 10);
     }
 
-    // Add buffer time to extend countdown and match actual song change timing
-    // This prevents the countdown from reaching 0:00 too early
     totalSeconds += COUNTDOWN_BUFFER_SECONDS;
-    debugLog(
-      `Added ${COUNTDOWN_BUFFER_SECONDS}s buffer to duration. Total: ${totalSeconds}s`,
-    );
-
-    // Calculate elapsed time based on start time
     let elapsedSeconds = 0;
     let countdownStartTime = Date.now();
 
     if (startTime) {
       try {
-        // Handle YYYY-MM-DD HH:MM:SS format
-        // Convert to ISO format for better browser compatibility
         let isoStartTime = startTime;
-        if (startTime.includes(" ") && !startTime.includes("T")) {
+        if (startTime.includes(" ") && !startTime.includes("T"))
           isoStartTime = startTime.replace(" ", "T");
-        }
-
         const songStartTime = new Date(isoStartTime).getTime();
         const now = Date.now();
         elapsedSeconds = Math.floor((now - songStartTime) / 1000);
-
-        // Ensure elapsed time is not negative or greater than total duration
         elapsedSeconds = Math.max(0, Math.min(elapsedSeconds, totalSeconds));
-
-        debugLog(`Song started at: ${startTime} (${isoStartTime})`);
-        debugLog(
-          `Song has been playing for ${elapsedSeconds} seconds out of ${totalSeconds} total`,
-        );
       } catch (error) {
-        debugLog.warn(
-          "Invalid startTime format, using current time as start:",
-          error,
-        );
-        debugLog.warn(
-          "Expected format: YYYY-MM-DD HH:MM:SS, received:",
-          startTime,
-        );
         elapsedSeconds = 0;
       }
     }
 
-    // Calculate remaining time - use next track start time if available for maximum accuracy
     let remainingSeconds;
     let useNextTrackTiming = false;
 
     if (nextTrackStarttime) {
       try {
-        // Convert next track start time to ISO format
         let isoNextStartTime = nextTrackStarttime;
         if (
           nextTrackStarttime.includes(" ") &&
           !nextTrackStarttime.includes("T")
-        ) {
+        )
           isoNextStartTime = nextTrackStarttime.replace(" ", "T");
-        }
-
         const nextTrackTime = new Date(isoNextStartTime).getTime();
         const now = Date.now();
         remainingSeconds = Math.floor((nextTrackTime - now) / 1000);
 
-        // Only use next track timing if it's reasonable (positive and not too far in future)
         if (remainingSeconds > 0 && remainingSeconds < totalSeconds + 30) {
           useNextTrackTiming = true;
-          debugLog(
-            `Using next track start time: ${nextTrackStarttime} (${isoNextStartTime})`,
-          );
-          debugLog(
-            `Accurate remaining time: ${remainingSeconds} seconds until next track`,
-          );
-        } else {
-          debugLog.warn(
-            `Next track timing seems unreasonable: ${remainingSeconds}s, falling back to duration calculation`,
-          );
         }
-      } catch (error) {
-        debugLog.warn(
-          "Invalid nextTrackStarttime format, falling back to duration calculation:",
-          error,
-        );
-      }
+      } catch (error) {}
     }
 
-    // Fallback to duration-based calculation if next track timing not available or unreasonable
-    if (!useNextTrackTiming) {
-      remainingSeconds = totalSeconds - elapsedSeconds;
-      debugLog(
-        `Using duration-based calculation: ${remainingSeconds} seconds remaining`,
-      );
-    }
+    if (!useNextTrackTiming) remainingSeconds = totalSeconds - elapsedSeconds;
 
-    // Set up polling for new data before song ends
     let pollBeforeEnd;
     let pollDelay;
 
     if (useNextTrackTiming) {
-      // With exact next track timing, we can be much more precise
-      if (remainingSeconds <= 10) {
-        pollBeforeEnd = 1; // Poll 1 second before for very short remaining time
-      } else if (remainingSeconds <= 30) {
-        pollBeforeEnd = Math.max(1, Math.floor(remainingSeconds * 0.3)); // Poll at 70% through
-      } else {
-        pollBeforeEnd = 10; // Poll 10 seconds before for longer tracks
-      }
+      if (remainingSeconds <= 10) pollBeforeEnd = 1;
+      else if (remainingSeconds <= 30)
+        pollBeforeEnd = Math.max(1, Math.floor(remainingSeconds * 0.3));
+      else pollBeforeEnd = 10;
       pollDelay = Math.max(1000, (remainingSeconds - pollBeforeEnd) * 1000);
-      debugLog(
-        `Using precise next-track timing: polling in ${Math.floor(
-          pollDelay / 1000,
-        )}s`,
-      );
     } else {
-      // Fallback to duration-based logic
-      if (totalSeconds < 10) {
-        pollBeforeEnd = 1; // For very short jingles, poll 1 second before end
-      } else if (totalSeconds < 30) {
-        pollBeforeEnd = Math.max(1, Math.floor(remainingSeconds * 0.5)); // 50% for short tracks
-      } else {
-        pollBeforeEnd = 30; // 30 seconds for long tracks
-      }
+      if (totalSeconds < 10) pollBeforeEnd = 1;
+      else if (totalSeconds < 30)
+        pollBeforeEnd = Math.max(1, Math.floor(remainingSeconds * 0.5));
+      else pollBeforeEnd = 30;
       pollDelay = Math.max(1000, (remainingSeconds - pollBeforeEnd) * 1000);
-      debugLog(
-        `Using duration-based timing: polling in ${Math.floor(
-          pollDelay / 1000,
-        )}s`,
-      );
     }
 
     setTimeout(() => {
-      // Clear any existing interval to implement smart polling
       if (fetchIntervalId) {
         clearInterval(fetchIntervalId);
         fetchIntervalId = null;
-        debugLog("Cleared continuous polling - switching to smart polling");
       }
-
-      // Use longer interval for localhost to be gentle on CORS proxies
       const isLocalhost =
         window.location.hostname === "localhost" ||
         window.location.hostname === "127.0.0.1";
-      const interval = isLocalhost ? 5000 : 1000; // 5 seconds for localhost, 1 second for production
-
+      const interval = isLocalhost ? 5000 : 1000;
       fetchIntervalId = setInterval(getStreamingData, interval);
-      debugLog(
-        "Smart polling: Started interval getStreamingData for next song detection.",
-      );
     }, pollDelay);
 
     function updateCountdown() {
@@ -1297,123 +923,83 @@ function displayTrackCountdown(song, duration, startTime, nextTrackStarttime) {
       const min = Math.floor(remaining / 60);
       const sec = remaining % 60;
 
-      // Show visual indicator when very close to song change (within buffer time)
       if (remaining > 0 && remaining <= COUNTDOWN_BUFFER_SECONDS) {
-        // We're in the buffer zone - song change is imminent
         currentDurationElem.style.opacity = "0.8";
-        currentDurationElem.style.color = "#ffd700"; // Golden color to indicate imminent change
+        currentDurationElem.style.color = "#ffd700";
       } else {
-        // Reset styling for normal countdown
         currentDurationElem.style.opacity = "1";
-        currentDurationElem.style.color = ""; // Reset to default
+        currentDurationElem.style.color = "";
       }
 
-      // When countdown reaches 0:00, show loading indicator and trigger aggressive polling
       if (remaining === 0 && !awaitingNextSong) {
-        debugLog(
-          "Countdown reached 0:00 - triggering immediate playlist refresh",
-        );
         awaitingNextSong = true;
-
-        // Show "Loading next song..." in the duration display
         currentDurationElem.textContent = "Next song...";
         currentDurationElem.style.opacity = "0.7";
-        currentDurationElem.style.color = ""; // Reset color
+        currentDurationElem.style.color = "";
         currentDurationElem.style.animation = "pulse 1.5s ease-in-out infinite";
 
-        // Clear existing interval and start rapid polling for new song detection
         if (fetchIntervalId) {
           clearInterval(fetchIntervalId);
           fetchIntervalId = null;
         }
 
-        // Start aggressive polling every 500ms when at 0:00 to catch song changes quickly
         fetchIntervalId = setInterval(getStreamingData, 500);
-
-        // Also trigger an immediate check
         getStreamingData();
 
-        // Safety timeout: if no new song is detected within 15 seconds,
-        // force refresh and reset state to prevent infinite loading
         setTimeout(() => {
           if (awaitingNextSong) {
-            debugLog("Timeout waiting for new song - forcing refresh");
             awaitingNextSong = false;
             currentDurationElem.textContent = "0:00";
             currentDurationElem.style.opacity = "1";
             currentDurationElem.style.animation = "";
-
-            // Trigger one more immediate check
             getStreamingData();
           }
         }, 15000);
       } else if (remaining > 0) {
-        // Normal countdown display
-        currentDurationElem.textContent = `${min}:${sec
-          .toString()
-          .padStart(2, "0")}`;
+        currentDurationElem.textContent = `${min}:${sec.toString().padStart(2, "0")}`;
         currentDurationElem.style.opacity = "1";
         currentDurationElem.style.animation = "";
       }
     }
 
     updateCountdown();
-
-    // Start track time countdown every second
     window.countdownInterval = setInterval(() => {
       updateCountdown();
     }, 1000);
   }
 
-  if (currentDurationElem && song && duration) {
+  if (currentDurationElem && song && duration)
     startCountdown(duration, startTime, nextTrackStarttime);
-  }
 }
 
 async function fetchStreamingData(apiUrl) {
-  let actualUrl = apiUrl; // Declare outside try block to avoid reference errors
+  let actualUrl = apiUrl;
   try {
-    debugLog("Attempting to fetch from URL:", apiUrl);
-
-    // Detect if we're running on localhost
     const isLocalhost =
       window.location.hostname === "localhost" ||
       window.location.hostname === "127.0.0.1";
 
-    // If we're on localhost and have a relative URL, convert to production URL
     if (isLocalhost && !apiUrl.startsWith("http")) {
-      // Check if app_url is configured
       const productionBaseUrl = CONFIG?.APP_CONFIG?.app_url;
-
       if (
         !productionBaseUrl ||
         productionBaseUrl === "https://your-domain.com/app/"
       ) {
-        debugLog.error("❌ VITE_APP_URL is not configured in .env file");
         showPlaylistErrorNotification(
           "Configuration Error",
-          "VITE_APP_URL is not configured. Please set it in your .env file.",
+          "VITE_APP_URL is not configured.",
         );
         throw new Error("Missing VITE_APP_URL configuration");
       }
-
       actualUrl = new URL(apiUrl, productionBaseUrl).href;
-      debugLog(
-        `Localhost detected: Converting relative URL "${apiUrl}" to production URL: ${actualUrl}`,
-      );
     }
 
     const isExternalUrl =
       actualUrl.startsWith("http://") || actualUrl.startsWith("https://");
-
     let fetchUrl = actualUrl;
     let usingProxy = false;
 
-    // If we're on localhost and trying to fetch external data, use CORS proxy
     if (isLocalhost && isExternalUrl && !actualUrl.includes("localhost")) {
-      debugLog("Using CORS proxy for localhost development");
-
-      // For eajt.nl, try the CORS-enabled PHP script first
       if (
         actualUrl.includes("eajt.nl") &&
         actualUrl.includes("playlist.json")
@@ -1422,149 +1008,75 @@ async function fetchStreamingData(apiUrl) {
           "playlist.json",
           "cors-playlist.php",
         );
-        debugLog("Trying CORS-enabled playlist proxy:", corsProxyUrl);
-
         try {
           fetchUrl = corsProxyUrl;
           const response = await fetch(fetchUrl, {
             method: "GET",
-            headers: {
-              "Cache-Control": "no-cache",
-            },
+            headers: { "Cache-Control": "no-cache" },
           });
-
           if (response.ok) {
-            debugLog("Successfully using cors-playlist.php");
             const text = await response.text();
-            debugLog("CORS proxy response length:", text.length);
-            debugLog("Raw response (first 100 chars):", text.substring(0, 100));
-
-            const data = JSON.parse(text);
-            debugLog(
-              "Successfully fetched and parsed streaming data via CORS proxy",
-            );
-            return data;
+            return JSON.parse(text);
           } else {
-            debugLog.warn(
-              "cors-playlist.php failed, falling back to generic CORS proxy",
-            );
             throw new Error(`CORS proxy failed: ${response.status}`);
           }
-        } catch (corsError) {
-          debugLog.warn(
-            "CORS proxy failed, trying generic proxies:",
-            corsError.message,
-          );
-        }
+        } catch (corsError) {}
       }
 
-      // Try multiple generic CORS proxy services for better reliability
       const corsProxies = [
         `https://api.allorigins.win/get?url=${encodeURIComponent(actualUrl)}`,
         `https://corsproxy.io/?${encodeURIComponent(actualUrl)}`,
         `https://cors-anywhere.herokuapp.com/${actualUrl}`,
       ];
 
-      // Try each proxy until one works
       for (let i = 0; i < corsProxies.length; i++) {
         try {
           fetchUrl = corsProxies[i];
           usingProxy = true;
-          debugLog(`Trying CORS proxy ${i + 1}:`, fetchUrl);
           break;
         } catch (error) {
-          debugLog.warn(`CORS proxy ${i + 1} failed, trying next...`);
-          if (i === corsProxies.length - 1) {
-            throw error;
-          }
+          if (i === corsProxies.length - 1) throw error;
         }
       }
     }
 
-    // Fetch the data (either direct or via generic CORS proxy)
     const response = await fetch(fetchUrl, {
       method: "GET",
-      headers: {
-        "Cache-Control": "no-cache",
-      },
+      headers: { "Cache-Control": "no-cache" },
     });
-
-    if (!response.ok) {
+    if (!response.ok)
       throw new Error(
         `Error fetching playlist: ${response.status} ${response.statusText}`,
       );
-    }
 
-    debugLog("Response status:", response.status);
-    debugLog("Response content-type:", response.headers.get("content-type"));
-
-    // Get the raw text first to inspect it
     const text = await response.text();
-
-    // If we used generic CORS proxy, extract the actual content
     let actualText = text;
     if (usingProxy) {
       try {
-        // Handle different proxy response formats
         if (fetchUrl.includes("allorigins.win")) {
           const proxyResponse = JSON.parse(text);
           actualText = proxyResponse.contents;
-          debugLog("Extracted content from allorigins.win proxy");
-        } else if (fetchUrl.includes("corsproxy.io")) {
-          // corsproxy.io returns the content directly
+        } else if (
+          fetchUrl.includes("corsproxy.io") ||
+          fetchUrl.includes("cors-anywhere")
+        ) {
           actualText = text;
-          debugLog("Using content from corsproxy.io proxy");
-        } else if (fetchUrl.includes("cors-anywhere")) {
-          // cors-anywhere returns the content directly
-          actualText = text;
-          debugLog("Using content from cors-anywhere proxy");
         } else {
-          // Fallback: try to parse as proxy response, otherwise use raw
           try {
             const proxyResponse = JSON.parse(text);
             actualText = proxyResponse.contents || proxyResponse.data || text;
           } catch {
             actualText = text;
           }
-          debugLog("Extracted content from generic CORS proxy");
         }
       } catch (error) {
-        debugLog.warn("Failed to parse CORS proxy response, using raw text");
         actualText = text;
       }
     } else {
-      // Direct fetch or CORS-enabled PHP script
       actualText = text;
     }
-
-    debugLog("Raw response length:", actualText.length);
-    debugLog("Raw response (first 100 chars):", actualText.substring(0, 100));
-    debugLog(
-      "Raw response (last 100 chars):",
-      actualText.substring(actualText.length - 100),
-    );
-
-    // Try to parse the JSON
-    const data = JSON.parse(actualText);
-    debugLog("Successfully fetched and parsed streaming data");
-    return data;
+    return JSON.parse(actualText);
   } catch (error) {
-    console.error("fetchStreamingData error:", error);
-    console.error("Failed URL:", actualUrl || apiUrl);
-
-    // Log error but continue polling - playlist data will be fetched when available
-    debugLog.warn(
-      "Playlist fetch failed, will retry on next poll:",
-      error.message,
-    );
-
-    if (error instanceof SyntaxError) {
-      console.error(
-        "JSON parsing failed - the playlist.json file appears to be malformed or truncated",
-      );
-    }
-
-    // Re-throw so getStreamingData's catch block can trigger the UI notification
     throw error;
   }
 }
@@ -1576,13 +1088,12 @@ function setCopyright() {
 
   var copy = document.getElementById("copy");
   let jaar = new Date().getFullYear();
-  copy.textContent =
-    appName + " " + appVersion + " | ©" + jaar + " " + appAuthor;
+  if (copy)
+    copy.textContent =
+      appName + " " + appVersion + " | ©" + jaar + " " + appAuthor;
 
   const versionInfo = document.getElementById("version-info");
-  if (versionInfo) {
-    versionInfo.textContent = `v${appVersion}`;
-  }
+  if (versionInfo) versionInfo.textContent = `v${appVersion}`;
 
   setupAudioPlayer();
 }
@@ -1590,37 +1101,26 @@ function setCopyright() {
 async function setupAudioPlayer() {
   audio = new Audio(URL_STREAMING);
   audio.crossOrigin = "anonymous";
-  audio.preload = "metadata"; // Changed from "none" to "metadata" for better buffering
+  audio.preload = "metadata";
   audio.autoplay = false;
   audio.loop = false;
   audio.muted = false;
 
-  // Add some additional properties that might help with streaming
-  if ("mozPreservesPitch" in audio) {
-    audio.mozPreservesPitch = false;
-  }
-  if ("webkitPreservesPitch" in audio) {
-    audio.webkitPreservesPitch = false;
-  }
+  if ("mozPreservesPitch" in audio) audio.mozPreservesPitch = false;
+  if ("webkitPreservesPitch" in audio) audio.webkitPreservesPitch = false;
 
   setupAudioEventListeners();
 
-  document.getElementById("volume").oninput = function () {
-    changeVolumeLocalStorage(this.value);
-    // debugLog.log("Volume slider changed to:", this.value);
-    audio.volume = intToDecimal(this.value);
-  };
-
-  // Set up player button click listener
-  const playerButton = document.getElementById("playerButton");
-  if (playerButton) {
-    playerButton.addEventListener("click", togglePlay);
-    debugLog("Player button click listener attached");
-  } else {
-    debugLog.warn(
-      "Player button not found - click functionality will not work",
-    );
+  const volumeSlider = document.getElementById("volume");
+  if (volumeSlider) {
+    volumeSlider.oninput = function () {
+      changeVolumeLocalStorage(this.value);
+      audio.volume = intToDecimal(this.value);
+    };
   }
+
+  const playerButton = document.getElementById("playerButton");
+  if (playerButton) playerButton.addEventListener("click", togglePlay);
 }
 
 function setupAudioEventListeners() {
@@ -1633,10 +1133,7 @@ function setupAudioEventListeners() {
 
   function resetButtonState() {
     const playerButton = document.getElementById("playerButton");
-    if (playerButton && isPlayerIconPaused()) {
-      debugLog("Stream stopped - resetting button state");
-      setPlayerIcon(false); // Set to play icon
-    }
+    if (playerButton && isPlayerIconPaused()) setPlayerIcon(false);
   }
 
   function startHealthCheck() {
@@ -1644,19 +1141,14 @@ function setupAudioEventListeners() {
     healthCheckInterval = setInterval(() => {
       const playerButton = document.getElementById("playerButton");
       if (playerButton && isPlayerIconPaused()) {
-        // Should be playing, check if it actually is
         if (audio.paused || audio.ended || audio.readyState < 2) {
-          debugLog.warn("Health check failed - stream appears stopped");
           resetButtonState();
-          // Try a quick recovery
           audio.load();
           const playPromise = audio.play();
-          if (playPromise !== undefined) {
-            playPromise.catch(() => {});
-          }
+          if (playPromise !== undefined) playPromise.catch(() => {});
         }
       }
-    }, 3000); // Check every 3 seconds
+    }, 3000);
   }
 
   function stopHealthCheck() {
@@ -1667,9 +1159,6 @@ function setupAudioEventListeners() {
   }
 
   function handleStreamError(eventType = "unknown") {
-    debugLog.warn(`Stream ${eventType} detected`);
-
-    // Clear any existing timeouts to prevent loops
     if (retryTimer) {
       clearTimeout(retryTimer);
       retryTimer = null;
@@ -1682,113 +1171,48 @@ function setupAudioEventListeners() {
     resetButtonState();
 
     if (retryCount < 3) {
-      // Reduced from 6 to 3 retries
       retryCount++;
-      debugLog.warn(
-        `Stream error detected. Retrying in 10 seconds... (${retryCount}/3)`,
-      );
-
-      // Shorter retry delay and simpler recovery
       retryTimer = setTimeout(() => {
-        debugLog.log("Attempting stream recovery...");
-        // Simple recovery - just try to play again without load()
         const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise.catch((error) => {
-            debugLog.warn("Recovery failed, will try again:", error);
-          });
-        }
+        if (playPromise !== undefined) playPromise.catch((error) => {});
         retryTimer = null;
-      }, 10000); // Reduced from 30 to 10 seconds
+      }, 10000);
     } else {
-      console.error("Maximum retry attempts reached. Stream may be offline.");
       resetButtonState();
-      retryCount = 0; // Reset for future attempts
+      retryCount = 0;
     }
   }
 
-  // More intelligent event listeners - only handle real errors
-  audio.addEventListener("error", (e) => {
-    debugLog.warn("Audio error event:", e);
-    handleStreamError("error");
-  });
-
-  // Only handle stalled if it persists (not during normal loading)
+  audio.addEventListener("error", (e) => handleStreamError("error"));
   audio.addEventListener("stalled", () => {
     setTimeout(() => {
-      if (audio.readyState < 2) {
-        // Only if still not loaded after delay
-        debugLog.warn("Stream stalled - no data received");
-        handleStreamError("stalled");
-      }
-    }, 10000); // Wait 10 seconds before treating as error
+      if (audio.readyState < 2) handleStreamError("stalled");
+    }, 10000);
   });
 
-  // Suspend is often normal, only treat as error if repeated
   let suspendCount = 0;
   audio.addEventListener("suspend", () => {
     suspendCount++;
     if (suspendCount > 3) {
-      debugLog.warn("Multiple suspend events detected");
       handleStreamError("suspend");
       suspendCount = 0;
     }
   });
 
-  // Abort and emptied are normal during stream loading - don't treat as errors
-  audio.addEventListener("abort", () => {
-    debugLog.log("Audio abort event (normal during loading)");
-  });
+  audio.addEventListener("abort", () => {});
+  audio.addEventListener("emptied", () => {});
 
-  audio.addEventListener("emptied", () => {
-    debugLog.log("Audio emptied event (normal during loading)");
-  });
-
-  // Monitor for unexpected pauses that might indicate buffering issues
-  // audio.addEventListener("pause", () => {
-  //   stopHealthCheck(); // Stop health checking when paused
-
-  //   // Only handle unexpected pauses (not user-initiated)
-  //   if (!userInitiatedPause) {
-  //     setTimeout(() => {
-  //       const playerButton = document.getElementById("playerButton");
-  //       if (playerButton && isPlayerIconPaused() && audio.paused) {
-  //         debugLog.warn("Unexpected pause detected - stream may have stopped");
-  //         resetButtonState();
-  //       }
-  //     }, 100);
-  //   } else {
-  //     debugLog.log("User-initiated pause detected - not treating as error");
-  //     userInitiatedPause = false; // Reset the flag
-  //   }
-  // });
-
-  // NEW 250912: Add a listener for the 'pause' event
   audio.addEventListener("pause", () => {
-    debugLog.log("Audio 'pause' event triggered. Setting button to play icon.");
-    // This will set the button to the play icon when the audio pauses,
-    // whether by a user click or by the browser/OS.
     setPlayerIcon(false);
-    // add the text shadow back here
     const playerButton = document.getElementById("playerButton");
-    if (playerButton) {
-      playerButton.style.textShadow = "0 0 5px black";
-    }
+    if (playerButton) playerButton.style.textShadow = "0 0 5px black";
     stopHealthCheck();
-    // Do not reset the userInitiatedPause flag here.
-    // The `togglePlay` function already handles that.
   });
 
   audio.addEventListener("play", () => {
-    debugLog.log("Audio 'play' event triggered. Setting button to pause icon.");
-    // This will set the button to the pause icon when the audio starts playing,
-    // whether by a user click or by the browser automatically resuming it.
     setPlayerIcon(true);
-    // You might also want to remove the text shadow here
     const playerButton = document.getElementById("playerButton");
-    if (playerButton) {
-      playerButton.style.textShadow = "none";
-    }
+    if (playerButton) playerButton.style.textShadow = "none";
     retryCount = 0;
     suspendCount = 0;
     if (retryTimer) {
@@ -1799,39 +1223,27 @@ function setupAudioEventListeners() {
       clearTimeout(bufferingTimeout);
       bufferingTimeout = null;
     }
-    startHealthCheck(); // Start monitoring stream health
+    startHealthCheck();
   });
 
-  // Monitor buffering state with shorter timeout for faster recovery
   audio.addEventListener("waiting", () => {
-    debugLog.log("Stream buffering...");
-    // Only set timeout if not already buffering
     if (bufferingTimeout) clearTimeout(bufferingTimeout);
     bufferingTimeout = setTimeout(() => {
-      // Only attempt recovery if still buffering and not paused by user
-      if (audio.readyState < 3 && !audio.paused) {
-        debugLog.warn("Buffering timeout - stream may be having issues");
+      if (audio.readyState < 3 && !audio.paused)
         handleStreamError("buffering timeout");
-      }
-    }, 15000); // Increased to 15 seconds to avoid false positives
+    }, 15000);
   });
 
   audio.addEventListener("canplaythrough", () => {
-    debugLog.log("Stream ready to play through");
     if (bufferingTimeout) {
       clearTimeout(bufferingTimeout);
       bufferingTimeout = null;
     }
   });
 
-  // Button state is now managed by togglePlay() function only
-  // Removed onplay and onpause handlers to prevent race conditions
-
-  // The 'playing' event is triggered when playback has begun, while 'play' is triggered when the request to play is initiated. 'play' is a more reliable event to use for updating the button state.
   audio.addEventListener("playing", () => {
-    debugLog.log("Stream playing successfully");
     retryCount = 0;
-    suspendCount = 0; // Reset suspend counter when playing successfully
+    suspendCount = 0;
     if (retryTimer) {
       clearTimeout(retryTimer);
       retryTimer = null;
@@ -1840,31 +1252,27 @@ function setupAudioEventListeners() {
       clearTimeout(bufferingTimeout);
       bufferingTimeout = null;
     }
-    startHealthCheck(); // Start monitoring stream health
+    startHealthCheck();
   });
 }
 
 function togglePlay() {
   const playerButton = document.getElementById("playerButton");
   const isPlaying = isPlayerIconPaused();
-  // debugLog.log("Toggle play state:", isPlaying);
+
   if (isPlaying) {
-    // debugLog.log("Pausing audio");
-    setPlayerIcon(false); // Set to play icon
+    setPlayerIcon(false);
     playerButton.style.textShadow = "0 0 5px black";
 
     if (audio) {
-      userInitiatedPause = true; // Set flag before pausing
+      userInitiatedPause = true;
       audio.pause();
-      // Don't create a new audio object, just reset the current one
       audio.currentTime = 0;
     }
   } else {
-    // debugLog.log("Playing audio");
-    setPlayerIcon(true); // Set to pause icon
+    setPlayerIcon(true);
     playerButton.style.textShadow = "0 0 5px black";
 
-    // Reuse existing audio object if available, otherwise create new one
     if (!audio) {
       audio = new Audio(URL_STREAMING);
       audio.crossOrigin = "anonymous";
@@ -1872,23 +1280,17 @@ function togglePlay() {
       audio.autoplay = false;
       audio.loop = false;
       audio.muted = false;
-
-      // Attach event listeners for the new audio object
       setupAudioEventListeners();
     } else if (audio.src !== URL_STREAMING) {
-      // Just update the source without recreating the object
       audio.src = URL_STREAMING;
     }
 
     setVolume(initialVol);
 
-    // Handle the play promise properly
     const playPromise = audio.play();
     if (playPromise !== undefined) {
       playPromise.catch((error) => {
-        debugLog.warn("Audio play failed:", error);
-        // Reset button state if play fails
-        setPlayerIcon(false); // Set to play icon
+        setPlayerIcon(false);
       });
     }
   }
@@ -1898,33 +1300,25 @@ function intToDecimal(vol) {
   return vol / 100;
 }
 
-// Nightshift / lightmode toggle
-// Clicking the #nightshift image will toggle the class 'lightmode' on the <body>
-// The choice is persisted in localStorage under key 'rl_lightmode'
 (function () {
   function initNightshift() {
     const night = document.getElementById("nightshift");
     if (!night) return;
 
-    // Initialize from localStorage
     try {
       const pref = localStorage.getItem("rl_lightmode");
       if (pref === "1") {
         document.body.classList.add("lightmode");
-        // set dark bulb icon because lightmode is active
         night.src = "assets/icons/lightbulb-dark.svg";
         night.alt = "Light mode on";
       }
-    } catch (e) {
-      // ignore storage errors
-    }
+    } catch (e) {}
 
     night.addEventListener("click", function () {
       const isOn = document.body.classList.toggle("lightmode");
       try {
         if (isOn) {
           localStorage.setItem("rl_lightmode", "1");
-          // swap icon to dark bulb when light mode is on
           night.src = "assets/icons/lightbulb-dark.svg";
           night.alt = "Light mode on";
         } else {
@@ -1932,9 +1326,7 @@ function intToDecimal(vol) {
           night.src = "assets/icons/lightbulb-light.svg";
           night.alt = "Light mode off";
         }
-      } catch (e) {
-        // ignore storage errors
-      }
+      } catch (e) {}
     });
   }
 
